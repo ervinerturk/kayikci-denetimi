@@ -399,9 +399,26 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
           <button class="gun-btn" data-g="Cuma" onclick="gunToggle(this)">Cum</button>
           <button class="gun-btn" data-g="Cumartesi" onclick="gunToggle(this)">Cmt</button>
           <button class="gun-btn" data-g="Pazar" onclick="gunToggle(this)">Paz</button>
+          <button class="gun-btn" id="ozelBtn" type="button" onclick="ozelToggle()" style="font-size:11px;">⭐ Özel Çalışma</button>
         </div>
       </div>
       <div class="chip" id="chip"></div>
+    </div>
+  </div>
+
+  <!-- ÖZEL ÇALIŞMA (Gün kutularındaki "Özel Çalışma" ile açılır) -->
+  <div class="card" id="ozelKart" style="display:none;">
+    <div class="card-head">
+      <div class="card-ic red">⭐</div>
+      <div>
+        <div class="card-title">Özel Çalışma</div>
+        <div class="card-sub" id="ozelBilgi"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <datalist id="ozelMusteriList"></datalist>
+      <div id="ozelSatirlar"></div>
+      <button class="btn btn-red" id="bOzelGonder" type="button" onclick="ozelGonder()" style="margin-top:6px;">📨 Özel Çalışmayı Gönder</button>
     </div>
   </div>
 
@@ -2410,7 +2427,7 @@ function rutVerisiUygula(rutDoc, gyAd, telMap){
     ST_TEL=tel;
   }
 }
-function _rutYenile(){ try{ onST(); }catch(e){ console.warn('rut yenileme:', e.message); } }
+function _rutYenile(){ try{ onST(); }catch(e){ console.warn('rut yenileme:', e.message); } try{ if(_ozelAcik) _ozelMusteriListesi(); }catch(e){} }
 function rutYukle(u, email){
   var anahtar='kyk_rut_'+email;
   // 1) Bu cihazda daha önce yüklenmiş kopya varsa hemen kullan (sahada çevrimdışı çalışabilsin)
@@ -2457,6 +2474,95 @@ function sifreSifirla(){
       if(/user-not-found/.test((err&&err.code)||'')) _girisMesaji(tamam,'bilgi');
       else _girisMesaji(girisHataMetni(err));
     });
+}
+
+// ── ÖZEL ÇALIŞMA ──
+// GY'nin rut dışı özel çalışmaları: en fazla 10 satır (Müşteri + sabit açıklama seçeneği).
+// Normal rapordan bağımsız gönderilir; "raporlar" koleksiyonuna "ozel_" önekli kimlikle yazılır
+// (mevcut Firestore kuralları ve şeması değişmeden çalışır). Panel bunları ayrı kartta gösterir.
+var OZEL_SECENEKLER=['Ürün Sevkiyat Desteği','Stant Kurulum Desteği','Özel Stant Çalışması','Diğer'];
+var OZEL_SATIR=10;
+var _ozelAcik=false;
+function _ozelSatirlariKur(){
+  var kap=document.getElementById('ozelSatirlar');
+  if(!kap || kap.getAttribute('data-kuruldu')) return;
+  for(var i=1;i<=OZEL_SATIR;i++){
+    var d=document.createElement('div');
+    d.style.cssText='border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;';
+    var lb=document.createElement('div');
+    lb.style.cssText='font-size:11px;font-weight:700;color:var(--mid);margin-bottom:6px;';
+    lb.textContent=i+'. Müşteri';
+    var m=document.createElement('input');
+    m.className='inp'; m.id='ozM'+i; m.setAttribute('list','ozelMusteriList'); m.maxLength=80; m.placeholder='Müşteri adı...'; m.autocomplete='off';
+    var t=document.createElement('select');
+    t.className='inp'; t.id='ozT'+i; t.style.marginTop='6px';
+    var o0=document.createElement('option'); o0.value=''; o0.textContent='Açıklama seçin...'; t.appendChild(o0);
+    OZEL_SECENEKLER.forEach(function(sec){ var o=document.createElement('option'); o.value=sec; o.textContent=sec; t.appendChild(o); });
+    var n=document.createElement('input');
+    n.className='inp'; n.id='ozN'+i; n.maxLength=200; n.placeholder='Açıklayın (Diğer)...'; n.style.cssText='display:none;margin-top:6px;';
+    (function(t,n){ t.addEventListener('change',function(){ n.style.display=(t.value==='Diğer')?'block':'none'; if(t.value!=='Diğer') n.value=''; }); })(t,n);
+    d.appendChild(lb); d.appendChild(m); d.appendChild(t); d.appendChild(n);
+    kap.appendChild(d);
+  }
+  kap.setAttribute('data-kuruldu','1');
+}
+function _ozelMusteriListesi(){
+  var dl=document.getElementById('ozelMusteriList'); if(!dl) return;
+  while(dl.firstChild) dl.removeChild(dl.firstChild);
+  var ad={};
+  Object.keys(RUT||{}).forEach(function(st){ var g=(RUT[st]&&RUT[st].g)||{}; Object.keys(g).forEach(function(gun){ (g[gun]||[]).forEach(function(m){ if(m&&m.a) ad[m.a]=1; }); }); });
+  Object.keys(ad).sort(function(a,b){return a.localeCompare(b,'tr');}).forEach(function(a){ var o=document.createElement('option'); o.value=a; dl.appendChild(o); });
+}
+function _ozelBilgiYaz(){
+  var el=document.getElementById('ozelBilgi'); if(!el) return;
+  var gy=(document.getElementById('sYon')||{}).value||'—', tr=(document.getElementById('iTarih')||{}).value||'—';
+  el.textContent=gy+' · '+tr.split('-').reverse().join('.');
+}
+function ozelToggle(){
+  _ozelAcik=!_ozelAcik;
+  var btn=document.getElementById('ozelBtn'), kart=document.getElementById('ozelKart');
+  if(_ozelAcik){
+    _ozelSatirlariKur(); _ozelMusteriListesi(); _ozelBilgiYaz();
+    var _it=document.getElementById('iTarih'); if(_it && !_it.getAttribute('data-ozel')){ _it.addEventListener('change',_ozelBilgiYaz); _it.setAttribute('data-ozel','1'); }
+    kart.style.display='';
+    btn.style.background='var(--amber)'; btn.style.color='#fff'; btn.style.borderColor='var(--amber)';
+    setTimeout(function(){ kart.scrollIntoView({behavior:'smooth',block:'start'}); },50);
+  } else {
+    kart.style.display='none';
+    btn.style.background=''; btn.style.color=''; btn.style.borderColor='';
+  }
+}
+function ozelGonder(){
+  var gy=document.getElementById('sYon').value, tarih=document.getElementById('iTarih').value;
+  if(!gy){ toast('⚠️ Grup Yöneticisi seçili değil!','e'); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(tarih)){ toast('⚠️ Tarih seçin!','e'); return; }
+  var satirlar=[], hata='';
+  for(var i=1;i<=OZEL_SATIR;i++){
+    var m=document.getElementById('ozM'+i).value.trim(), t=document.getElementById('ozT'+i).value, n=document.getElementById('ozN'+i).value.trim();
+    if(!m && !t) continue;
+    if(!m){ hata=i+'. satırda müşteri adı eksik'; break; }
+    if(OZEL_SECENEKLER.indexOf(t)===-1){ hata=i+'. satırda açıklama seçilmedi'; break; }
+    if(t==='Diğer' && !n){ hata=i+'. satırda "Diğer" için açıklama yazın'; break; }
+    satirlar.push({done:true, ad:m.slice(0,80), tur:t, not:(t==='Diğer'?n.slice(0,200):'')});
+  }
+  if(hata){ toast('⚠️ '+hata,'e'); return; }
+  if(!satirlar.length){ toast('⚠️ En az 1 müşteri girin!','e'); return; }
+  if(!_db || !_auth || !_auth.currentUser){ toast('⚠️ Oturum kapanmış. Tekrar giriş yapın.','e'); return; }
+  var _k=function(s){return String(s||'').replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü]+/g,'_');};
+  var kayit={
+    id:'ozel_'+_k(tarih)+'_'+_k(gy),
+    yonetici:gy, yoneticiAd:gy, st:'', tarih:tarih, gunler:'Özel Çalışma',
+    cikis:'', donus:'', km1:0, km2:0, kmFark:0, stDeger:'',
+    noktalar:satirlar, toplamNokta:satirlar.length, sktNokta:0, soNokta:0, stantNokta:0, ortTazelik:0,
+    zaman:new Date().toISOString(), gonderen:_auth.currentUser.email
+  };
+  var btn=document.getElementById('bOzelGonder');
+  btn.disabled=true; btn.textContent='⏳ Gönderiliyor...';
+  try{
+    _db.collection('raporlar').doc(kayit.id).set(kayit)
+      .then(function(){ toast('✓ Özel çalışma panele gönderildi!','s'); btn.textContent='✓ Gönderildi'; setTimeout(function(){ btn.disabled=false; btn.textContent='📨 Özel Çalışmayı Gönder'; },3000); })
+      .catch(function(err){ toast('⚠️ Gönderilemedi: '+err.message,'e'); btn.disabled=false; btn.textContent='📨 Özel Çalışmayı Gönder'; });
+  }catch(err){ toast('⚠️ Gönderilemedi: '+err.message,'e'); btn.disabled=false; btn.textContent='📨 Özel Çalışmayı Gönder'; }
 }
 
 // Firebase hata kodlarını kullanıcının anlayacağı dile çevir

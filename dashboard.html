@@ -407,6 +407,30 @@ function secHd(t){
   return '<div class="sec-hd-inner">'+t+'</div>';
 }
 
+// ── ÖZEL ÇALIŞMA (formdaki "Özel Çalışma" kutusundan gelen kayıtlar) ──
+function _ozelMi(r){ return !!r && (String(r.id||'').indexOf('ozel_')===0 || r.gunler==='Özel Çalışma'); }
+function _ozelKartHtml(liste){
+  if(!liste || !liste.length) return '';
+  var sirali=liste.slice().sort(function(a,b){ return String(b.tarih||'').localeCompare(String(a.tarih||'')); });
+  var sayac={}, toplam=0;
+  var h='';
+  sirali.forEach(function(r){
+    var satirlar=(r.noktalar||[]).filter(function(n){ return n && n.ad; });
+    var tarihTr=String(r.tarih||'—').split('-').reverse().join('.');
+    h+='<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
+      +'<div style="font-size:12px;font-weight:800;margin-bottom:6px;">'+tarihTr+' · '+(r.yoneticiAd||r.yonetici||'—')+' <span style="font-weight:600;color:var(--mid);">('+satirlar.length+' müşteri)</span></div>';
+    satirlar.forEach(function(n,i){
+      var tur=n.tur||'—'; sayac[tur]=(sayac[tur]||0)+1; toplam++;
+      h+=row((i+1)+'. '+n.ad, tur+(n.not?' — '+n.not:''));
+    });
+    h+='</div>';
+  });
+  var ozet='';
+  Object.keys(sayac).sort(function(a,b){return sayac[b]-sayac[a];}).forEach(function(t){ ozet+=row(t, sayac[t]+' müşteri'); });
+  return '<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Özel Çalışmalar ('+liste.length+' gün · '+toplam+' müşteri)</div></div>'
+    +'<div class="card-body">'+secHd('📊 Çalışma Türleri')+ozet+secHd('🗂️ Detay')+h+'</div></div>';
+}
+
 // Kalkan: beklenmedik bir veri yüzünden panel tamamen boş kalmasın
 function guncelle(){
   try{ _guncelleIc(); }
@@ -426,6 +450,11 @@ function _guncelleIc(){
   if(gy) data=data.filter(function(r){return (r.yonetici||r.yoneticiAd||'')===gy;});
   if(st) data=data.filter(function(r){return r.st===st;});
 
+  // Özel çalışmalar normal rapor istatistiklerine karışmaz; ayrı kartta gösterilir
+  var _ozelData=data.filter(_ozelMi);
+  data=data.filter(function(r){ return !_ozelMi(r); });
+  var _ozelHtml=_ozelKartHtml(_ozelData);
+
   // Seçili müşteri bu filtredeki veride yoksa sıfırla
   var secMus=document.getElementById('fMusteri')?document.getElementById('fMusteri').value:'';
   if(secMus){
@@ -442,7 +471,7 @@ function _guncelleIc(){
     document.getElementById('oPuan').textContent='—';
     ic.innerHTML='<div class="empty"><div style="font-size:36px">📋</div><div style="font-size:13px;font-weight:500;margin-top:8px;">Henüz rapor bulunamadı</div>'
       +((typeof _firestoreHata!=='undefined' && _firestoreHata)?'<div style="font-size:12px;color:var(--red);margin-top:8px;">⚠️ Sunucuya bağlanılamadı: '+String(_firestoreHata).replace(/</g,'&lt;')+'</div>':'')
-      +'</div>';
+      +'</div>'+_ozelHtml;
     return;
   }
 
@@ -614,6 +643,9 @@ function _guncelleIc(){
 
   k5+=detayTablo;
   _html+='<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Nokta Değerlendirmesi & Rapor Detayı</div></div><div class="card-body">'+k5+'</div></div>';
+
+  // ── ÖZEL ÇALIŞMALAR ──
+  _html+=_ozelHtml;
 
   // ── MÜŞTERİ DETAY PANELİ YER TUTUCU ──
   _html+='<div class="card" id="musteriDetayKart" style="display:none;"><div class="card-head"><div class="card-ic">🏪</div><div class="card-title">Müşteri Ziyaret Detayı</div></div><div class="card-body" id="musteriDetayBody"></div></div>';
