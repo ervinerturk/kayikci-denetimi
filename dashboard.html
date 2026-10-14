@@ -415,21 +415,21 @@ function _ozelKartHtml(liste){
   if(!liste || !liste.length) return '';
   var sirali=liste.slice().sort(function(a,b){ return String(b.tarih||'').localeCompare(String(a.tarih||'')); });
   var sayac={}, toplam=0;
-  var h='';
+  // Detay tablosu: Tarih | Grup Yöneticisi | Satış Temsilcisi | Müşteri Adı | Açıklama (her müşteri bir satır)
+  var h='<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;"><thead><tr><th>Tarih</th><th>Grup Yöneticisi</th><th>Satış Temsilcisi</th><th>Müşteri Adı</th><th>Açıklama</th></tr></thead><tbody>';
   sirali.forEach(function(r){
     var satirlar=(r.noktalar||[]).filter(function(n){ return n && n.ad; });
     var tarihTr=String(r.tarih||'—').split('-').reverse().join('.');
-    h+='<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
-      +'<div style="font-size:12px;font-weight:800;margin-bottom:6px;">'+tarihTr+' · '+(r.yoneticiAd||r.yonetici||'—')+(r.st?' · '+r.st:'')+' <span style="font-weight:600;color:var(--mid);">('+satirlar.length+' müşteri)</span></div>';
     satirlar.forEach(function(n,i){
       var tur=n.tur||'—'; sayac[tur]=(sayac[tur]||0)+1; toplam++;
-      h+=row((i+1)+'. '+n.ad, tur+(n.not?' — '+n.not:''));
+      h+='<tr><td style="white-space:nowrap;">'+tarihTr+'</td><td>'+(r.yoneticiAd||r.yonetici||'—')+'</td><td>'+(n.noktaST||r.st||'—')+'</td>'
+        +'<td>'+(i+1)+'. '+n.ad+'</td><td>'+tur+(n.not?' — '+n.not:'')+'</td></tr>';
     });
-    h+='</div>';
   });
+  h+='</tbody></table></div>';
   var ozet='';
   Object.keys(sayac).sort(function(a,b){return sayac[b]-sayac[a];}).forEach(function(t){ ozet+=row(t, sayac[t]+' müşteri'); });
-  return '<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Özel Çalışmalar ('+liste.length+' gün · '+toplam+' müşteri)</div></div>'
+  return '<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Özel Çalışmalar ('+liste.map(function(r){return r.tarih;}).filter(function(v,j,a){return a.indexOf(v)===j;}).length+' gün · '+toplam+' müşteri)</div></div>'
     +'<div class="card-body">'+secHd('📊 Çalışma Türleri')+ozet+secHd('🗂️ Detay')+h+'</div></div>';
 }
 
@@ -450,11 +450,18 @@ function _guncelleIc(){
 
   var data=donemFiltre(tum,donem);
   if(gy) data=data.filter(function(r){return (r.yonetici||r.yoneticiAd||'')===gy;});
-  if(st) data=data.filter(function(r){return r.st===st;});
 
-  // Özel çalışmalar normal rapor istatistiklerine karışmaz; ayrı kartta gösterilir
+  // Özel çalışmalar normal rapor istatistiklerine karışmaz; ayrı kartta gösterilir.
+  // Bir özel çalışmada her satırın temsilcisi ayrı olabilir: temsilci filtresinde yalnız o temsilcinin satırları kalır.
   var _ozelData=data.filter(_ozelMi);
   data=data.filter(function(r){ return !_ozelMi(r); });
+  if(st){
+    _ozelData=_ozelData.map(function(r){
+      var sat=(r.noktalar||[]).filter(function(n){ return (n.noktaST||r.st)===st; });
+      return sat.length ? Object.assign({}, r, {noktalar:sat}) : null;
+    }).filter(Boolean);
+  }
+  if(st) data=data.filter(function(r){return r.st===st;});
   var _ozelHtml=_ozelKartHtml(_ozelData);
 
   // Seçili müşteri bu filtredeki veride yoksa sıfırla
