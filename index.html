@@ -416,7 +416,15 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
       </div>
     </div>
     <div class="card-body">
-      <datalist id="ozelMusteriList"></datalist>
+      <div class="f">
+        <label class="lb">Grup Yöneticisi</label>
+        <select class="inp" id="ozGY" onchange="ozelGYDegisti()"><option value="">Seçiniz...</option></select>
+      </div>
+      <div class="f">
+        <label class="lb">Satış Temsilcisi</label>
+        <select class="inp" id="ozST" onchange="ozelSTDegisti()"><option value="">Seçiniz...</option></select>
+      </div>
+      <div id="ozelMusBilgi" style="font-size:11px;font-weight:600;color:var(--mid);margin:-2px 0 10px;">Önce satış temsilcisini seçin.</div>
       <div id="ozelSatirlar"></div>
       <button class="btn btn-red" id="bOzelGonder" type="button" onclick="ozelGonder()" style="margin-top:6px;">📨 Özel Çalışmayı Gönder</button>
     </div>
@@ -2111,6 +2119,7 @@ function ozetGorevDurum(idx, durum){
 function raporGonder(){
   var done=noktalar.filter(function(n){return n.done;});
   if(done.length===0){toast('En az 1 nokta girin!','e');return;}
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(document.getElementById('iTarih').value)){toast('⚠️ Tarih seçin!','e');return;}
 
   // ── KM DOĞRULAMA ──
   var km1=parseInt(document.getElementById('iKm1').value)||0;
@@ -2187,6 +2196,8 @@ function raporGonder(){
     localStorage.setItem(rapor.id, JSON.stringify(rapor));
     var liste=JSON.parse(localStorage.getItem('kayikci_raporlar')||'[]').filter(function(x){return x.id!==rapor.id;});
     liste.push({id:rapor.id, tarih:rapor.tarih, st:rapor.st, yonetici:rapor.yonetici, zaman:rapor.zaman});
+    // Cihazda yalnızca son 10 raporun yedeği tutulur (müşteri verisi birikmesin, depolama dolmasın)
+    while(liste.length>10){ var eski=liste.shift(); if(eski && /^rapor_/.test(String(eski.id))) localStorage.removeItem(eski.id); }
     localStorage.setItem('kayikci_raporlar', JSON.stringify(liste));
   }catch(e){console.warn('localStorage kayıt hatası:',e.message);}
 
@@ -2427,7 +2438,7 @@ function rutVerisiUygula(rutDoc, gyAd, telMap){
     ST_TEL=tel;
   }
 }
-function _rutYenile(){ try{ onST(); }catch(e){ console.warn('rut yenileme:', e.message); } try{ if(_ozelAcik) _ozelMusteriListesi(); }catch(e){} }
+function _rutYenile(){ try{ onST(); }catch(e){ console.warn('rut yenileme:', e.message); } try{ if(_ozelAcik){ _ozelGYListesi(); _ozelSTListesi(); _ozelMusteriListesi(); } }catch(e){} }
 function rutYukle(u, email){
   var anahtar='kyk_rut_'+email;
   // 1) Bu cihazda daha önce yüklenmiş kopya varsa hemen kullan (sahada çevrimdışı çalışabilsin)
@@ -2492,8 +2503,18 @@ function _ozelSatirlariKur(){
     var lb=document.createElement('div');
     lb.style.cssText='font-size:11px;font-weight:700;color:var(--mid);margin-bottom:6px;';
     lb.textContent=i+'. Müşteri';
+    var mk=document.createElement('div'); mk.style.position='relative';
     var m=document.createElement('input');
-    m.className='inp'; m.id='ozM'+i; m.setAttribute('list','ozelMusteriList'); m.maxLength=80; m.placeholder='Müşteri adı...'; m.autocomplete='off';
+    m.className='inp'; m.id='ozM'+i; m.maxLength=80; m.placeholder='Müşteri ara (ilk harfleri yazın)...'; m.autocomplete='off';
+    var dd=document.createElement('div');
+    dd.id='ozD'+i; dd.className='oz-dd';
+    dd.style.cssText='display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:#fff;border:1.5px solid var(--blue,#2563EB);border-radius:10px;z-index:600;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);';
+    (function(i,m){
+      m.addEventListener('input',function(){ _ozelOneriGoster(i); });
+      m.addEventListener('focus',function(){ _ozelOneriGoster(i); });
+      m.addEventListener('blur',function(){ setTimeout(function(){ var d=document.getElementById('ozD'+i); if(d && document.activeElement!==m) d.style.display='none'; },200); });
+    })(i,m);
+    mk.appendChild(m); mk.appendChild(dd);
     var t=document.createElement('select');
     t.className='inp'; t.id='ozT'+i; t.style.marginTop='6px';
     var o0=document.createElement('option'); o0.value=''; o0.textContent='Açıklama seçin...'; t.appendChild(o0);
@@ -2501,28 +2522,86 @@ function _ozelSatirlariKur(){
     var n=document.createElement('input');
     n.className='inp'; n.id='ozN'+i; n.maxLength=200; n.placeholder='Açıklayın (Diğer)...'; n.style.cssText='display:none;margin-top:6px;';
     (function(t,n){ t.addEventListener('change',function(){ n.style.display=(t.value==='Diğer')?'block':'none'; if(t.value!=='Diğer') n.value=''; }); })(t,n);
-    d.appendChild(lb); d.appendChild(m); d.appendChild(t); d.appendChild(n);
+    d.appendChild(lb); d.appendChild(mk); d.appendChild(t); d.appendChild(n);
     kap.appendChild(d);
   }
   kap.setAttribute('data-kuruldu','1');
 }
+// Zincir: Grup Yöneticisi → ona bağlı Satış Temsilcileri (YO) → temsilcinin müşterileri (RUT, tüm günler)
+var _ozelMus=[];
+function _ozelGYListesi(){
+  var sel=document.getElementById('ozGY'), ana=document.getElementById('sYon'); if(!sel||!ana) return;
+  if(sel.options.length<=1){
+    Object.keys(YO).forEach(function(g){ var o=document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o); });
+  }
+  if(ana.value) sel.value=ana.value;
+  sel.disabled=!!ana.disabled;   // GY girişinde kendi adı sabittir (ana formdaki gibi)
+}
+function _ozelSTListesi(){
+  var sel=document.getElementById('ozST'); if(!sel) return;
+  var gy=(document.getElementById('ozGY')||{}).value||'', onceki=sel.value;
+  while(sel.options.length>1) sel.remove(1);
+  (YO[gy]||[]).slice().sort(function(a,b){return a.localeCompare(b,'tr');}).forEach(function(s){ var o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+  if(onceki && (YO[gy]||[]).indexOf(onceki)>-1) sel.value=onceki;
+}
 function _ozelMusteriListesi(){
-  var dl=document.getElementById('ozelMusteriList'); if(!dl) return;
-  while(dl.firstChild) dl.removeChild(dl.firstChild);
-  var ad={};
-  Object.keys(RUT||{}).forEach(function(st){ var g=(RUT[st]&&RUT[st].g)||{}; Object.keys(g).forEach(function(gun){ (g[gun]||[]).forEach(function(m){ if(m&&m.a) ad[m.a]=1; }); }); });
-  Object.keys(ad).sort(function(a,b){return a.localeCompare(b,'tr');}).forEach(function(a){ var o=document.createElement('option'); o.value=a; dl.appendChild(o); });
+  var st=(document.getElementById('ozST')||{}).value||'', ad={};
+  var g=(st && RUT[st] && RUT[st].g) || {};
+  Object.keys(g).forEach(function(gun){ (g[gun]||[]).forEach(function(m){ if(m&&m.a) ad[m.a]=1; }); });
+  _ozelMus=Object.keys(ad).sort(function(a,b){return a.localeCompare(b,'tr');});
+  var bilgi=document.getElementById('ozelMusBilgi');
+  if(bilgi) bilgi.textContent = !st ? 'Önce satış temsilcisini seçin.'
+    : (_ozelMus.length ? '📋 '+_ozelMus.length+' müşteri — müşteri kutusuna ilk harfleri yazın veya listeden seçin.' : '⚠️ Bu temsilcinin rut listesi bulunamadı; müşteri adını elle yazabilirsiniz.');
+}
+function _ozelOneriGoster(i){
+  var inp=document.getElementById('ozM'+i), dd=document.getElementById('ozD'+i); if(!inp||!dd) return;
+  while(dd.firstChild) dd.removeChild(dd.firstChild);
+  var satir=function(metin, secilebilir){
+    var el=document.createElement('div'); el.textContent=metin;
+    el.style.cssText='padding:9px 12px;font-size:13px;border-bottom:1px solid var(--border,#E2E8F0);'+(secilebilir?'cursor:pointer;color:var(--dark,#0F1923);':'color:var(--mid,#4A5568);font-style:italic;');
+    if(secilebilir) el.addEventListener('mousedown',function(e){ e.preventDefault(); inp.value=metin; dd.style.display='none'; });
+    dd.appendChild(el);
+  };
+  if(!(document.getElementById('ozST')||{}).value){ satir('Önce satış temsilcisini seçin.', false); dd.style.display='block'; return; }
+  var q=_trBuyuk(inp.value);
+  var bul=_ozelMus.filter(function(a){ return !q || _trBuyuk(a).indexOf(q)===0; });
+  if(!bul.length){ if(q){ satir('Eşleşen müşteri yok — ad elle yazılabilir.', false); dd.style.display='block'; } else dd.style.display='none'; return; }
+  bul.slice(0,100).forEach(function(a){ satir(a, true); });
+  if(bul.length>100) satir('… '+(bul.length-100)+' müşteri daha — aramayı daraltın', false);
+  dd.style.display='block';
+}
+function _ozelSatirlariTemizle(){
+  var dolu=false;
+  for(var i=1;i<=OZEL_SATIR;i++){
+    var m=document.getElementById('ozM'+i), t=document.getElementById('ozT'+i), n=document.getElementById('ozN'+i);
+    if(!m) continue;
+    if(m.value||t.value||n.value) dolu=true;
+    m.value=''; t.value=''; n.value=''; n.style.display='none';
+  }
+  return dolu;
+}
+function ozelGYDegisti(){
+  _ozelSTListesi(); document.getElementById('ozST').value='';
+  ozelSTDegisti();
+}
+function ozelSTDegisti(){
+  if(_ozelSatirlariTemizle()) toast('Temsilci değişti: müşteri satırları temizlendi.','i');
+  _ozelMusteriListesi(); _ozelBilgiYaz();
 }
 function _ozelBilgiYaz(){
   var el=document.getElementById('ozelBilgi'); if(!el) return;
   var gy=(document.getElementById('sYon')||{}).value||'—', tr=(document.getElementById('iTarih')||{}).value||'—';
-  el.textContent=gy+' · '+tr.split('-').reverse().join('.');
+  var st=(document.getElementById('ozST')||{}).value;
+  el.textContent=gy+(st?' · '+st:'')+' · '+tr.split('-').reverse().join('.');
 }
 function ozelToggle(){
   _ozelAcik=!_ozelAcik;
   var btn=document.getElementById('ozelBtn'), kart=document.getElementById('ozelKart');
   if(_ozelAcik){
-    _ozelSatirlariKur(); _ozelMusteriListesi(); _ozelBilgiYaz();
+    _ozelSatirlariKur(); _ozelGYListesi(); _ozelSTListesi();
+    var _anaST=(document.getElementById('sST')||{}).value, _oz=document.getElementById('ozST');
+    if(_anaST && !_oz.value && [].some.call(_oz.options,function(o){return o.value===_anaST;})) _oz.value=_anaST;
+    _ozelMusteriListesi(); _ozelBilgiYaz();
     var _it=document.getElementById('iTarih'); if(_it && !_it.getAttribute('data-ozel')){ _it.addEventListener('change',_ozelBilgiYaz); _it.setAttribute('data-ozel','1'); }
     kart.style.display='';
     btn.style.background='var(--amber)'; btn.style.color='#fff'; btn.style.borderColor='var(--amber)';
@@ -2533,8 +2612,10 @@ function ozelToggle(){
   }
 }
 function ozelGonder(){
-  var gy=document.getElementById('sYon').value, tarih=document.getElementById('iTarih').value;
+  var gy=(document.getElementById('ozGY')||{}).value||document.getElementById('sYon').value, tarih=document.getElementById('iTarih').value;
+  var st=(document.getElementById('ozST')||{}).value||'';
   if(!gy){ toast('⚠️ Grup Yöneticisi seçili değil!','e'); return; }
+  if(!st || (YO[gy]||[]).indexOf(st)===-1){ toast('⚠️ Satış Temsilcisi seçin!','e'); return; }
   if(!/^\d{4}-\d{2}-\d{2}$/.test(tarih)){ toast('⚠️ Tarih seçin!','e'); return; }
   var satirlar=[], hata='';
   for(var i=1;i<=OZEL_SATIR;i++){
@@ -2550,8 +2631,8 @@ function ozelGonder(){
   if(!_db || !_auth || !_auth.currentUser){ toast('⚠️ Oturum kapanmış. Tekrar giriş yapın.','e'); return; }
   var _k=function(s){return String(s||'').replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü]+/g,'_');};
   var kayit={
-    id:'ozel_'+_k(tarih)+'_'+_k(gy),
-    yonetici:gy, yoneticiAd:gy, st:'', tarih:tarih, gunler:'Özel Çalışma',
+    id:'ozel_'+_k(tarih)+'_'+_k(gy)+'_'+_k(st),
+    yonetici:gy, yoneticiAd:gy, st:st, tarih:tarih, gunler:'Özel Çalışma',
     cikis:'', donus:'', km1:0, km2:0, kmFark:0, stDeger:'',
     noktalar:satirlar, toplamNokta:satirlar.length, sktNokta:0, soNokta:0, stantNokta:0, ortTazelik:0,
     zaman:new Date().toISOString(), gonderen:_auth.currentUser.email
@@ -2625,7 +2706,7 @@ function loginUygula(u){
 function cikisYap(){
   try{ sessionStorage.removeItem('kyk_kullanici'); localStorage.removeItem('kyk_kullanici'); }catch(e){}
   // Çıkışta bu cihazdaki müşteri listesi kopyasını da sil
-  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('kyk_rut_')===0) localStorage.removeItem(k); }); }catch(e){}
+  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('kyk_rut_')===0 || k.indexOf('rapor_')===0 || k==='kayikci_raporlar') localStorage.removeItem(k); }); }catch(e){}
   if(_auth){ _auth.signOut().then(function(){ location.reload(); }); }
   else location.reload();
 }

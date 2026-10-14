@@ -358,6 +358,8 @@ function raporNormalle(r){
   r.noktalar=r.noktalar.filter(function(n){ return n && typeof n==='object' && !Array.isArray(n); });
   var x=Object.assign({},r);
   if(x.gunlukKm==null && x.kmFark!=null) x.gunlukKm=x.kmFark;
+  // Görünen GY adı her zaman gerçek GY alanından alınır (başka GY adıyla görünme engellenir)
+  if(typeof x.yonetici==='string' && x.yonetici) x.yoneticiAd=x.yonetici;
   x.noktalar=(r.noktalar||[]).map(function(n){
     var y=Object.assign({},n);
     ['soUrunler','sktUrunler','tadimcaUrunler','gsUrunler','gorevler'].forEach(function(f){ if(!Array.isArray(y[f])) y[f]=[]; });
@@ -418,7 +420,7 @@ function _ozelKartHtml(liste){
     var satirlar=(r.noktalar||[]).filter(function(n){ return n && n.ad; });
     var tarihTr=String(r.tarih||'—').split('-').reverse().join('.');
     h+='<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;">'
-      +'<div style="font-size:12px;font-weight:800;margin-bottom:6px;">'+tarihTr+' · '+(r.yoneticiAd||r.yonetici||'—')+' <span style="font-weight:600;color:var(--mid);">('+satirlar.length+' müşteri)</span></div>';
+      +'<div style="font-size:12px;font-weight:800;margin-bottom:6px;">'+tarihTr+' · '+(r.yoneticiAd||r.yonetici||'—')+(r.st?' · '+r.st:'')+' <span style="font-weight:600;color:var(--mid);">('+satirlar.length+' müşteri)</span></div>';
     satirlar.forEach(function(n,i){
       var tur=n.tur||'—'; sayac[tur]=(sayac[tur]||0)+1; toplam++;
       h+=row((i+1)+'. '+n.ad, tur+(n.not?' — '+n.not:''));
