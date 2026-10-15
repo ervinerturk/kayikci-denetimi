@@ -102,6 +102,55 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 .alert-g{background:var(--green-l);color:var(--green);}
 
 .footer{text-align:center;color:var(--soft);font-size:11px;margin-top:40px;padding-top:16px;border-top:1px solid var(--border);}
+
+/* ── Panel düzeni: solda filtre sütunu + kartlarda grafikler ── */
+.filter-baslik{display:none;font-size:11px;font-weight:700;color:var(--soft);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;}
+.kart-ici{display:block;}
+.grf{min-width:0;}
+.grf-bas{font-size:10px;font-weight:700;color:var(--soft);letter-spacing:.5px;text-transform:uppercase;padding:10px 0 3px;border-bottom:2px solid var(--border);margin:6px 0 10px;}
+.grf-bos{font-size:12px;color:var(--soft);padding:8px 0;}
+.hbar{display:grid;grid-template-columns:minmax(0,40%) minmax(0,1fr) auto;align-items:center;gap:8px;padding:5px 2px;font-size:12px;border-radius:6px;cursor:default;}
+.hbar:hover{background:var(--bg);}
+.hbar-l{color:var(--mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hbar-t{height:12px;display:block;}
+.hbar-f{height:100%;display:block;border-radius:0 4px 4px 0;min-width:2px;}
+.hbar-v{font-weight:700;color:var(--dark);min-width:26px;text-align:right;}
+.stk{display:flex;height:16px;gap:2px;}
+.stk>div{height:100%;cursor:default;}
+.stk>div:first-child{border-radius:4px 0 0 4px;}
+.stk>div:last-child{border-radius:0 4px 4px 0;}
+.stk>div:only-child{border-radius:4px;}
+.lej{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:var(--mid);margin:8px 0 4px;}
+.lej b{color:var(--dark);}
+.lej i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;}
+.kol-alan{display:flex;align-items:flex-end;gap:4px;height:150px;border-bottom:1px solid var(--border);padding-top:18px;}
+.kol{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;position:relative;cursor:default;}
+.kol:hover{background:var(--bg);}
+.kol-s{display:block;margin:0 18%;}
+.kol-s+.kol-s{margin-top:2px;}
+.kol-ust{border-radius:4px 4px 0 0;}
+.kol-v{position:absolute;left:0;right:0;text-align:center;font-size:10px;font-weight:700;color:var(--mid);}
+.kol-x{display:flex;gap:4px;}
+.kol-x span{flex:1;min-width:0;text-align:center;font-size:9px;color:var(--soft);padding-top:4px;overflow:hidden;white-space:nowrap;}
+#grfTip{position:fixed;z-index:10000;pointer-events:none;background:var(--dark);color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.2);display:none;max-width:260px;}
+.deneme-serit{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;font-size:12px;font-weight:600;border-radius:10px;padding:8px 12px;margin-bottom:12px;}
+@media(min-width:700px){
+  .wrap{max-width:1200px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:0 16px;align-items:start;}
+  .wrap>*{grid-column:2;}
+  .wrap>.filter-panel{grid-column:1;grid-row:1 / span 3;position:sticky;top:68px;margin-bottom:0;}
+  .filter-row{grid-template-columns:1fr;}
+  .filter-baslik{display:block;}
+}
+/* Telefonda üst menü taşmasın (tarih gizlenir, düğmeler alt satıra geçebilir) */
+@media(max-width:600px){
+  .nav{height:auto;min-height:52px;flex-wrap:wrap;gap:6px;padding:8px 12px;}
+  .nav>div:last-child{flex-wrap:wrap;justify-content:flex-end;}
+  .nav-date{display:none;}
+}
+/* Tablo + grafik yan yana yalnızca yeterince geniş ekranda; daha darda grafik tablonun altında */
+@media(min-width:1000px){
+  .kart-ici{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;}
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -162,6 +211,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 
   <!-- FİLTRELER -->
   <div class="filter-panel">
+    <div class="filter-baslik">🔎 Filtreler</div>
     <div class="filter-row">
       <div class="filter-group">
         <label>Grup Yöneticisi</label>
@@ -409,6 +459,78 @@ function secHd(t){
   return '<div class="sec-hd-inner">'+t+'</div>';
 }
 
+// ── GRAFİK YARDIMCILARI (deneme) ──
+// Not: rapor verileri raporNormalle() içinde zaten kaçışlanmış geliyor; tooltip metni textContent ile basılır.
+var GRF_MAVI='#2a78d6', GRF_TURUNCU='#eb6834', GRF_GRI='#CBD5E1', GRF_KIRMIZI='#DC2626';
+function _grfAd(t){ return '<div class="grf-bas">'+t+'</div>'; }
+function _grfBar(liste, renk, birim){
+  liste=(liste||[]).filter(function(x){ return x && x.deger>0; });
+  if(!liste.length) return '<div class="grf-bos">Gösterilecek veri yok.</div>';
+  var mx=Math.max.apply(null, liste.map(function(x){ return x.deger; }))||1;
+  return liste.map(function(x){
+    return '<div class="hbar" data-tip="'+x.ad+': '+x.deger+' '+birim+'"><span class="hbar-l">'+x.ad+'</span>'
+      +'<span class="hbar-t"><span class="hbar-f" style="width:'+(x.deger/mx*100).toFixed(1)+'%;background:'+renk+';"></span></span>'
+      +'<span class="hbar-v">'+x.deger+'</span></div>';
+  }).join('');
+}
+function _grfYigin(parcalar, birim){
+  var top=parcalar.reduce(function(a,p){ return a+(p.deger||0); },0);
+  if(!top) return '<div class="grf-bos">Gösterilecek veri yok.</div>';
+  var h='<div class="stk">';
+  parcalar.forEach(function(p){
+    if(!p.deger) return;
+    var y=Math.round(p.deger/top*100);
+    h+='<div style="flex:'+p.deger+' 1 0;background:'+p.renk+';" data-tip="'+p.ad+': '+p.deger+' '+birim+' (%'+y+')"></div>';
+  });
+  h+='</div><div class="lej">';
+  parcalar.forEach(function(p){
+    h+='<span><i style="background:'+p.renk+'"></i>'+p.ad+' <b>'+p.deger+'</b> (%'+Math.round(p.deger/top*100)+')</span>';
+  });
+  return h+'</div>';
+}
+// gunler: [{etiket, alt, ust}] → alt (mavi) + üst (kırmızı) yığılmış sütun, tek eksen (nokta)
+function _grfKolon(gunler, altAd, ustAd){
+  if(!gunler.length) return '<div class="grf-bos">Gösterilecek veri yok.</div>';
+  var mx=Math.max.apply(null, gunler.map(function(g){ return g.alt+g.ust; }))||1;
+  var h='<div class="kol-alan">';
+  gunler.forEach(function(g){
+    var t=g.alt+g.ust;
+    var hu=(g.ust/mx*100), ha=(g.alt/mx*100);
+    h+='<div class="kol" data-tip="'+g.etiket+' · '+t+' nokta ('+ustAd+': '+g.ust+')">'
+      +'<span class="kol-v" style="bottom:calc('+(t/mx*100).toFixed(1)+'% + 2px);">'+t+'</span>'
+      +(g.ust?'<span class="kol-s kol-ust" style="height:'+hu.toFixed(1)+'%;background:'+GRF_KIRMIZI+';"></span>':'')
+      +(g.alt?'<span class="kol-s'+(g.ust?'':' kol-ust')+'" style="height:'+ha.toFixed(1)+'%;background:'+GRF_MAVI+';"></span>':'')
+      +'</div>';
+  });
+  h+='</div><div class="kol-x">';
+  gunler.forEach(function(g){ h+='<span>'+g.etiket+'</span>'; });
+  h+='</div><div class="lej"><span><i style="background:'+GRF_MAVI+'"></i>'+altAd+'</span><span><i style="background:'+GRF_KIRMIZI+'"></i>'+ustAd+'</span></div>';
+  return h;
+}
+function _kartIci(sol, sag){ return '<div class="kart-ici"><div>'+sol+'</div><div class="grf">'+sag+'</div></div>'; }
+function _sayilariSirala(obj, adet){
+  return Object.keys(obj).sort(function(a,b){ return obj[b]-obj[a]; }).slice(0, adet||99).map(function(k){ return {ad:k, deger:obj[k]}; });
+}
+(function(){
+  function kur(){
+    if(document.getElementById('grfTip')) return;
+    var tip=document.createElement('div'); tip.id='grfTip'; document.body.appendChild(tip);
+    function goster(e){
+      var el=e.target && e.target.closest ? e.target.closest('[data-tip]') : null;
+      if(!el){ tip.style.display='none'; return; }
+      tip.textContent=el.getAttribute('data-tip');
+      tip.style.display='block';
+      var x=Math.min(e.clientX+12, window.innerWidth-tip.offsetWidth-8), y=e.clientY-tip.offsetHeight-12;
+      if(y<8) y=e.clientY+16;
+      tip.style.left=Math.max(8,x)+'px'; tip.style.top=y+'px';
+    }
+    document.addEventListener('mousemove', goster);
+    document.addEventListener('click', goster);
+    window.addEventListener('scroll', function(){ tip.style.display='none'; }, {passive:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', kur); else kur();
+})();
+
 // ── ÖZEL ÇALIŞMA (formdaki "Özel Çalışma" kutusundan gelen kayıtlar) ──
 function _ozelMi(r){ return !!r && (String(r.id||'').indexOf('ozel_')===0 || r.gunler==='Özel Çalışma'); }
 function _ozelKartHtml(liste){
@@ -422,7 +544,7 @@ function _ozelKartHtml(liste){
     var tarihTr=String(r.tarih||'—').split('-').reverse().join('.');
     satirlar.forEach(function(n,i){
       var tur=n.tur||'—'; sayac[tur]=(sayac[tur]||0)+1; toplam++;
-      h+='<tr><td style="white-space:nowrap;">'+tarihTr+'</td><td>'+(r.yoneticiAd||r.yonetici||'—')+'</td><td>'+(n.noktaST||r.st||'—')+'</td>'
+      h+='<tr><td style="white-space:nowrap;">'+tarihTr+'</td><td>'+(r.yoneticiAd||r.yonetici||'—')+'</td><td>'+((n.noktaST||r.st)?(n.noktaST||r.st):'<span style="color:var(--soft);" title="Bu kayıt temsilci alanı eklenmeden önceki formla gönderildi">— (eski form)</span>')+'</td>'
         +'<td>'+(i+1)+'. '+n.ad+'</td><td>'+tur+(n.not?' — '+n.not:'')+'</td></tr>';
     });
   });
@@ -430,7 +552,7 @@ function _ozelKartHtml(liste){
   var ozet='';
   Object.keys(sayac).sort(function(a,b){return sayac[b]-sayac[a];}).forEach(function(t){ ozet+=row(t, sayac[t]+' müşteri'); });
   return '<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Özel Çalışmalar ('+liste.map(function(r){return r.tarih;}).filter(function(v,j,a){return a.indexOf(v)===j;}).length+' gün · '+toplam+' müşteri)</div></div>'
-    +'<div class="card-body">'+secHd('📊 Çalışma Türleri')+ozet+secHd('🗂️ Detay')+h+'</div></div>';
+    +'<div class="card-body">'+_kartIci(secHd('📊 Çalışma Türleri')+ozet, _grfAd('📊 Türlere Göre Müşteri')+_grfBar(_sayilariSirala(sayac), GRF_MAVI, 'müşteri'))+secHd('🗂️ Detay')+h+'</div></div>';
 }
 
 // Kalkan: beklenmedik bir veri yüzünden panel tamamen boş kalmasın
@@ -534,7 +656,12 @@ function _guncelleIc(){
   k1+=row('Ziyaret Edilen Nokta', N+' nokta');
   k1+=row('Düzenli Ziyaret', duzN+' nokta'+(N>0?' (%'+Math.round(duzN/N*100)+')':''), duzN===N&&N>0?'g':'');
 
-  _html+='<div class="card"><div class="card-head"><div class="card-ic">📋</div><div class="card-title">Denetim Özeti</div></div><div class="card-body">'+al+k1+'</div></div>';
+  var g1='', _kirilim=Object.create(null), _kirAd;
+  if(!gy){ _kirAd='Grup Yöneticisi'; data.forEach(function(r){ var k=r.yoneticiAd||r.yonetici||'—'; _kirilim[k]=(_kirilim[k]||0)+(r.noktalar||[]).filter(function(n){return n.done;}).length; }); }
+  else if(!st){ _kirAd='Satış Temsilcisi'; data.forEach(function(r){ var k=r.st||'—'; _kirilim[k]=(_kirilim[k]||0)+(r.noktalar||[]).filter(function(n){return n.done;}).length; }); }
+  if(_kirAd){ g1+=_grfAd('📊 '+_kirAd+' Bazında Ziyaret (nokta)')+_grfBar(_sayilariSirala(_kirilim,8), GRF_MAVI, 'nokta'); }
+  g1+=_grfAd('📍 Düzenli Ziyaret Oranı')+_grfYigin([{ad:'Düzenli',deger:duzN,renk:GRF_MAVI},{ad:'Düzensiz / boş',deger:N-duzN,renk:GRF_GRI}],'nokta');
+  _html+='<div class="card"><div class="card-head"><div class="card-ic">📋</div><div class="card-title">Denetim Özeti</div></div><div class="card-body">'+al+_kartIci(k1,g1)+'</div></div>';
 
   // ── KART 2: ZİYARET EDİLEN NOKTALAR ──
   var k2='';
@@ -559,7 +686,11 @@ function _guncelleIc(){
     Object.keys(_soUrun).sort(function(a,b){return _soUrun[b]-_soUrun[a];}).slice(0,3).forEach(function(u){k2+=row('→ '+u,_soUrun[u]+' noktada','r');});
   }
 
-  _html+='<div class="card"><div class="card-head"><div class="card-ic">🏪</div><div class="card-title">Ziyaret Edilen Noktalar</div></div><div class="card-body">'+k2+'</div></div>';
+  var g2=_grfAd('🚫 Stok Out Durumu')+_grfYigin([{ad:'Stok out var',deger:soN,renk:GRF_KIRMIZI},{ad:'Sorunsuz',deger:N-soN,renk:GRF_GRI}],'nokta');
+  var _soTum=Object.create(null);
+  done.filter(function(n){return n.so==='Var';}).forEach(function(n){ (n.soUrunler||[]).forEach(function(u){ _soTum[u]=(_soTum[u]||0)+1; }); });
+  g2+=_grfAd('📦 En Çok Stok Out Olan Ürünler (ilk 6)')+_grfBar(_sayilariSirala(_soTum,6), GRF_KIRMIZI, 'noktada');
+  _html+='<div class="card"><div class="card-head"><div class="card-ic">🏪</div><div class="card-title">Ziyaret Edilen Noktalar</div></div><div class="card-body">'+_kartIci(k2,g2)+'</div></div>';
 
   // ── KART 3: STANT ──
   var k3='';
@@ -579,7 +710,10 @@ function _guncelleIc(){
   k3+=secHd('📦 Gereksiz Stok');
   k3+=row('Gereksiz Stok Nokta', gsN>0?gsN+' nokta':'Yok', gsN>0?'r':'g');
 
-  _html+='<div class="card"><div class="card-head"><div class="card-ic">🪧</div><div class="card-title">Stant & Gereksiz Stok</div></div><div class="card-body">'+k3+'</div></div>';
+  var _stantYok=Math.max(0,N-stantN-reyonN);
+  var g3=_grfAd('🪧 Stant Dağılımı')+_grfYigin([{ad:'Stantlı',deger:stantN,renk:GRF_MAVI},{ad:'Müşteri reyonu',deger:reyonN,renk:GRF_TURUNCU},{ad:'Stant yok',deger:_stantYok,renk:GRF_GRI}],'nokta');
+  g3+=_grfAd('📍 Stant Konumu')+_grfBar(_sayilariSirala(sknSay), GRF_MAVI, 'nokta');
+  _html+='<div class="card"><div class="card-head"><div class="card-ic">🪧</div><div class="card-title">Stant & Gereksiz Stok</div></div><div class="card-body">'+_kartIci(k3,g3)+'</div></div>';
 
   // ── KART 4: TADIMCA ──
   var k4='';
@@ -624,7 +758,9 @@ function _guncelleIc(){
     k4+='<div style="color:var(--soft);font-size:12px;padding:8px 4px;">Henüz üretim tarihi girilmedi.</div>';
   }
 
-  _html+='<div class="card"><div class="card-head"><div class="card-ic">🟡</div><div class="card-title">Tadımca Bulunurluk</div></div><div class="card-body">'+k4+'</div></div>';
+  var g4=_grfAd('🟡 Tadımca Bulunurluk')+_grfYigin([{ad:'Tadımca var',deger:tadN,renk:GRF_MAVI},{ad:'Tadımca yok',deger:tadYok,renk:GRF_GRI}],'nokta');
+  g4+=_grfAd('⏳ En Eski Üretim — Ort. Gün (ilk 8)')+_grfBar(uSirali.slice(0,8).map(function(u){ return {ad:u, deger:Math.round(uMap[u].toplam/uMap[u].adet)}; }), GRF_TURUNCU, 'gün');
+  _html+='<div class="card"><div class="card-head"><div class="card-ic">🟡</div><div class="card-title">Tadımca Bulunurluk</div></div><div class="card-body">'+_kartIci(k4,g4)+'</div></div>';
 
   // ── KART 5: NOKTA DEĞERLENDİRMESİ ──
   var k5='';
@@ -650,8 +786,15 @@ function _guncelleIc(){
   });
   detayTablo+='</tbody></table>';
 
-  k5+=detayTablo;
-  _html+='<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Nokta Değerlendirmesi & Rapor Detayı</div></div><div class="card-body">'+k5+'</div></div>';
+  var _gun=Object.create(null);
+  data.forEach(function(r){
+    var t=String(r.tarih||''); if(!t) return;
+    if(!_gun[t]) _gun[t]={alt:0,ust:0};
+    (r.noktalar||[]).forEach(function(n){ if(!n.done) return; if(n.so==='Var') _gun[t].ust++; else _gun[t].alt++; });
+  });
+  var _gunler=Object.keys(_gun).sort().slice(-14).map(function(t){ var p=t.split('-'); return {etiket:(p[2]||'')+'.'+(p[1]||''), alt:_gun[t].alt, ust:_gun[t].ust}; });
+  var g5=_grfAd('📅 Günlük Ziyaret Edilen Nokta (son 14 gün)')+_grfKolon(_gunler,'Sorunsuz nokta','Stok out olan nokta');
+  _html+='<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Nokta Değerlendirmesi & Rapor Detayı</div></div><div class="card-body">'+_kartIci(k5,g5)+detayTablo+'</div></div>';
 
   // ── ÖZEL ÇALIŞMALAR ──
   _html+=_ozelHtml;

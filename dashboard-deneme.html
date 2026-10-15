@@ -103,7 +103,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 
 .footer{text-align:center;color:var(--soft);font-size:11px;margin-top:40px;padding-top:16px;border-top:1px solid var(--border);}
 
-/* ── DENEME: sağda filtre sütunu + grafikler ── */
+/* ── Panel düzeni: solda filtre sütunu + kartlarda grafikler ── */
 .filter-baslik{display:none;font-size:11px;font-weight:700;color:var(--soft);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;}
 .kart-ici{display:block;}
 .grf{min-width:0;}
@@ -544,7 +544,7 @@ function _ozelKartHtml(liste){
     var tarihTr=String(r.tarih||'—').split('-').reverse().join('.');
     satirlar.forEach(function(n,i){
       var tur=n.tur||'—'; sayac[tur]=(sayac[tur]||0)+1; toplam++;
-      h+='<tr><td style="white-space:nowrap;">'+tarihTr+'</td><td>'+(r.yoneticiAd||r.yonetici||'—')+'</td><td>'+(n.noktaST||r.st||'—')+'</td>'
+      h+='<tr><td style="white-space:nowrap;">'+tarihTr+'</td><td>'+(r.yoneticiAd||r.yonetici||'—')+'</td><td>'+((n.noktaST||r.st)?(n.noktaST||r.st):'<span style="color:var(--soft);" title="Bu kayıt temsilci alanı eklenmeden önceki formla gönderildi">— (eski form)</span>')+'</td>'
         +'<td>'+(i+1)+'. '+n.ad+'</td><td>'+tur+(n.not?' — '+n.not:'')+'</td></tr>';
     });
   });
