@@ -1180,6 +1180,38 @@ function rutFirebaseYukle(){
 })();
 
 var _dashKullanici = null;
+
+// ── MÜŞTERİ ADLARI LİSTESİ (Özel Çalışma için) ──
+// GY telefonları güvenlik gereği yalnız kendi ekibinin rutunu okuyabilir. GY başka ekibe destek verdiğinde
+// o temsilcinin müşterilerini seçebilsin diye, Satış Müdürü paneli açılınca tüm temsilcilerin YALNIZ
+// MÜŞTERİ ADLARI (adres/konum/telefon YOK) ayarlar/musteriAdlari belgesine yazılır. Değişiklik yoksa yazılmaz.
+function musteriAdlariniYayinla(){
+  if(!db || typeof YO!=='object') return;
+  var gyler=Object.keys(YO); if(!gyler.length) return;
+  var B=function(x){ return String(x||'').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim(); };
+  var yoAd={}; gyler.forEach(function(g){ (YO[g]||[]).forEach(function(x){ yoAd[B(x)]=x; }); });
+  var anahtar=function(o){ return Object.keys(o||{}).sort().map(function(k){ return k+'\u0001'+(Array.isArray(o[k])?o[k].join('\u0002'):''); }).join('\u0003'); };
+  Promise.all(gyler.map(function(g){ return db.collection('rutlar').doc(g).get().catch(function(){ return null; }); }))
+  .then(function(sn){
+    var st={};
+    sn.forEach(function(d){
+      if(!d || !d.exists) return;
+      var v=d.data(), m=(v && v.st && typeof v.st==='object') ? v.st : {};
+      Object.keys(m).forEach(function(k){
+        var ad=Object.create(null), gunler=(m[k] && typeof m[k]==='object') ? m[k] : {};
+        Object.keys(gunler).forEach(function(gun){ if(Array.isArray(gunler[gun])) gunler[gun].forEach(function(x){ if(x && typeof x.a==='string' && x.a.trim()) ad[x.a.trim().slice(0,120)]=1; }); });
+        var isim=yoAd[B(k)]; if(!isim) return;
+        st[isim]=Object.keys(ad).sort(function(a,b){ return a.localeCompare(b,'tr'); }).slice(0,3000);
+      });
+    });
+    if(!Object.keys(st).length) return;
+    return db.collection('ayarlar').doc('musteriAdlari').get().then(function(e){
+      var eski=(e && e.exists && e.data()) ? e.data().st : null;
+      if(eski && anahtar(eski)===anahtar(st)) return;
+      return db.collection('ayarlar').doc('musteriAdlari').set({st:st, zaman:new Date().toISOString()});
+    });
+  }).catch(function(err){ console.warn('Müşteri adları yayınlanamadı:', err && err.message); });
+}
 function raporDinleyiciBaslat(){
   if(_dinleyiciBasladi || typeof db==='undefined' || !db) return;
   _dinleyiciBasladi = true;
@@ -1280,6 +1312,7 @@ function dashOturumGoster(k){
     gyDegisti();
     guncelle();
     raporDinleyiciBaslat();
+    if(!k.gy) musteriAdlariniYayinla();   // yalnız Satış Müdürü
   }, 50);
 }
 

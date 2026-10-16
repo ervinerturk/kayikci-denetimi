@@ -420,7 +420,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
         <label class="lb">Grup Yöneticisi</label>
         <select class="inp" id="ozGY" onchange="ozelGYDegisti()"><option value="">Seçiniz...</option></select>
       </div>
-      <div style="font-size:11px;font-weight:600;color:var(--mid);margin:-2px 0 10px;">Her satırda temsilciyi seçin; o temsilcinin müşterileri listelenir.</div>
+      <div style="font-size:11px;font-weight:600;color:var(--mid);margin:-2px 0 10px;">Her satırda temsilciyi seçin (başka ekiplere destek için tüm temsilciler listelenir, kendi ekibiniz en üstte); o temsilcinin müşterileri gelir.</div>
       <div id="ozelSatirlar"></div>
       <button class="btn btn-red" id="bOzelGonder" type="button" onclick="ozelGonder()" style="margin-top:6px;">📨 Özel Çalışmayı Gönder</button>
     </div>
@@ -2434,25 +2434,40 @@ function rutVerisiUygula(rutDoc, gyAd, telMap){
     ST_TEL=tel;
   }
 }
+// Diğer ekiplerin temsilcileri için YALNIZ müşteri adları (adres/konum/telefon yok); Satış Müdürü paneli yayınlar
+var MUSTERI_ADLARI={};
+function musteriAdlariUygula(doc){
+  var yoAdlari={}, yeni={}, st=(doc&&doc.st&&typeof doc.st==='object')?doc.st:{};
+  Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(x){ yoAdlari[_trBuyuk(x)]=x; }); });
+  Object.keys(st).forEach(function(k){
+    var ad=yoAdlari[_trBuyuk(k)];   // yalnız tanınan temsilci adları kabul edilir
+    if(!ad || !Array.isArray(st[k])) return;
+    yeni[ad]=st[k].slice(0,3000).filter(function(v){ return typeof v==='string'; }).map(_rutTemiz).filter(Boolean);
+  });
+  MUSTERI_ADLARI=yeni;
+}
 function _rutYenile(){ try{ onST(); }catch(e){ console.warn('rut yenileme:', e.message); } try{ if(_ozelAcik){ _ozelGYListesi(); _ozelSTListeleri(); } }catch(e){} }
 function rutYukle(u, email){
   var anahtar='kyk_rut_'+email;
   // 1) Bu cihazda daha önce yüklenmiş kopya varsa hemen kullan (sahada çevrimdışı çalışabilsin)
   try{
     var c=JSON.parse(localStorage.getItem(anahtar)||'null');
-    if(c && c.rut){ rutVerisiUygula(c.rut, u.gy, c.tel); _rutYenile(); }
+    if(c && c.rut){ rutVerisiUygula(c.rut, u.gy, c.tel); if(c.ad) musteriAdlariUygula(c.ad); _rutYenile(); }
   }catch(e){}
   if(!_db || !u.gy) return;
   // 2) Sunucudan güncelini al
   Promise.all([
     _db.collection('rutlar').doc(u.gy).get(),
-    _db.collection('ayarlar').doc('tel').get().catch(function(){ return null; })
+    _db.collection('ayarlar').doc('tel').get().catch(function(){ return null; }),
+    _db.collection('ayarlar').doc('musteriAdlari').get().catch(function(){ return null; })
   ]).then(function(s){
     var rutDoc = (s[0] && s[0].exists) ? s[0].data() : null;
     var tel = (s[1] && s[1].exists) ? s[1].data() : null;
+    var adlar = (s[2] && s[2].exists) ? s[2].data() : null;
     if(!rutDoc){ toast('⚠️ Müşteri rut listesi sunucuda yok. Satış Müdürü rut dosyasını yüklemeli.','e'); return; }
     rutVerisiUygula(rutDoc, u.gy, tel);
-    try{ localStorage.setItem(anahtar, JSON.stringify({rut:rutDoc, tel:tel, zaman:Date.now()})); }catch(e){}
+    if(adlar) musteriAdlariUygula(adlar);
+    try{ localStorage.setItem(anahtar, JSON.stringify({rut:rutDoc, tel:tel, ad:adlar, zaman:Date.now()})); }catch(e){}
     _rutYenile();
   }).catch(function(err){
     if(!Object.keys(RUT).length) toast('⚠️ Müşteri listesi yüklenemedi: '+err.message,'e');
@@ -2495,8 +2510,11 @@ function _ozelGY(){ return (document.getElementById('ozGY')||{}).value || (docum
 function _ozelMusterileri(st){
   var ad={}, g=(st && RUT[st] && RUT[st].g) || {};
   Object.keys(g).forEach(function(gun){ (g[gun]||[]).forEach(function(m){ if(m&&m.a) ad[m.a]=1; }); });
+  // Kendi ekibi dışındaki temsilci: müşteri adları listesinden
+  if(!Object.keys(ad).length && st && MUSTERI_ADLARI[st]) MUSTERI_ADLARI[st].forEach(function(a){ ad[a]=1; });
   return Object.keys(ad).sort(function(a,b){return a.localeCompare(b,'tr');});
 }
+function _ozelTumST(){ var t=[]; Object.keys(YO).forEach(function(g){ t=t.concat(YO[g]||[]); }); return t; }
 function _ozelSecenekEkle(sel, deger, metin){ var o=document.createElement('option'); o.value=deger; o.textContent=metin; sel.appendChild(o); }
 function _ozelSatirlariKur(){
   var kap=document.getElementById('ozelSatirlar');
@@ -2541,15 +2559,21 @@ function _ozelGYListesi(){
   if(ana.value) sel.value=ana.value;
   sel.disabled=!!ana.disabled;   // GY girişinde kendi adı sabittir (ana formdaki gibi)
 }
-// Her satırın temsilci listesi = üstteki GY'ye bağlı temsilciler (alfabetik)
+// Her satırın temsilci listesi = TÜM temsilciler (GY başka ekiplere de destek verebilir).
+// GY adına göre gruplanır; giriş yapan GY'nin ekibi en üstte, gruplar ve adlar alfabetik.
 function _ozelSTListeleri(){
-  var liste=(YO[_ozelGY()]||[]).slice().sort(function(a,b){return a.localeCompare(b,'tr');});
+  var gy=_ozelGY(), tum=_ozelTumST();
+  var gruplar=Object.keys(YO).sort(function(a,b){ return a===gy?-1:b===gy?1:a.localeCompare(b,'tr'); });
   for(var i=1;i<=OZEL_SATIR;i++){
     var s=document.getElementById('ozS'+i); if(!s) continue;
     var onceki=s.value;
-    while(s.options.length>1) s.remove(1);
-    liste.forEach(function(st){ _ozelSecenekEkle(s,st,st); });
-    s.value=(liste.indexOf(onceki)>-1)?onceki:'';
+    while(s.children.length>1) s.removeChild(s.lastChild);
+    gruplar.forEach(function(g){
+      var og=document.createElement('optgroup'); og.label=g+(g===gy?' (kendi ekibim)':'');
+      (YO[g]||[]).slice().sort(function(a,b){return a.localeCompare(b,'tr');}).forEach(function(st){ var o=document.createElement('option'); o.value=st; o.textContent=st; og.appendChild(o); });
+      s.appendChild(og);
+    });
+    s.value=(tum.indexOf(onceki)>-1)?onceki:'';
     _ozelMusteriKutusu(i);
   }
 }
@@ -2576,7 +2600,7 @@ function _ozelOneriGoster(i){
   };
   if(!s.value){ dd.style.display='none'; return; }
   var tum=_ozelMusterileri(s.value);
-  if(!tum.length){ satir('Bu temsilcinin rut listesi yok — müşteri adını yazın.', false); dd.style.display='block'; return; }
+  if(!tum.length){ satir('Bu temsilcinin müşteri listesi henüz yok — müşteri adını yazın.', false); dd.style.display='block'; return; }
   var q=_trBuyuk(inp.value);
   var bul=tum.filter(function(a){ return !q || _trBuyuk(a).indexOf(q)===0; });
   if(!bul.length){ satir('Eşleşen müşteri yok — ad elle yazılabilir.', false); dd.style.display='block'; return; }
@@ -2615,7 +2639,7 @@ function ozelGonder(){
   var gy=_ozelGY(), tarih=document.getElementById('iTarih').value;
   if(!gy){ toast('⚠️ Grup Yöneticisi seçili değil!','e'); return; }
   if(!/^\d{4}-\d{2}-\d{2}$/.test(tarih)){ toast('⚠️ Tarih seçin!','e'); return; }
-  var satirlar=[], hata='', bagli=YO[gy]||[];
+  var satirlar=[], hata='', bagli=_ozelTumST();
   for(var i=1;i<=OZEL_SATIR;i++){
     var s=document.getElementById('ozS'+i).value, m=document.getElementById('ozM'+i).value.trim(), t=document.getElementById('ozT'+i).value, n=document.getElementById('ozN'+i).value.trim();
     if(!s && !m && !t) continue;
