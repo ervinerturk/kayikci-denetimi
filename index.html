@@ -420,6 +420,19 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
         <label class="lb">Grup Yöneticisi</label>
         <select class="inp" id="ozGY" onchange="ozelGYDegisti()"><option value="">Seçiniz...</option></select>
       </div>
+      <div id="ofisKutu" style="border:2px solid #2563EB;background:#EFF6FF;border-radius:12px;padding:12px 14px;margin:4px 0 12px;">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px;color:#1E3A5F;cursor:pointer;"><input type="checkbox" id="ofisVar" onchange="ofisToggle()" style="width:20px;height:20px;accent-color:#2563EB;flex-shrink:0;"> 🏢 Ofis Çalışması</label>
+        <div style="font-size:11px;color:#4A5568;margin:2px 0 0 30px;font-weight:600;">Temsilci / müşteri seçmeden, ofiste yapılan işi kaydedin</div>
+        <div id="ofisAlan" style="display:none;margin-top:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="f"><label class="lb">Başlangıç</label><input type="time" class="inp" id="ofisBas" oninput="ofisSureYaz()" onchange="ofisSureYaz()" style="-webkit-appearance:none;"></div>
+            <div class="f"><label class="lb">Bitiş</label><input type="time" class="inp" id="ofisBit" oninput="ofisSureYaz()" onchange="ofisSureYaz()" style="-webkit-appearance:none;"></div>
+          </div>
+          <div id="ofisSure" style="font-size:11px;font-weight:700;color:#1E3A5F;margin:-2px 0 8px;"></div>
+          <div class="f"><label class="lb">Konu</label><select class="inp" id="ofisKonu" onchange="ofisSureYaz()"><option value="">Konu seçin...</option></select></div>
+          <div class="f"><label class="lb">Kısa Not <span id="ofisNotZorunlu" style="font-size:10px;color:var(--mid);font-weight:400;">(isteğe bağlı)</span></label><input class="inp" id="ofisNot" maxlength="200" placeholder="Örn: Haftalık rapor hazırlandı" autocomplete="off"></div>
+        </div>
+      </div>
       <div style="font-size:11px;font-weight:600;color:var(--mid);margin:-2px 0 10px;">Her satırda temsilciyi seçin (başka ekiplere destek için tüm temsilciler listelenir, kendi ekibiniz en üstte); o temsilcinin müşterileri gelir.</div>
       <div id="ozelSatirlar"></div>
       <button class="btn btn-red" id="bOzelGonder" type="button" onclick="ozelGonder()" style="margin-top:6px;">📨 Özel Çalışmayı Gönder</button>
@@ -2608,7 +2621,39 @@ function _ozelOneriGoster(i){
   if(bul.length>100) satir('… '+(bul.length-100)+' müşteri daha — aramayı daraltın', false);
   dd.style.display='block';
 }
+// ── OFİS ÇALIŞMASI (Özel Çalışma içinde) ──
+// Temsilci/müşteri gerektirmez; kayıtta noktalar listesine tip:'ofis' satırı olarak eklenir (kural/şema değişmez).
+var OFIS_KONULAR=['Rapor Hazırlığı','Toplantı','Eğitim','Sipariş / Sevkiyat Planlama','Diğer'];
+function _ofisKonulariKur(){
+  var k=document.getElementById('ofisKonu'); if(!k || k.options.length>1) return;
+  OFIS_KONULAR.forEach(function(x){ var o=document.createElement('option'); o.value=x; o.textContent=x; k.appendChild(o); });
+}
+function _ofisDk(bas, bit){
+  if(!/^\d{2}:\d{2}$/.test(bas) || !/^\d{2}:\d{2}$/.test(bit)) return -1;
+  var a=bas.split(':'), b=bit.split(':');
+  return (parseInt(b[0],10)*60+parseInt(b[1],10)) - (parseInt(a[0],10)*60+parseInt(a[1],10));
+}
+function _ofisSureMetin(dk){ var h=Math.floor(dk/60), m=dk%60; return ((h?h+' saat':'')+(h&&m?' ':'')+(m?m+' dk':''))||'0 dk'; }
+function ofisToggle(){
+  _ofisKonulariKur();
+  var acik=document.getElementById('ofisVar').checked;
+  document.getElementById('ofisAlan').style.display=acik?'block':'none';
+  ofisSureYaz();
+}
+function ofisSureYaz(){
+  var el=document.getElementById('ofisSure'); if(!el) return;
+  var dk=_ofisDk(document.getElementById('ofisBas').value, document.getElementById('ofisBit').value);
+  el.textContent = dk>0 ? '⏱ Süre: '+_ofisSureMetin(dk) : (dk===-1 ? '' : '⚠️ Bitiş saati başlangıçtan sonra olmalı');
+  var z=document.getElementById('ofisNotZorunlu');
+  if(z) z.textContent = document.getElementById('ofisKonu').value==='Diğer' ? '(Diğer için zorunlu)' : '(isteğe bağlı)';
+}
+function _ofisTemizle(){
+  var v=document.getElementById('ofisVar'); if(!v) return;
+  v.checked=false; ['ofisBas','ofisBit','ofisKonu','ofisNot'].forEach(function(id){ document.getElementById(id).value=''; });
+  ofisToggle();
+}
 function _ozelFormuTemizle(){
+  _ofisTemizle();
   for(var i=1;i<=OZEL_SATIR;i++){
     var s=document.getElementById('ozS'+i), m=document.getElementById('ozM'+i), t=document.getElementById('ozT'+i), n=document.getElementById('ozN'+i);
     if(!s) continue;
@@ -2650,7 +2695,18 @@ function ozelGonder(){
     satirlar.push({done:true, noktaST:s, ad:m.slice(0,80), tur:t, not:(t==='Diğer'?n.slice(0,200):'')});
   }
   if(hata){ toast('⚠️ '+hata,'e'); return; }
-  if(!satirlar.length){ toast('⚠️ En az 1 müşteri girin!','e'); return; }
+  var ofis=null;
+  if(document.getElementById('ofisVar').checked){
+    var ob=document.getElementById('ofisBas').value, oe=document.getElementById('ofisBit').value,
+        ok=document.getElementById('ofisKonu').value, on=document.getElementById('ofisNot').value.trim();
+    var odk=_ofisDk(ob, oe);
+    if(odk===-1){ toast('⚠️ Ofis çalışması: başlangıç ve bitiş saatini girin','e'); return; }
+    if(odk<=0){ toast('⚠️ Ofis çalışması: bitiş saati başlangıçtan sonra olmalı','e'); return; }
+    if(OFIS_KONULAR.indexOf(ok)===-1){ toast('⚠️ Ofis çalışması: konu seçin','e'); return; }
+    if(ok==='Diğer' && !on){ toast('⚠️ Ofis çalışması: "Diğer" için not yazın','e'); return; }
+    ofis={done:true, tip:'ofis', ad:'Ofis Çalışması', tur:ok, not:on.slice(0,200), bas:ob, bit:oe, dk:odk};
+  }
+  if(!satirlar.length && !ofis){ toast('⚠️ En az 1 müşteri veya ofis çalışması girin!','e'); return; }
   if(!_db || !_auth || !_auth.currentUser){ toast('⚠️ Oturum kapanmış. Tekrar giriş yapın.','e'); return; }
   var _k=function(s){return String(s||'').replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü]+/g,'_');};
   // Kimlik bu gönderim için bir kez üretilir: tekrar denemede aynı kayıt güncellenir (çift kayıt olmaz),
@@ -2661,7 +2717,7 @@ function ozelGonder(){
     id:_ozelKayitId,
     yonetici:gy, yoneticiAd:gy, st:(stler.length===1?stler[0]:''), tarih:tarih, gunler:'Özel Çalışma',
     cikis:'', donus:'', km1:0, km2:0, kmFark:0, stDeger:'',
-    noktalar:satirlar, toplamNokta:satirlar.length, sktNokta:0, soNokta:0, stantNokta:0, ortTazelik:0,
+    noktalar:(ofis?[ofis]:[]).concat(satirlar), toplamNokta:satirlar.length, sktNokta:0, soNokta:0, stantNokta:0, ortTazelik:0,
     zaman:new Date().toISOString(), gonderen:_auth.currentUser.email
   };
   var btn=document.getElementById('bOzelGonder');
@@ -2670,7 +2726,7 @@ function ozelGonder(){
   try{
     _db.collection('raporlar').doc(kayit.id).set(kayit)
       .then(function(){
-        toast('✓ Özel çalışma panele gönderildi! ('+satirlar.length+' müşteri)','s');
+        toast('✓ Özel çalışma panele gönderildi! ('+[satirlar.length?satirlar.length+' müşteri':'', ofis?'ofis çalışması':''].filter(Boolean).join(' + ')+')','s');
         _ozelKayitId=''; _ozelFormuTemizle();
         btn.textContent='✓ Gönderildi'; setTimeout(bitir,2000);
       })

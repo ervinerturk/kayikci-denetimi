@@ -536,12 +536,13 @@ function _ozelMi(r){ return !!r && (String(r.id||'').indexOf('ozel_')===0 || r.g
 function _ozelKartHtml(liste){
   if(!liste || !liste.length) return '';
   var sirali=liste.slice().sort(function(a,b){ return String(b.tarih||'').localeCompare(String(a.tarih||'')); });
-  var sayac={}, toplam=0;
+  var sayac={}, toplam=0, ofisler=[];
   // Detay tablosu: Tarih | Grup Yöneticisi | Satış Temsilcisi | Müşteri Adı | Açıklama (her müşteri bir satır)
   var h='<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;"><thead><tr><th>Tarih</th><th>Grup Yöneticisi</th><th>Satış Temsilcisi</th><th>Müşteri Adı</th><th>Açıklama</th></tr></thead><tbody>';
   sirali.forEach(function(r){
-    var satirlar=(r.noktalar||[]).filter(function(n){ return n && n.ad; });
+    var satirlar=(r.noktalar||[]).filter(function(n){ return n && n.ad && n.tip!=='ofis'; });
     var tarihTr=String(r.tarih||'—').split('-').reverse().join('.');
+    (r.noktalar||[]).forEach(function(n){ if(n && n.tip==='ofis') ofisler.push({tarihTr:tarihTr, tarih:String(r.tarih||''), gy:(r.yoneticiAd||r.yonetici||'—'), n:n}); });
     satirlar.forEach(function(n,i){
       var tur=n.tur||'—'; sayac[tur]=(sayac[tur]||0)+1; toplam++;
       h+='<tr><td style="white-space:nowrap;">'+tarihTr+'</td><td>'+(r.yoneticiAd||r.yonetici||'—')+'</td><td>'+((n.noktaST||r.st)?(n.noktaST||r.st):'<span style="color:var(--soft);" title="Bu kayıt temsilci alanı eklenmeden önceki formla gönderildi">— (eski form)</span>')+'</td>'
@@ -551,8 +552,37 @@ function _ozelKartHtml(liste){
   h+='</tbody></table></div>';
   var ozet='';
   Object.keys(sayac).sort(function(a,b){return sayac[b]-sayac[a];}).forEach(function(t){ ozet+=row(t, sayac[t]+' müşteri'); });
-  return '<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Özel Çalışmalar ('+liste.map(function(r){return r.tarih;}).filter(function(v,j,a){return a.indexOf(v)===j;}).length+' gün · '+toplam+' müşteri)</div></div>'
-    +'<div class="card-body">'+_kartIci(secHd('📊 Çalışma Türleri')+ozet, _grfAd('📊 Türlere Göre Müşteri')+_grfBar(_sayilariSirala(sayac), GRF_MAVI, 'müşteri'))+secHd('🗂️ Detay')+h+'</div></div>';
+  var saha = toplam ? _kartIci(secHd('📊 Çalışma Türleri')+ozet, _grfAd('📊 Türlere Göre Müşteri')+_grfBar(_sayilariSirala(sayac), GRF_MAVI, 'müşteri'))+secHd('🗂️ Detay')+h : '';
+  return '<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Özel Çalışmalar ('+liste.map(function(r){return r.tarih;}).filter(function(v,j,a){return a.indexOf(v)===j;}).length+' gün · '+toplam+' müşteri'+(ofisler.length?' · '+ofisler.length+' ofis kaydı':'')+')</div></div>'
+    +'<div class="card-body">'+saha+_ofisBolumHtml(ofisler)+'</div></div>';
+}
+// ── Ofis Çalışmaları bölümü (Özel Çalışmalar kartı içinde) ──
+function _ofisDk(n){
+  var a=String(n.bas||''), b=String(n.bit||'');
+  if(!/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b)) return 0;
+  var d=(parseInt(b.slice(0,2),10)*60+parseInt(b.slice(3),10))-(parseInt(a.slice(0,2),10)*60+parseInt(a.slice(3),10));
+  return d>0 ? d : 0;
+}
+function _sureMetin(dk){ var h=Math.floor(dk/60), m=dk%60; return ((h?h+' sa':'')+(h&&m?' ':'')+(m?m+' dk':''))||'—'; }
+function _ofisBolumHtml(ofisler){
+  if(!ofisler.length) return '';
+  ofisler.sort(function(a,b){ return b.tarih.localeCompare(a.tarih) || String(b.n.bas||'').localeCompare(String(a.n.bas||'')); });
+  var topDk=0, konu=Object.create(null), gyDk=Object.create(null);
+  var t='<div style="overflow-x:auto;"><table class="tbl" style="min-width:520px;"><thead><tr><th>Tarih</th><th>Grup Yöneticisi</th><th>Saat</th><th>Süre</th><th>Konu</th><th>Not</th></tr></thead><tbody>';
+  ofisler.forEach(function(o){
+    var dk=_ofisDk(o.n); topDk+=dk;
+    var k=String(o.n.tur||'—'); konu[k]=(konu[k]||0)+1; gyDk[o.gy]=(gyDk[o.gy]||0)+dk;
+    t+='<tr><td style="white-space:nowrap;">'+o.tarihTr+'</td><td>'+o.gy+'</td><td style="white-space:nowrap;">'+String(o.n.bas||'')+'–'+String(o.n.bit||'')+'</td><td style="white-space:nowrap;">'+_sureMetin(dk)+'</td><td>'+k+'</td><td>'+(o.n.not?String(o.n.not):'—')+'</td></tr>';
+  });
+  t+='</tbody></table></div>';
+  var enSik=Object.keys(konu).sort(function(a,b){ return konu[b]-konu[a]; })[0]||'—';
+  var kutu=function(v,l){ return '<div style="background:#EFF6FF;border-radius:10px;padding:10px;text-align:center;"><b style="display:block;font-size:18px;color:#1E3A5F;">'+v+'</b><span style="font-size:10px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
+  var ozet='<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:8px 0 6px;">'+kutu(ofisler.length,'Ofis kaydı')+kutu(_sureMetin(topDk),'Toplam ofis süresi')+kutu(enSik,'En sık konu')+'</div>';
+  var mx=Math.max.apply(null, Object.keys(gyDk).map(function(g){ return gyDk[g]; }).concat([1]));
+  var g=Object.keys(gyDk).sort(function(a,b){ return gyDk[b]-gyDk[a]; }).map(function(gy){
+    return '<div class="hbar" data-tip="'+gy+': '+_sureMetin(gyDk[gy])+'"><span class="hbar-l">'+gy+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(gyDk[gy]/mx*100).toFixed(1)+'%;background:'+GRF_MAVI+';"></span></span><span class="hbar-v">'+_sureMetin(gyDk[gy])+'</span></div>';
+  }).join('');
+  return secHd('🏢 Ofis Çalışmaları')+_kartIci(ozet, _grfAd('📊 GY Bazında Ofis Süresi')+(g||'<div class="grf-bos">Gösterilecek veri yok.</div>'))+t;
 }
 
 // Kalkan: beklenmedik bir veri yüzünden panel tamamen boş kalmasın
@@ -579,7 +609,7 @@ function _guncelleIc(){
   data=data.filter(function(r){ return !_ozelMi(r); });
   if(st){
     _ozelData=_ozelData.map(function(r){
-      var sat=(r.noktalar||[]).filter(function(n){ return (n.noktaST||r.st)===st; });
+      var sat=(r.noktalar||[]).filter(function(n){ return n && n.tip!=='ofis' && (n.noktaST||r.st)===st; });
       return sat.length ? Object.assign({}, r, {noktalar:sat}) : null;
     }).filter(Boolean);
   }
