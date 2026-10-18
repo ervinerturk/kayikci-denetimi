@@ -2126,6 +2126,7 @@ function ozetGorevDurum(idx, durum){
 
 // ── RAPOR GÖNDER ──
 function raporGonder(){
+  if(_onizleme){ toast('👁 Önizleme modu: gönderim kapalı, kayıt oluşturulmadı.','e'); return; }
   var done=noktalar.filter(function(n){return n.done;});
   if(done.length===0){toast('En az 1 nokta girin!','e');return;}
   if(!/^\d{4}-\d{2}-\d{2}$/.test(document.getElementById('iTarih').value)){toast('⚠️ Tarih seçin!','e');return;}
@@ -2570,7 +2571,7 @@ function _ozelGYListesi(){
   var sel=document.getElementById('ozGY'), ana=document.getElementById('sYon'); if(!sel||!ana) return;
   if(sel.options.length<=1) Object.keys(YO).forEach(function(g){ _ozelSecenekEkle(sel,g,g); });
   if(ana.value) sel.value=ana.value;
-  sel.disabled=!!ana.disabled;   // GY girişinde kendi adı sabittir (ana formdaki gibi)
+  sel.disabled=!!ana.disabled || _onizleme;   // GY girişinde kendi adı sabittir; önizlemede GY üstteki ana alandan seçilir
 }
 // Her satırın temsilci listesi = TÜM temsilciler (GY başka ekiplere de destek verebilir).
 // GY adına göre gruplanır; giriş yapan GY'nin ekibi en üstte, gruplar ve adlar alfabetik.
@@ -2681,6 +2682,7 @@ function ozelToggle(){
   }
 }
 function ozelGonder(){
+  if(_onizleme){ toast('👁 Önizleme modu: gönderim kapalı, kayıt oluşturulmadı.','e'); return; }
   var gy=_ozelGY(), tarih=document.getElementById('iTarih').value;
   if(!gy){ toast('⚠️ Grup Yöneticisi seçili değil!','e'); return; }
   if(!/^\d{4}-\d{2}-\d{2}$/.test(tarih)){ toast('⚠️ Tarih seçin!','e'); return; }
@@ -2764,9 +2766,47 @@ function loginYap(){
     });
 }
 
+// ── ÖNİZLEME MODU (yalnız Satış Müdürü, adres sonunda ?onizleme) ──
+// Formu GY gözüyle görmek için: her GY seçilebilir, o GY'nin rutu yüklenir; GÖNDERİM KAPALI (hiç kayıt oluşmaz).
+var _onizleme=false;
+function _onizlemeIstendi(){ try{ return /(^|[?&])onizleme(=|&|$)/.test(String(location.search).slice(1)); }catch(e){ return false; } }
+function onizlemeRutYukle(gy){
+  RUT={}; MUSTERI_ADLARI={};
+  if(!gy || !_db){ _rutYenile(); return; }
+  Promise.all([
+    _db.collection('rutlar').doc(gy).get(),
+    _db.collection('ayarlar').doc('tel').get().catch(function(){ return null; }),
+    _db.collection('ayarlar').doc('musteriAdlari').get().catch(function(){ return null; })
+  ]).then(function(s){
+    if((document.getElementById('sYon')||{}).value!==gy) return;   // bu arada başka GY seçildiyse eskiyi uygulama
+    var rutDoc=(s[0]&&s[0].exists)?s[0].data():null;
+    if(!rutDoc){ toast('⚠️ '+gy+' için rut listesi sunucuda yok.','e'); _rutYenile(); return; }
+    rutVerisiUygula(rutDoc, gy, (s[1]&&s[1].exists)?s[1].data():null);
+    if(s[2]&&s[2].exists) musteriAdlariUygula(s[2].data());
+    _rutYenile();
+  }).catch(function(err){ toast('⚠️ Rut yüklenemedi: '+err.message,'e'); });
+}
+function onizlemeBaslat(u){
+  _onizleme=true;
+  var serit=document.createElement('div');
+  serit.id='onizlemeSerit';
+  serit.style.cssText='position:sticky;top:0;z-index:300;background:#FEF3C7;color:#92400E;border-bottom:2px solid #F59E0B;font-size:12px;font-weight:700;padding:8px 12px;text-align:center;';
+  serit.appendChild(document.createTextNode('👁 ÖNİZLEME MODU — '+u.ad+' · GY alanından seçim yapın. Gönderim kapalı, kayıt oluşmaz. '));
+  var git=document.createElement('a'); git.href='dashboard.html'; git.textContent='← Panele dön'; git.style.cssText='color:#92400E;text-decoration:underline;margin-left:4px;white-space:nowrap;';
+  serit.appendChild(git);
+  document.body.insertBefore(serit, document.body.firstChild);
+  var sYon=document.getElementById('sYon');
+  if(sYon){
+    sYon.disabled=false;
+    sYon.addEventListener('change', function(){ onizlemeRutYukle(sYon.value); if(_ozelAcik){ _ozelGYListesi(); _ozelSTListeleri(); _ozelBilgiYaz(); } });
+  }
+}
+
 function loginUygula(u){
   document.getElementById('loginOverlay').style.display='none';
-  if(u.rol === 'md'){
+  if(u.rol === 'md' && _onizlemeIstendi()){
+    onizlemeBaslat(u);
+  } else if(u.rol === 'md'){
     // Satış Müdürü — dashboard'a yönlendir
     window.location.href = 'dashboard.html';
   } else {
