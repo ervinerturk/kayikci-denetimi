@@ -701,12 +701,17 @@ function _gorevKartHtml(gy, st, donem){
 var _tazDetay={yeni:[], eski:[]};
 function _tazelikGrafikleri(data){
   var grup={yeni:Object.create(null), eski:Object.create(null)};
+  // Mükerrer kontrolü: aynı ürün + aynı müşteri + aynı temsilci + aynı gün yalnız 1 kez sayılır
+  // (aynı nokta raporda iki kez girilmiş ya da rapor iki kez gönderilmiş olsa bile ortalama ve liste şişmez)
+  var gorulen=Object.create(null);
   data.forEach(function(r){
     (r.noktalar||[]).forEach(function(n){
       if(!n || !n.done) return;
       [['yeni','yeniU','yeniGun','yeniT'],['eski','eskiU','eskiGun','eskiT']].forEach(function(a){
         var urun=String(n[a[1]]||'').trim(), gun=parseInt(n[a[2]],10);
         if(!urun || !(gun>0)) return;
+        var anahtar=a[0]+'|'+urun.toLocaleUpperCase('tr-TR')+'|'+String(n.ad||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('tr-TR')+'|'+String(r.st||'').trim().toLocaleUpperCase('tr-TR')+'|'+String(r.tarih||'');
+        if(gorulen[anahtar]) return; gorulen[anahtar]=1;
         var g=grup[a[0]][urun]||(grup[a[0]][urun]={top:0, liste:[]});
         g.top+=gun; g.liste.push({ad:n.ad||'—', st:r.st||'—', gy:r.yoneticiAd||r.yonetici||'—', tarih:r.tarih||'', gun:gun, ut:String(n[a[3]]||'')});
       });
