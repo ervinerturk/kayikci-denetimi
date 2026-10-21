@@ -2196,6 +2196,13 @@ function raporGonder(){
     document.getElementById('iKm2').focus();
     return;
   }
+  // Başlangıç KM boşsa günlük KM, aracın toplam kilometresi olarak yazılıyordu → zorunlu
+  if(!km1){
+    toast('⚠️ Başlangıç KM girin!','e');
+    if(typeof goSayfa==='function') goSayfa(0);
+    document.getElementById('iKm1').focus();
+    return;
+  }
 
   // ── RAPOR OLUŞTUR ──
   // Rapor kimliği = tarih + GY + ST → "Tekrar Gönder" aynı raporu günceller, çift kayıt oluşmaz

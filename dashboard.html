@@ -400,6 +400,7 @@ function _derinKac(v, d){
 }
 function _coz(s){ var t=document.createElement('textarea'); t.innerHTML=String(s||''); return t.value; }
 
+var KM_GUNLUK_UST=1000; // bir günde bundan fazla KM hatalı giriş sayılır
 function raporNormalle(r){
   if(!r || typeof r!=='object') return null;
   r=_derinKac(r);
@@ -408,6 +409,17 @@ function raporNormalle(r){
   r.noktalar=r.noktalar.filter(function(n){ return n && typeof n==='object' && !Array.isArray(n); });
   var x=Object.assign({},r);
   if(x.gunlukKm==null && x.kmFark!=null) x.gunlukKm=x.kmFark;
+  // KM kontrolü: günlük KM = Bitiş KM − Başlangıç KM. Başlangıç KM boş bırakılırsa form farkı
+  // araç kilometresinin tamamı olarak yazıyordu (ör. 45.000 km) → bu raporlar toplamdan çıkarılır, işaretlenir.
+  (function(){
+    var k1=parseInt(x.km1,10)||0, k2=parseInt(x.km2,10)||0, f=0, h='';
+    if(k1>0 && k2>0){ f=k2-k1; if(f<=0) h='Bitiş KM, başlangıç KM\'den küçük/eşit'; }
+    else if(k2>0) h='Başlangıç KM boş ('+k2+' km toplam kilometre olarak yazılmış)';
+    else if(k1>0) h='Bitiş KM boş';
+    else f=parseInt(x.gunlukKm,10)||0;
+    if(!h && f>KM_GUNLUK_UST) h='Günlük '+f+' km — makul değil';
+    x.gunlukKm=h?0:Math.max(f,0); x._kmHata=h;
+  })();
   // Görünen GY adı her zaman gerçek GY alanından alınır (başka GY adıyla görünme engellenir)
   if(typeof x.yonetici==='string' && x.yonetici) x.yoneticiAd=x.yonetici;
   x.noktalar=(r.noktalar||[]).map(function(n){
@@ -859,7 +871,12 @@ function _guncelleIc(){
   k1+=row('Satış Temsilcisi', stAdı);
   k1+=row('Dönem', donem==='bugun'?'Bugün':donem==='hafta'?'Bu Hafta':donem==='ay'?'Bu Ay':'Tümü');
   k1+=row('Toplam Rapor', data.length+' rapor');
-  k1+=row('Toplam Günlük KM', topKM>0?topKM+' km':'—');
+  k1+=row('Toplam Günlük KM', topKM>0?topKM.toLocaleString('tr-TR')+' km':'—');
+  var kmHatali=data.filter(function(r){ return r._kmHata; });
+  if(kmHatali.length){
+    var kmTip=kmHatali.slice(0,15).map(function(r){ return String(r.tarih||'').split('-').reverse().join('.')+' · '+(r.st||r.yoneticiAd||'—')+': '+r._kmHata; }).join(' | ')+(kmHatali.length>15?' | …':'');
+    k1+=row('⚠️ KM Hatalı Rapor', '<span data-tip="'+_kac(kmTip)+'" style="cursor:help;">'+kmHatali.length+' rapor (toplama katılmadı)</span>', 'r');
+  }
 
   k1+=secHd('📍 Ziyaret & Nokta');
   var duzN=done.filter(function(n){return n.duzZiyaret==='Evet';}).length;
@@ -1051,7 +1068,7 @@ function raporDetayAc(ridx){
    +'<div style="font-size:11px;opacity:.8;margin-top:2px;">'+(r.tarih||'—')+' · '+(r.yoneticiAd||r.yonetici||'—')+'</div>'
    +'<div style="font-size:11px;margin-top:4px;opacity:.9;">'+noktalar.length+' nokta'
    +(noktalar.filter(function(n){return n.so==='Var';}).length>0?' · 🔴 '+noktalar.filter(function(n){return n.so==='Var';}).length+' SO':'')
-   +(r.gunlukKm?' · '+r.gunlukKm+' km':'')
+   +(r.gunlukKm?' · '+r.gunlukKm+' km':'')+(r._kmHata?' · ⚠️ KM hatalı: '+r._kmHata:'')
    +'</div>'
    +'</div>';
 
