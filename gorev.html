@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Kayıkçı · Görev</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:#F2F4F7;color:#0F1923;min-height:100vh;}
+.ust{background:#0F1923;color:#fff;padding:14px 16px;font-weight:800;font-size:15px;letter-spacing:.3px;}
+.ust span{color:#C8102E;}
+.kap{max-width:460px;margin:0 auto;padding:16px;}
+.kart{background:#fff;border:1px solid #E2E8F0;border-radius:16px;padding:18px;margin-bottom:12px;}
+.etk{font-size:10px;font-weight:700;color:#8896A7;text-transform:uppercase;letter-spacing:.5px;margin-top:12px;}
+.etk:first-child{margin-top:0;}
+.deg{font-size:15px;font-weight:600;margin-top:3px;word-break:break-word;}
+.gorev{font-size:17px;font-weight:800;line-height:1.35;margin-top:4px;word-break:break-word;}
+.rozet{display:inline-block;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;margin-top:6px;}
+.r-bek{background:#FFFBEB;color:#B45309;} .r-gec{background:#FEF2F2;color:#DC2626;}
+.r-ok{background:#F0FDF4;color:#16A34A;} .r-no{background:#FEF2F2;color:#DC2626;}
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;font-size:17px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:10px;}
+.btn:disabled{opacity:.6;cursor:default;}
+.b-ok{background:#16A34A;color:#fff;} .b-no{background:#fff;color:#DC2626;border:2px solid #DC2626;}
+.b-gonder{background:#DC2626;color:#fff;} .b-geri{background:#F2F4F7;color:#4A5568;font-size:14px;padding:12px;}
+.secim{display:flex;align-items:center;gap:10px;padding:13px 12px;border:1.5px solid #E2E8F0;border-radius:12px;margin-top:8px;font-size:15px;font-weight:600;cursor:pointer;}
+.secim input{width:20px;height:20px;accent-color:#DC2626;}
+textarea{width:100%;margin-top:10px;padding:12px;border:1.5px solid #E2E8F0;border-radius:12px;font-family:inherit;font-size:15px;min-height:80px;resize:vertical;}
+.mesaj{text-align:center;padding:26px 18px;}
+.mesaj .ikon{font-size:44px;}
+.mesaj .bas{font-size:18px;font-weight:800;margin-top:8px;}
+.mesaj .alt{font-size:13px;color:#4A5568;margin-top:6px;line-height:1.5;}
+.hata{background:#FEF2F2;color:#DC2626;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600;margin-top:10px;display:none;}
+.dip{text-align:center;font-size:11px;color:#8896A7;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="ust">KAYIKÇI <span>•</span> Görev</div>
+<div class="kap">
+  <div id="icerik"><div class="kart mesaj"><div class="ikon">⏳</div><div class="bas">Görev yükleniyor…</div></div></div>
+  <div class="dip">Kayıkçı Kardeşler · Saha Denetim Sistemi</div>
+</div>
+<script>
+// Satış temsilcisinin görev cevap sayfası. Giriş gerektirmez: WhatsApp bağlantısındaki rastgele kod ile
+// YALNIZ o görevi okur ve bekleyen görevi bir kez cevaplayabilir (Firestore kuralları bunu zorlar).
+var firebaseConfig = {
+  apiKey: "AIzaSyBvp4dPmWap0U1voNkhdTrqFTVzqSyzwVI",
+  authDomain: "kayikcisahadenetimi.firebaseapp.com",
+  projectId: "kayikcisahadenetimi",
+  storageBucket: "kayikcisahadenetimi.firebasestorage.app",
+  messagingSenderId: "170634060046",
+  appId: "1:170634060046:web:064af295a8ba5ab675f75f"
+};
+var NEDENLER=['Müşteri kabul etmedi','Ürün yok','Zaman yetmedi','Nokta kapalı / yetkili yok','Diğer'];
+var db=null;
+try{ firebase.initializeApp(firebaseConfig); db=firebase.firestore(); }catch(e){}
+var KOD=(function(){ try{ return new URLSearchParams(location.search).get('k')||''; }catch(e){ return ''; } })();
+var ic=document.getElementById('icerik');
+// Güvenlik: tüm metinler textContent ile basılır (HTML olarak yorumlanmaz)
+function el(tag, cls, metin){ var e=document.createElement(tag); if(cls) e.className=cls; if(metin!=null) e.textContent=String(metin); return e; }
+function trTarih(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); return m ? m[3]+'.'+m[2]+'.'+m[1] : '—'; }
+function bugun(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function mesaj(ikon, bas, alt){ ic.innerHTML=''; var k=el('div','kart mesaj'); k.appendChild(el('div','ikon',ikon)); k.appendChild(el('div','bas',bas)); if(alt) k.appendChild(el('div','alt',alt)); ic.appendChild(k); }
+function bilgiKarti(g){
+  var k=el('div','kart');
+  k.appendChild(el('div','etk','Görev')); k.appendChild(el('div','gorev',g.metin));
+  k.appendChild(el('div','etk','Müşteri')); k.appendChild(el('div','deg',g.musteri||'—'));
+  k.appendChild(el('div','etk','Satış Temsilcisi')); k.appendChild(el('div','deg',g.st||'—'));
+  k.appendChild(el('div','etk','Görevi Veren')); k.appendChild(el('div','deg',g.gy||'—'));
+  k.appendChild(el('div','etk','Son Tarih'));
+  var r;
+  if(g.durum==='yapildi') r=el('span','rozet r-ok','✅ Yapıldı');
+  else if(g.durum==='yapilamadi') r=el('span','rozet r-no','❌ Yapılamadı');
+  else if(String(g.sonTarih)<bugun()) r=el('span','rozet r-gec','🔴 '+trTarih(g.sonTarih)+' · Süresi geçti');
+  else r=el('span','rozet r-bek','⏰ '+trTarih(g.sonTarih));
+  k.appendChild(r);
+  return k;
+}
+function sonuc(g){
+  ic.innerHTML=''; ic.appendChild(bilgiKarti(g));
+  var k=el('div','kart mesaj');
+  k.appendChild(el('div','ikon', g.durum==='yapildi'?'✅':'📝'));
+  k.appendChild(el('div','bas','Cevabınız kaydedildi'));
+  var alt=(g.durum==='yapildi'?'Görev tamamlandı olarak bildirildi.':'Yapılamadı: '+(g.neden||'')+(g.aciklama?' — '+g.aciklama:'')+'.');
+  if(g.cevapZaman){ var z=new Date(g.cevapZaman); if(!isNaN(z)) alt+=' ('+z.toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+')'; }
+  k.appendChild(el('div','alt',alt+' Teşekkürler!'));
+  ic.appendChild(k);
+}
+function gonder(g, durum, neden, aciklama, btn){
+  var h=document.getElementById('hata'); if(h) h.style.display='none';
+  btn.disabled=true; var eski=btn.textContent; btn.textContent='⏳ Gönderiliyor…';
+  var veri={durum:durum, neden:neden, aciklama:String(aciklama||'').trim().slice(0,200), cevapZaman:new Date().toISOString()};
+  db.collection('gorevler').doc(KOD).update(veri).then(function(){
+    sonuc(Object.assign({}, g, veri));
+  }).catch(function(){
+    btn.disabled=false; btn.textContent=eski;
+    if(h){ h.textContent='Gönderilemedi. İnternet bağlantınızı kontrol edip tekrar deneyin. Görev daha önce cevaplanmış olabilir; sayfayı yenileyin.'; h.style.display='block'; }
+  });
+}
+function cevapEkrani(g){
+  ic.innerHTML=''; ic.appendChild(bilgiKarti(g));
+  var k=el('div','kart');
+  k.appendChild(el('div','etk','Görevi yaptınız mı?'));
+  var ok=el('button','btn b-ok','✅ Yaptım'); ok.type='button'; ok.id='bYaptim';
+  var no=el('button','btn b-no','❌ Yapamadım'); no.type='button'; no.id='bYapamadim';
+  var hata=el('div','hata'); hata.id='hata';
+  ok.addEventListener('click', function(){ gonder(g,'yapildi','','',ok); });
+  no.addEventListener('click', function(){ nedenEkrani(g); });
+  k.appendChild(ok); k.appendChild(no); k.appendChild(hata);
+  ic.appendChild(k);
+}
+function nedenEkrani(g){
+  ic.innerHTML=''; ic.appendChild(bilgiKarti(g));
+  var k=el('div','kart');
+  k.appendChild(el('div','etk','Neden yapılamadı?'));
+  NEDENLER.forEach(function(n,i){
+    var l=el('label','secim'); var r=document.createElement('input'); r.type='radio'; r.name='neden'; r.value=n; r.id='nd'+i;
+    l.appendChild(r); l.appendChild(document.createTextNode(n)); k.appendChild(l);
+  });
+  var t=document.createElement('textarea'); t.id='aciklama'; t.maxLength=200; t.placeholder='Kısa açıklama (“Diğer” için zorunlu)';
+  k.appendChild(t);
+  var hata=el('div','hata'); hata.id='hata';
+  var gb=el('button','btn b-gonder','Gönder'); gb.type='button'; gb.id='bGonder';
+  var geri=el('button','btn b-geri','← Geri'); geri.type='button';
+  gb.addEventListener('click', function(){
+    var s=k.querySelector('input[name=neden]:checked');
+    if(!s){ hata.textContent='Lütfen bir neden seçin.'; hata.style.display='block'; return; }
+    if(s.value==='Diğer' && !t.value.trim()){ hata.textContent='“Diğer” için kısa bir açıklama yazın.'; hata.style.display='block'; return; }
+    gonder(g,'yapilamadi',s.value,t.value,gb);
+  });
+  geri.addEventListener('click', function(){ cevapEkrani(g); });
+  k.appendChild(hata); k.appendChild(gb); k.appendChild(geri);
+  ic.appendChild(k);
+}
+(function(){
+  if(!/^[A-Za-z0-9]{20,40}$/.test(KOD)){ mesaj('⚠️','Geçersiz bağlantı','Bağlantıyı WhatsApp mesajından eksiksiz açtığınızdan emin olun.'); return; }
+  if(!db){ mesaj('📶','Bağlanılamadı','İnternet bağlantınızı kontrol edip sayfayı yenileyin.'); return; }
+  db.collection('gorevler').doc(KOD).get().then(function(d){
+    if(!d.exists){ mesaj('🗑️','Görev bulunamadı','Bu görev silinmiş olabilir. Grup yöneticinize danışın.'); return; }
+    var g=d.data()||{};
+    ['metin','musteri','st','gy','sonTarih','durum','neden','aciklama','cevapZaman'].forEach(function(f){ g[f]=(typeof g[f]==='string')?g[f]:''; });
+    if(g.durum==='bekliyor') cevapEkrani(g); else sonuc(g);
+  }).catch(function(){ mesaj('📶','Bağlanılamadı','İnternet bağlantınızı kontrol edip sayfayı yenileyin.'); });
+})();
+</script>
+</body>
+</html>

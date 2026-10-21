@@ -757,6 +757,12 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
             onkeydown="if(event.key==='Enter')gorevEkle()">
           <button class="gorev-ekle-btn" onclick="gorevEkle()">+ Ekle</button>
         </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11px;font-weight:700;color:var(--amber);">
+          ⏰ Son tarih:
+          <select id="gorevSure" style="flex:1;padding:7px 10px;border:1.5px solid #FCD34D;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;background:var(--white);">
+            <option value="0">Bugün</option><option value="1">Yarın</option><option value="3">3 gün</option><option value="7" selected>1 hafta</option>
+          </select>
+        </div>
         <div id="gorevList"></div>
         <div id="gorevPayBtn" style="display:none;margin-top:8px;">
           <button class="btn btn-green" onclick="gorevHepsiPaylast()" style="font-size:13px;padding:10px;">
@@ -1572,51 +1578,67 @@ function seg(btn,id,cls){
 }
 
 // ── GÖREV ──
+// ── GÖREV TAKİP ──
+// Görev Firestore "gorevler" koleksiyonuna, tahmin edilemeyen rastgele bir kodla kaydedilir.
+// WhatsApp mesajındaki bağlantı (gorev.html?k=KOD) ile temsilci "Yaptım / Yapamadım" diye dönüş yapar.
+function _gorevKod(){
+  var h='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', a=new Uint8Array(24), k='';
+  (window.crypto||window.msCrypto).getRandomValues(a);
+  for(var i=0;i<a.length;i++) k+=h.charAt(a[i]%62);
+  return k;
+}
+function _gorevLink(kod){ return location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/,'')+'gorev.html?k='+kod; }
+function _gorevTarih(gun){ var d=new Date(); d.setDate(d.getDate()+(parseInt(gun,10)||0)); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _trTarihKisa(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); return m?m[3]+'.'+m[2]:''; }
 function gorevEkle(){
   var inp=document.getElementById('gorevInp');
-  var text=inp.value.trim();
+  var text=inp.value.trim().slice(0,300);
   if(!text){toast('Görev yazın!','e');return;}
-  gorevler.push({metin:text,durum:'bekliyor'});
-  inp.value='';
-  gorevGuncelle();
-  document.getElementById('gorevPayBtn').style.display='block';
+  if(typeof _onizleme!=='undefined' && _onizleme){ toast('👁 Önizleme modu: görev oluşturulmaz.','e'); return; }
+  var gy=document.getElementById('sYon').value, st=document.getElementById('sST').value, mus=(document.getElementById('iNokta').value||'').trim();
+  if(!st){ toast('⚠️ Önce satış temsilcisini seçin!','e'); return; }
+  if(!mus){ toast('⚠️ Önce müşteri (nokta) adını girin!','e'); return; }
+  if(!_db || !_auth || !_auth.currentUser){ toast('⚠️ Oturum kapanmış. Tekrar giriş yapın.','e'); return; }
+  var kod=_gorevKod(), son=_gorevTarih((document.getElementById('gorevSure')||{}).value);
+  var kayit={kod:kod, gy:gy, st:st, musteri:mus.slice(0,120), metin:text, sonTarih:son, olusturma:new Date().toISOString(),
+             olusturan:_auth.currentUser.email, durum:'bekliyor', neden:'', aciklama:'', cevapZaman:''};
+  var btn=document.querySelector('.gorev-ekle-btn'); if(btn){ btn.disabled=true; btn.textContent='⏳'; }
+  var bitir=function(){ if(btn){ btn.disabled=false; btn.textContent='+ Ekle'; } };
+  try{
+    _db.collection('gorevler').doc(kod).set(kayit).then(function(){
+      gorevler.push({metin:text, durum:'bekliyor', kod:kod, sonTarih:son});
+      inp.value=''; bitir(); gorevGuncelle();
+      document.getElementById('gorevPayBtn').style.display='block';
+      toast('✓ Görev kaydedildi. WA ile temsilciye gönderin.','s');
+    }).catch(function(err){ bitir(); toast('⚠️ Görev kaydedilemedi: '+err.message,'e'); });
+  }catch(err){ bitir(); toast('⚠️ Görev kaydedilemedi: '+err.message,'e'); }
 }
 function gorevGuncelle(){
   var list=document.getElementById('gorevList');
-  if(gorevler.length===0){list.innerHTML='';return;}
-  var h='';
-  for(var i=0;i<gorevler.length;i++){
-    var g=gorevler[i];
-    var ok=g.durum==='tamamlandi', no=g.durum==='tamamlanmadi';
-    h+='<div class="gorev-item'+(ok?' ok':no?' no':'')+'" data-i="'+i+'">'
-      +'<div class="gorev-metin'+(ok?' done':'')+'">'+g.metin+'</div>'
-      +'<div class="gorev-btns">'
-      +'<button class="g-btn g-btn-wa" data-i="'+i+'">&#128232; WA</button>'
-      +'<button class="g-btn g-btn-ok'+(ok?' on':'')+'" data-i="'+i+'" data-d="tamamlandi">&#10003; Tamam</button>'
-      +'<button class="g-btn g-btn-no'+(no?' on':'')+'" data-i="'+i+'" data-d="tamamlanmadi">&#10007; Tamam Değil</button>'
-      +'<button class="g-btn g-btn-del" data-i="'+i+'">Sil</button>'
-      +'</div></div>';
-  }
-  list.innerHTML=h;
-  list.querySelectorAll('.g-btn-wa').forEach(function(btn){
-    btn.addEventListener('click',function(){gorevPaylast(parseInt(this.getAttribute('data-i')));});
-  });
-  list.querySelectorAll('.g-btn-ok,.g-btn-no').forEach(function(btn){
-    btn.addEventListener('click',function(){gorevDurum(parseInt(this.getAttribute('data-i')),this.getAttribute('data-d'));});
-  });
-  list.querySelectorAll('.g-btn-del').forEach(function(btn){
-    btn.addEventListener('click',function(){gorevSil(parseInt(this.getAttribute('data-i')));});
+  while(list.firstChild) list.removeChild(list.firstChild);
+  gorevler.forEach(function(g,i){
+    var d=document.createElement('div'); d.className='gorev-item'; d.setAttribute('data-i',i);
+    var m=document.createElement('div'); m.className='gorev-metin'; m.textContent=g.metin; d.appendChild(m);
+    var bilgi=document.createElement('div'); bilgi.style.cssText='font-size:11px;color:var(--mid);margin:-2px 0 6px;font-weight:600;';
+    bilgi.textContent=g.kod ? '⏳ Temsilci dönüşü bekleniyor'+(g.sonTarih?' · son tarih '+_trTarihKisa(g.sonTarih):'') : '';
+    if(g.kod) d.appendChild(bilgi);
+    var b=document.createElement('div'); b.className='gorev-btns';
+    var wa=document.createElement('button'); wa.className='g-btn g-btn-wa'; wa.textContent='📨 WA ile Gönder'; wa.addEventListener('click',function(){ gorevPaylast(i); });
+    var sil=document.createElement('button'); sil.className='g-btn g-btn-del'; sil.textContent='Sil'; sil.addEventListener('click',function(){ gorevSil(i); });
+    b.appendChild(wa); b.appendChild(sil); d.appendChild(b);
+    list.appendChild(d);
   });
 }
 function gorevDurum(i,durum){
   gorevler[i].durum=durum;
   gorevGuncelle();
-  toast(durum==='tamamlandi'?'✓ Tamamlandı':'✗ Tamamlanmadı',durum==='tamamlandi'?'s':'e');
 }
 function gorevSil(i){
-  gorevler.splice(i,1);
-  gorevGuncelle();
-  if(gorevler.length===0) document.getElementById('gorevPayBtn').style.display='none';
+  var g=gorevler[i]; if(!g) return;
+  var kaldir=function(){ gorevler.splice(i,1); gorevGuncelle(); if(gorevler.length===0) document.getElementById('gorevPayBtn').style.display='none'; };
+  if(!g.kod || !_db){ kaldir(); return; }
+  _db.collection('gorevler').doc(g.kod).delete().then(function(){ kaldir(); toast('Görev silindi.','s'); })
+    .catch(function(err){ toast('⚠️ Görev silinemedi: '+err.message,'e'); });
 }
 // Saat otomatik format: 0800 → 08:00
 function saatFormat(inp){
@@ -1662,7 +1684,10 @@ function gorevPaylast(i){
   var st=document.getElementById('sST').value||'ST';
   var nokta=document.getElementById('iNokta').value||'Nokta';
   var g=gorevler[i];
-  var msg='Merhaba '+st+', '+nokta+' icin gorev: '+g.metin+' - Kayikci Saha Denetim';
+  var msg='Merhaba '+st+', '+nokta+' için görev:\n📋 '+g.metin
+    +(g.sonTarih?'\n⏰ Son tarih: '+_trTarihKisa(g.sonTarih):'')
+    +(g.kod?'\n👉 Bitince buradan bildir: '+_gorevLink(g.kod):'')
+    +'\n- Kayıkçı Saha Denetim';
   var tel=ST_TEL[st]||'';
   var url=tel?'https://wa.me/90'+tel.substring(1)+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg);
   waAc(url);
@@ -1672,10 +1697,9 @@ function gorevHepsiPaylast(){
   var nokta=document.getElementById('iNokta').value||'Nokta';
   var tel=ST_TEL[st]||'';
   var metinler=gorevler.map(function(g,i){
-    var d=g.durum==='tamamlandi'?' (Tamam)':g.durum==='tamamlanmadi'?' (Tamam Degil)':'';
-    return (i+1)+'. '+g.metin+d;
-  }).join(', ');
-  var msg='Merhaba '+st+', '+nokta+' icin gorevler: '+metinler+' - Kayikci Saha Denetim';
+    return (i+1)+'. '+g.metin+(g.sonTarih?' (son: '+_trTarihKisa(g.sonTarih)+')':'')+(g.kod?'\n   👉 '+_gorevLink(g.kod):'');
+  }).join('\n');
+  var msg='Merhaba '+st+', '+nokta+' için görevler:\n'+metinler+'\nHer görevi bitince bağlantısından bildirin.\n- Kayıkçı Saha Denetim';
   var url=tel?'https://wa.me/90'+tel.substring(1)+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg);
   waAc(url);
 }
@@ -2068,13 +2092,13 @@ function ozetYap(){
   done.forEach(function(n){
     if(n.gorevler&&n.gorevler.length>0){
       n.gorevler.forEach(function(g){
-        tumGorevler.push({nokta:n.ad, metin:g.metin, durum:g.durum||'bekliyor'});
+        tumGorevler.push({nokta:n.ad, metin:g.metin, durum:g.durum||'bekliyor', kod:g.kod||''});
       });
     }
   });
   // Güncel formda atanan görevler
   gorevler.forEach(function(g){
-    tumGorevler.push({nokta:'(Bu rapor)', metin:g.metin, durum:g.durum||'bekliyor'});
+    tumGorevler.push({nokta:'(Bu rapor)', metin:g.metin, durum:g.durum||'bekliyor', kod:g.kod||''});
   });
 
   var gorevKart=document.getElementById('ozetGorevKart');
@@ -2085,21 +2109,23 @@ function ozetYap(){
     var tamam=tumGorevler.filter(function(g){return g.durum==='tamamlandi';}).length;
     var bekliyor=tumGorevler.filter(function(g){return g.durum==='bekliyor';}).length;
     document.getElementById('ozetGorevSayac').textContent=tamam+'/'+tumGorevler.length+' tamamlandı';
+    var _esc=function(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); };
     document.getElementById('ozetGorevListesi').innerHTML=tumGorevler.map(function(g,i){
       var renk=g.durum==='tamamlandi'?'var(--green)':g.durum==='tamamlanmadi'?'var(--red)':'var(--amber)';
       var ikon=g.durum==='tamamlandi'?'✅':g.durum==='tamamlanmadi'?'❌':'⏳';
       var sinif=g.durum==='tamamlandi'?'on-g':'';
       return '<div style="padding:10px 0;border-bottom:1px solid var(--border);">'
         +'<div style="display:flex;justify-content:space-between;align-items:center;">'
-        +'<span style="font-size:12px;font-weight:600;">'+g.metin+'</span>'
+        +'<span style="font-size:12px;font-weight:600;">'+_esc(g.metin)+'</span>'
         +'<span style="font-size:10px;color:'+renk+';font-weight:700;">'+ikon+' '+g.durum.replace('tamamlandi','Tamamlandı').replace('tamamlanmadi','Yapılamadı').replace('bekliyor','Bekliyor')+'</span>'
         +'</div>'
-        +'<div style="font-size:11px;color:var(--soft);margin-top:3px;">📍 '+g.nokta+'</div>'
-        +'<div style="display:flex;gap:6px;margin-top:6px;">'
+        +'<div style="font-size:11px;color:var(--soft);margin-top:3px;">📍 '+_esc(g.nokta)+'</div>'
+        +(g.kod ? '<div style="font-size:11px;color:var(--mid);margin-top:6px;font-weight:600;">🔗 Temsilci bağlantıdan dönüş yapacak · durum panelde takip edilir</div></div>' : '')
+        +(g.kod ? '' : '<div style="display:flex;gap:6px;margin-top:6px;">'
         +'<button onclick="ozetGorevDurum('+i+',&quot;tamamlandi&quot;)" style="font-size:11px;padding:3px 10px;border-radius:6px;border:1.5px solid var(--green);background:'+(g.durum==='tamamlandi'?'var(--green)':'var(--green-l)')+';color:'+(g.durum==='tamamlandi'?'#fff':'var(--green)')+';cursor:pointer;font-weight:700;">✓ Tamamlandı</button>'
         +'<button onclick="ozetGorevDurum('+i+',&quot;bekliyor&quot;)" style="font-size:11px;padding:3px 10px;border-radius:6px;border:1.5px solid var(--amber);background:'+(g.durum==='bekliyor'?'var(--amber)':'var(--amber-l)')+';color:'+(g.durum==='bekliyor'?'#fff':'var(--amber)')+';cursor:pointer;font-weight:700;">⏳ Devam</button>'
         +'<button onclick="ozetGorevDurum('+i+',&quot;tamamlanmadi&quot;)" style="font-size:11px;padding:3px 10px;border-radius:6px;border:1.5px solid var(--red);background:'+(g.durum==='tamamlanmadi'?'var(--red)':'var(--red-l)')+';color:'+(g.durum==='tamamlanmadi'?'#fff':'var(--red)')+';cursor:pointer;font-weight:700;">✗ Yapılamadı</button>'
-        +'</div></div>';
+        +'</div></div>');
     }).join('');
   }
 }

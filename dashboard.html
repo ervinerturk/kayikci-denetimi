@@ -536,7 +536,7 @@ function _ozelMi(r){ return !!r && (String(r.id||'').indexOf('ozel_')===0 || r.g
 function _ozelKartHtml(liste){
   if(!liste || !liste.length) return '';
   var sirali=liste.slice().sort(function(a,b){ return String(b.tarih||'').localeCompare(String(a.tarih||'')); });
-  var sayac={}, toplam=0, ofisler=[];
+  var sayac={}, toplam=0, ofisler=[], gyOz=Object.create(null);
   // Detay tablosu: Tarih | Grup Yöneticisi | Satış Temsilcisi | Müşteri Adı | Açıklama (her müşteri bir satır)
   var h='<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;"><thead><tr><th>Tarih</th><th>Grup Yöneticisi</th><th>Satış Temsilcisi</th><th>Müşteri Adı</th><th>Açıklama</th></tr></thead><tbody>';
   sirali.forEach(function(r){
@@ -545,6 +545,12 @@ function _ozelKartHtml(liste){
     (r.noktalar||[]).forEach(function(n){ if(n && n.tip==='ofis') ofisler.push({tarihTr:tarihTr, tarih:String(r.tarih||''), gy:(r.yoneticiAd||r.yonetici||'—'), n:n}); });
     satirlar.forEach(function(n,i){
       var tur=n.tur||'—'; sayac[tur]=(sayac[tur]||0)+1; toplam++;
+      // GY özeti: müşteri, farklı temsilci, gün ve başka ekibe destek sayısı
+      var _gyA=(r.yoneticiAd||r.yonetici||'—'), _stA=(n.noktaST||r.st||'');
+      var o=gyOz[_gyA]||(gyOz[_gyA]={m:0, st:Object.create(null), gun:Object.create(null), destek:0, tur:Object.create(null)});
+      o.m++; if(_stA) o.st[_stA]=1; o.gun[String(r.tarih||'')]=1; o.tur[tur]=(o.tur[tur]||0)+1;
+      var _yoGy=(typeof YO==='object' && YO[r.yonetici]) ? YO[r.yonetici] : null;
+      if(_stA && _yoGy && _yoGy.indexOf(_stA)===-1) o.destek++;
       h+='<tr><td style="white-space:nowrap;">'+tarihTr+'</td><td>'+(r.yoneticiAd||r.yonetici||'—')+'</td><td>'+((n.noktaST||r.st)?(n.noktaST||r.st):'<span style="color:var(--soft);" title="Bu kayıt temsilci alanı eklenmeden önceki formla gönderildi">— (eski form)</span>')+'</td>'
         +'<td>'+(i+1)+'. '+n.ad+'</td><td>'+tur+(n.not?' — '+n.not:'')+'</td></tr>';
     });
@@ -552,7 +558,26 @@ function _ozelKartHtml(liste){
   h+='</tbody></table></div>';
   var ozet='';
   Object.keys(sayac).sort(function(a,b){return sayac[b]-sayac[a];}).forEach(function(t){ ozet+=row(t, sayac[t]+' müşteri'); });
-  var saha = toplam ? _kartIci(secHd('📊 Çalışma Türleri')+ozet, _grfAd('📊 Türlere Göre Müşteri')+_grfBar(_sayilariSirala(sayac), GRF_MAVI, 'müşteri'))+secHd('🗂️ Detay')+h : '';
+  // GY kırılımı (Çalışma Türleri tablosunun altında)
+  var gyAd=Object.keys(gyOz).sort(function(a,b){ return gyOz[b].m-gyOz[a].m || a.localeCompare(b,'tr'); });
+  // GY × çalışma türü tablosu (+ toplam ve başka ekibe destek)
+  var TURLER=[['Ürün Sevkiyat Desteği','Ürün Sevk.'],['Stant Kurulum Desteği','Stant Kur.'],['Özel Stant Çalışması','Özel Stant'],['Diğer','Diğer']];
+  var bos=function(v){ return v?v:''; };
+  var gyT='<div style="overflow-x:auto;"><table class="tbl" style="min-width:520px;"><thead><tr><th>Grup Yöneticisi</th>'
+    +TURLER.map(function(t){ return '<th class="num" title="'+t[0]+'">'+t[1]+'</th>'; }).join('')
+    +'<th class="num">Toplam</th><th class="num" title="Kendi ekibi dışındaki temsilcilerin müşterilerine yapılan çalışma">Destek</th></tr></thead><tbody>';
+  var top=Object.create(null), topM=0, topD=0;
+  gyAd.forEach(function(a){ var o=gyOz[a];
+    gyT+='<tr><td>'+a+'</td>'+TURLER.map(function(t){ top[t[0]]=(top[t[0]]||0)+(o.tur[t[0]]||0); return '<td class="num">'+bos(o.tur[t[0]])+'</td>'; }).join('')
+      +'<td class="num" style="font-weight:800;">'+o.m+'</td><td class="num">'+bos(o.destek)+'</td></tr>';
+    topM+=o.m; topD+=o.destek; });
+  gyT+='<tr style="background:var(--bg);"><td style="font-weight:800;">TOPLAM</td>'+TURLER.map(function(t){ return '<td class="num">'+bos(top[t[0]])+'</td>'; }).join('')
+    +'<td class="num" style="font-weight:800;">'+topM+'</td><td class="num">'+bos(topD)+'</td></tr>';
+  gyT+='</tbody></table></div>';
+  var saha = toplam ? _kartIci(secHd('📊 Çalışma Türleri')+ozet, _grfAd('📊 Türlere Göre Müşteri')+_grfBar(_sayilariSirala(sayac), GRF_MAVI, 'müşteri'))
+    +secHd('👤 Çalışma Türleri — GY Kırılımı')+gyT
+    +'<div style="font-size:10px;color:var(--soft);margin:4px 0 6px;">Destek: GY\'nin kendi ekibi dışındaki temsilcilerin müşterilerine yaptığı çalışma.</div>'
+    +secHd('🗂️ Detay')+h : '';
   return '<div class="card"><div class="card-head"><div class="card-ic">⭐</div><div class="card-title">Özel Çalışmalar ('+liste.map(function(r){return r.tarih;}).filter(function(v,j,a){return a.indexOf(v)===j;}).length+' gün · '+toplam+' müşteri'+(ofisler.length?' · '+ofisler.length+' ofis kaydı':'')+')</div></div>'
     +'<div class="card-body">'+saha+_ofisBolumHtml(ofisler)+'</div></div>';
 }
@@ -585,6 +610,93 @@ function _ofisBolumHtml(ofisler){
   return secHd('🏢 Ofis Çalışmaları')+_kartIci(ozet, _grfAd('📊 GY Bazında Ofis Süresi')+(g||'<div class="grf-bos">Gösterilecek veri yok.</div>'))+t;
 }
 
+// ── GÖREV TAKİP (temsilci görevleri) ──
+// GY formunda oluşturulan görevler "gorevler" koleksiyonunda; temsilci WhatsApp bağlantısından cevaplar.
+// Müdür hepsini, GY yalnız kendi görevlerini görür (Firestore kuralları da bunu zorlar).
+var _gorevlerHam=[], _gorevDinleyiciBasladi=false, _stTel=Object.create(null);
+function _yerelTarih(iso){ var d=new Date(iso); if(isNaN(d)) return ''; return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _bugunStr(){ return _yerelTarih(new Date().toISOString()); }
+function _trT(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); return m?m[3]+'.'+m[2]+'.'+m[1]:'—'; }
+function gorevDinleyiciBaslat(){
+  if(_gorevDinleyiciBasladi || !db) return;
+  _gorevDinleyiciBasladi=true;
+  var q=db.collection('gorevler');
+  if(_dashKullanici && _dashKullanici.gy) q=q.where('gy','==',_dashKullanici.gy);
+  q.onSnapshot(function(sn){
+    _gorevlerHam=sn.docs.map(function(d){ var x=d.data()||{}; var g={};
+      ['kod','gy','st','musteri','metin','sonTarih','olusturma','durum','neden','aciklama','cevapZaman'].forEach(function(f){ g[f]=(typeof x[f]==='string')?x[f].slice(0,400):''; });
+      return g; }).filter(function(g){ return /^[A-Za-z0-9]{20,40}$/.test(g.kod); });
+    guncelle();
+  }, function(err){ console.warn('Görev dinleme hatası:', err && err.message); _gorevDinleyiciBasladi=false; });
+  db.collection('ayarlar').doc('tel').get().then(function(d){
+    var t=(d && d.exists && d.data()) || {};
+    Object.keys(t).forEach(function(k){ var m=String(t[k]==null?'':t[k]).replace(/[^0-9]/g,'').match(/0?(5\d{9})$/); if(m) _stTel[k]='0'+m[1]; });
+  }).catch(function(){});
+}
+function _gorevLinki(kod){ return location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/,'')+'gorev.html?k='+kod; }
+function _gorevHatirlatUrl(g){
+  var msg='Merhaba '+g.st+', hatırlatma 🔔\n📋 '+g.metin+'\n📍 '+g.musteri+'\n⏰ Son tarih: '+_trT(g.sonTarih)+'\n👉 Bitince buradan bildir: '+_gorevLinki(g.kod)+'\n- Kayıkçı Saha Denetim';
+  var tel=_stTel[g.st]||'';
+  return tel ? 'https://wa.me/90'+tel.substring(1)+'?text='+encodeURIComponent(msg) : 'https://wa.me/?text='+encodeURIComponent(msg);
+}
+function gorevYenidenAc(kod){
+  if(!/^[A-Za-z0-9]{20,40}$/.test(kod) || !db) return;
+  db.collection('gorevler').doc(kod).update({durum:'bekliyor', neden:'', aciklama:'', cevapZaman:''})
+    .catch(function(err){ alert('Görev yeniden açılamadı: '+(err && err.message)); });
+}
+function _gorevKartHtml(gy, st, donem){
+  if(!_gorevlerHam.length) return '';
+  var bugun=_bugunStr();
+  // Dönem filtresi oluşturma tarihine uygulanır; AÇIK görevler dönemden bağımsız her zaman görünür
+  var donemde=Object.create(null);
+  donemFiltre(_gorevlerHam.map(function(g){ return {kod:g.kod, tarih:_yerelTarih(g.olusturma)}; }), donem).forEach(function(x){ donemde[x.kod]=1; });
+  var liste=_gorevlerHam.filter(function(g){
+    if(gy && g.gy!==gy) return false;
+    if(st && g.st!==st) return false;
+    return g.durum==='bekliyor' || donemde[g.kod];
+  });
+  if(!liste.length) return '';
+  var gec=function(g){ return g.durum==='bekliyor' && g.sonTarih && g.sonTarih<bugun; };
+  var nBek=0,nGec=0,nOk=0,nNo=0, sureT=0, sureN=0, acikST=Object.create(null);
+  liste.forEach(function(g){
+    if(g.durum==='yapildi') nOk++; else if(g.durum==='yapilamadi') nNo++; else { nBek++; if(gec(g)) nGec++; acikST[_kac(g.st||'—')]=(acikST[_kac(g.st||'—')]||0)+1; }
+    if(g.durum!=='bekliyor' && g.cevapZaman && g.olusturma){ var f=(new Date(g.cevapZaman)-new Date(g.olusturma))/864e5; if(f>=0 && isFinite(f)){ sureT+=f; sureN++; } }
+  });
+  var cevaplanan=nOk+nNo, oran=liste.length?Math.round(nOk/liste.length*100):0;
+  var k='';
+  k+=secHd('📋 Görev Durumu');
+  k+=row('Toplam Görev', liste.length+' görev');
+  k+=row('⏳ Bekleyen', nBek+' görev', nBek?'o':'');
+  k+=row('🔴 Süresi Geçen', nGec+' görev', nGec?'r':'g');
+  k+=row('✅ Yapıldı', nOk+' görev', nOk?'g':'');
+  k+=row('❌ Yapılamadı', nNo+' görev', nNo?'r':'');
+  k+=row('Tamamlama Oranı', '%'+oran, oran>=80?'g':oran<50?'r':'o');
+  k+=row('Ort. Dönüş Süresi', sureN?(sureT/sureN*24<1?'1 saatten az':sureT/sureN<1?Math.round(sureT/sureN*24)+' saat':(sureT/sureN).toFixed(1).replace('.',',')+' gün'):'—');
+  var g2=_grfAd('📊 Durum Dağılımı')+_grfYigin([{ad:'Yapıldı',deger:nOk,renk:GRF_MAVI},{ad:'Yapılamadı',deger:nNo,renk:GRF_KIRMIZI},{ad:'Bekleyen',deger:nBek,renk:GRF_GRI}],'görev');
+  g2+=_grfAd('⏳ Temsilci Bazında Açık Görev (ilk 8)')+_grfBar(_sayilariSirala(acikST,8), GRF_TURUNCU, 'açık görev');
+  // Tablo: önce süresi geçenler, sonra bekleyenler (son tarihe göre), sonra cevaplananlar (yeni → eski)
+  var sira=liste.slice().sort(function(a,b){
+    var pa=gec(a)?0:a.durum==='bekliyor'?1:2, pb=gec(b)?0:b.durum==='bekliyor'?1:2;
+    if(pa!==pb) return pa-pb;
+    if(pa<2) return String(a.sonTarih).localeCompare(String(b.sonTarih));
+    return String(b.cevapZaman).localeCompare(String(a.cevapZaman));
+  }).slice(0,100);
+  var t='<div style="overflow-x:auto;"><table class="tbl" style="min-width:720px;"><thead><tr><th>Veriliş</th><th>Grup Yöneticisi</th><th>Satış Temsilcisi</th><th>Müşteri</th><th>Görev</th><th>Son Tarih</th><th>Durum</th><th></th></tr></thead><tbody>';
+  sira.forEach(function(g){
+    var durum, islem='';
+    if(g.durum==='yapildi'){ durum='<span style="color:var(--green);font-weight:700;">✅ Yapıldı</span><div style="font-size:10px;color:var(--soft);">'+_trT(_yerelTarih(g.cevapZaman))+'</div>'; }
+    else if(g.durum==='yapilamadi'){ durum='<span style="color:var(--red);font-weight:700;">❌ Yapılamadı</span><div style="font-size:11px;color:var(--mid);">'+_kac(g.neden)+(g.aciklama?' — '+_kac(g.aciklama):'')+'</div>'; }
+    else if(gec(g)){ var gun=Math.round((new Date(bugun)-new Date(g.sonTarih))/864e5); durum='<span style="color:var(--red);font-weight:700;">🔴 Gecikti</span><div style="font-size:10px;color:var(--red);">'+gun+' gün</div>'; }
+    else durum='<span style="color:var(--orange);font-weight:700;">⏳ Bekliyor</span>';
+    if(g.durum==='bekliyor') islem='<a href="'+_kac(_gorevHatirlatUrl(g))+'" target="_blank" rel="noopener" style="font-size:11px;font-weight:700;color:#16A34A;text-decoration:none;white-space:nowrap;">🔔 Hatırlat</a>';
+    else islem='<button type="button" onclick="gorevYenidenAc(\''+g.kod+'\')" style="font-size:11px;font-weight:700;color:var(--blue);background:none;border:none;cursor:pointer;white-space:nowrap;">↺ Yeniden aç</button>';
+    t+='<tr><td style="white-space:nowrap;">'+_trT(_yerelTarih(g.olusturma))+'</td><td>'+_kac(g.gy)+'</td><td>'+_kac(g.st)+'</td><td>'+_kac(g.musteri)+'</td><td>'+_kac(g.metin)+'</td><td style="white-space:nowrap;">'+_trT(g.sonTarih)+'</td><td>'+durum+'</td><td>'+islem+'</td></tr>';
+  });
+  t+='</tbody></table></div>';
+  return '<div class="card"><div class="card-head"><div class="card-ic">📋</div><div class="card-title">Görev Takip ('+liste.length+' görev · '+nBek+' açık'+(nGec?' · '+nGec+' gecikmiş':'')+')</div></div>'
+    +'<div class="card-body">'+_kartIci(k,g2)+secHd('🗂️ Görevler (açık görevler dönemden bağımsız gösterilir)')+t+'</div></div>';
+}
+
 // Kalkan: beklenmedik bir veri yüzünden panel tamamen boş kalmasın
 function guncelle(){
   try{ _guncelleIc(); }
@@ -615,6 +727,7 @@ function _guncelleIc(){
   }
   if(st) data=data.filter(function(r){return r.st===st;});
   var _ozelHtml=_ozelKartHtml(_ozelData);
+  var _gorevHtml=_gorevKartHtml(gy, st, donem);
 
   // Seçili müşteri bu filtredeki veride yoksa sıfırla
   var secMus=document.getElementById('fMusteri')?document.getElementById('fMusteri').value:'';
@@ -632,7 +745,7 @@ function _guncelleIc(){
     document.getElementById('oPuan').textContent='—';
     ic.innerHTML='<div class="empty"><div style="font-size:36px">📋</div><div style="font-size:13px;font-weight:500;margin-top:8px;">Henüz rapor bulunamadı</div>'
       +((typeof _firestoreHata!=='undefined' && _firestoreHata)?'<div style="font-size:12px;color:var(--red);margin-top:8px;">⚠️ Sunucuya bağlanılamadı: '+String(_firestoreHata).replace(/</g,'&lt;')+'</div>':'')
-      +'</div>'+_ozelHtml;
+      +'</div>'+_ozelHtml+_gorevHtml;
     return;
   }
 
@@ -828,6 +941,7 @@ function _guncelleIc(){
 
   // ── ÖZEL ÇALIŞMALAR ──
   _html+=_ozelHtml;
+  _html+=_gorevHtml;
 
   // ── MÜŞTERİ DETAY PANELİ YER TUTUCU ──
   _html+='<div class="card" id="musteriDetayKart" style="display:none;"><div class="card-head"><div class="card-ic">🏪</div><div class="card-title">Müşteri Ziyaret Detayı</div></div><div class="card-body" id="musteriDetayBody"></div></div>';
@@ -1342,6 +1456,7 @@ function dashOturumGoster(k){
     gyDegisti();
     guncelle();
     raporDinleyiciBaslat();
+    gorevDinleyiciBaslat();
     if(!k.gy) musteriAdlariniYayinla();   // yalnız Satış Müdürü
   }, 50);
 }
