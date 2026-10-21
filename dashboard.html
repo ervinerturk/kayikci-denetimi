@@ -255,7 +255,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
     <div class="ozet-stat"><div class="ozet-v" id="oNokta">0</div><div class="ozet-l">Nokta</div></div>
     <div class="ozet-stat"><div class="ozet-v" id="oSKU">0</div><div class="ozet-l">Top. SKU</div></div>
     <div class="ozet-stat"><div class="ozet-v" id="oSKT">0</div><div class="ozet-l">SKT Risk</div></div>
-    <div class="ozet-stat"><div class="ozet-v" id="oSO">0</div><div class="ozet-l">Stok Out</div></div>
+    <div class="ozet-stat"><div class="ozet-v" id="oSO">0</div><div class="ozet-l">Stok Out</div><div class="ozet-l" id="oSOPay" style="margin-top:2px;opacity:.85;text-transform:none;"></div></div>
     <div class="ozet-stat"><div class="ozet-v" id="oStant">—</div><div class="ozet-l">Stant %</div></div>
     <div class="ozet-stat"><div class="ozet-v" id="oPuan">—</div><div class="ozet-l">Ort. Puan</div></div>
   </div>
@@ -697,6 +697,63 @@ function _gorevKartHtml(gy, st, donem){
     +'<div class="card-body">'+_kartIci(k,g2)+secHd('🗂️ Görevler (açık görevler dönemden bağımsız gösterilir)')+t+'</div></div>';
 }
 
+// ── TAZELİK: en yeni / en eski üretimli ilk 3 ürün (ort. gün) + çift tıkla müşteri listesi ──
+var _tazDetay={yeni:[], eski:[]};
+function _tazelikGrafikleri(data){
+  var grup={yeni:Object.create(null), eski:Object.create(null)};
+  data.forEach(function(r){
+    (r.noktalar||[]).forEach(function(n){
+      if(!n || !n.done) return;
+      [['yeni','yeniU','yeniGun','yeniT'],['eski','eskiU','eskiGun','eskiT']].forEach(function(a){
+        var urun=String(n[a[1]]||'').trim(), gun=parseInt(n[a[2]],10);
+        if(!urun || !(gun>0)) return;
+        var g=grup[a[0]][urun]||(grup[a[0]][urun]={top:0, liste:[]});
+        g.top+=gun; g.liste.push({ad:n.ad||'—', st:r.st||'—', gy:r.yoneticiAd||r.yonetici||'—', tarih:r.tarih||'', gun:gun, ut:String(n[a[3]]||'')});
+      });
+    });
+  });
+  var sirala=function(tip){
+    return Object.keys(grup[tip]).map(function(u){ var g=grup[tip][u]; return {urun:u, ort:Math.round(g.top/g.liste.length), liste:g.liste}; })
+      .sort(function(a,b){ return tip==='yeni' ? (a.ort-b.ort || b.liste.length-a.liste.length) : (b.ort-a.ort || b.liste.length-a.liste.length); })
+      .slice(0,3);
+  };
+  _tazDetay={yeni:sirala('yeni'), eski:sirala('eski')};
+  var cubuk=function(tip, renk){
+    var l=_tazDetay[tip]; if(!l.length) return '<div class="grf-bos">Henüz üretim tarihi girilmedi.</div>';
+    var mx=Math.max.apply(null, _tazDetay.yeni.concat(_tazDetay.eski).map(function(x){ return x.ort; }).concat([1]));
+    return l.map(function(x,i){
+      return '<div class="hbar" data-taz="'+tip+'-'+i+'" style="cursor:pointer;" data-tip="'+x.urun+': ort. '+x.ort+' gün · '+x.liste.length+' nokta (çift tıkla: müşteriler)">'
+        +'<span class="hbar-l">'+x.urun+'</span>'
+        +'<span class="hbar-t"><span class="hbar-f" style="width:'+(x.ort/mx*100).toFixed(1)+'%;background:'+renk+';"></span></span>'
+        +'<span class="hbar-v" style="white-space:nowrap;">'+x.ort+' gün</span></div>';
+    }).join('');
+  };
+  return _grfAd('🌿 En Yeni Üretim — İlk 3 Ürün (ort. gün)')+cubuk('yeni', GRF_MAVI)
+    +_grfAd('⏳ En Eski Üretim — İlk 3 Ürün (ort. gün)')+cubuk('eski', GRF_TURUNCU)
+    +'<div style="font-size:10px;color:var(--soft);margin-top:6px;">Ürünün üzerine çift tıklayınca hangi müşterilerde olduğu listelenir.</div>'
+    +'<div id="tazDetay" style="display:none;margin-top:10px;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;"></div>';
+}
+function _tazDetayGoster(anahtar){
+  var p=String(anahtar).split('-'), x=(_tazDetay[p[0]]||[])[parseInt(p[1],10)], el=document.getElementById('tazDetay');
+  if(!x || !el) return;
+  if(el.style.display!=='none' && el.getAttribute('data-acik')===anahtar){ el.style.display='none'; el.removeAttribute('data-acik'); return; }
+  var l=x.liste.slice().sort(function(a,b){ return p[0]==='yeni' ? a.gun-b.gun : b.gun-a.gun; });
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">'
+    +'<b style="font-size:12px;">'+(p[0]==='yeni'?'🌿 En yeni üretim':'⏳ En eski üretim')+' · '+x.urun+' <span style="font-weight:500;color:var(--mid);">('+l.length+' nokta)</span></b>'
+    +'<button type="button" onclick="document.getElementById(\'tazDetay\').style.display=\'none\'" style="border:none;background:none;font-size:16px;cursor:pointer;color:var(--soft);">✕</button></div>'
+    +'<div style="overflow-x:auto;"><table class="tbl" style="width:100%;"><thead><tr><th>Müşteri</th><th>Temsilci</th><th>Ziyaret</th><th class="num">Gün</th></tr></thead><tbody>';
+  l.slice(0,50).forEach(function(m){
+    h+='<tr><td>'+m.ad+'</td><td>'+m.st+'</td><td style="white-space:nowrap;">'+String(m.tarih).split('-').reverse().join('.')+'</td><td class="num">'+m.gun+'</td></tr>';
+  });
+  h+='</tbody></table></div>'+(l.length>50?'<div style="font-size:10px;color:var(--soft);margin-top:4px;">İlk 50 nokta gösteriliyor.</div>':'');
+  el.innerHTML=h; el.style.display='block'; el.setAttribute('data-acik',anahtar);
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+document.addEventListener('dblclick', function(e){
+  var t=e.target && e.target.closest ? e.target.closest('[data-taz]') : null;
+  if(t) _tazDetayGoster(t.getAttribute('data-taz'));
+});
+
 // Kalkan: beklenmedik bir veri yüzünden panel tamamen boş kalmasın
 function guncelle(){
   try{ _guncelleIc(); }
@@ -740,7 +797,7 @@ function _guncelleIc(){
   var ic=document.getElementById('icerik');
 
   if(data.length===0){
-    ['oRapor','oNokta','oSKU','oSKT','oSO'].forEach(function(id){document.getElementById(id).textContent='0';});
+    ['oRapor','oNokta','oSKU','oSKT','oSO'].forEach(function(id){document.getElementById(id).textContent='0';}); document.getElementById('oSOPay').textContent='';
     document.getElementById('oStant').textContent='—';
     document.getElementById('oPuan').textContent='—';
     ic.innerHTML='<div class="empty"><div style="font-size:36px">📋</div><div style="font-size:13px;font-weight:500;margin-top:8px;">Henüz rapor bulunamadı</div>'
@@ -758,6 +815,10 @@ function _guncelleIc(){
   var avgC=N>0?Math.round(topSKU/N):0;
   var sktN=done.filter(function(n){return n.skt==='Evet';}).length;
   var soN=done.filter(function(n){return n.so==='Var';}).length;
+  // Stok out SKU: stok out bildirilen noktalardaki işaretli ürün sayısı toplamı; pay = Top. SKU içindeki oranı
+  var soSKU=done.reduce(function(a,n){return a+(n.so==='Var'&&Array.isArray(n.soUrunler)?n.soUrunler.length:0);},0);
+  var soCesit=Object.keys(done.reduce(function(o,n){ if(n.so==='Var'&&Array.isArray(n.soUrunler)) n.soUrunler.forEach(function(u){ o[u]=1; }); return o; }, Object.create(null))).length;
+  var soPay=topSKU>0?(soSKU/topSKU*100).toLocaleString('tr-TR',{maximumFractionDigits:1}):'';
   var stantN=done.filter(function(n){return n.stant==='Var';}).length;
   var stantPct=N>0?Math.round(stantN/N*100):0;
   var puanlar=done.filter(function(n){return parseFloat(n.puan)>0;}).map(function(n){return parseFloat(n.puan);});
@@ -768,12 +829,13 @@ function _guncelleIc(){
   document.getElementById('oSKU').textContent=topSKU;
   document.getElementById('oSKT').textContent=sktN;
   document.getElementById('oSO').textContent=soN;
+  document.getElementById('oSOPay').textContent=soSKU>0?soSKU+' SKU'+(soPay?' · %'+soPay:''):'';
   document.getElementById('oStant').textContent='%'+stantPct;
   document.getElementById('oPuan').textContent=ortPuan>0?ortPuan:'—';
 
   // ALERTLER
   var al='';
-  if(soN>0) al+='<div class="alert alert-r"><span>📦</span><span>'+soN+' noktada stok-out var.</span></div>';
+  if(soN>0) al+='<div class="alert alert-r"><span>📦</span><span>'+soN+' noktada stok-out var'+(soSKU>0?' — '+soCesit+' farklı ürün çeşidi, toplam '+soSKU+' SKU'+(soPay?' ('+topSKU+' SKU içinde %'+soPay+')':''):'')+'.</span></div>';
   if(N>0&&!sktN&&!soN) al+='<div class="alert alert-g"><span>✅</span><span>Tüm noktalarda durum iyi.</span></div>';
 
   var _html='';
@@ -833,6 +895,7 @@ function _guncelleIc(){
   var _soTum=Object.create(null);
   done.filter(function(n){return n.so==='Var';}).forEach(function(n){ (n.soUrunler||[]).forEach(function(u){ _soTum[u]=(_soTum[u]||0)+1; }); });
   g2+=_grfAd('📦 En Çok Stok Out Olan Ürünler (ilk 6)')+_grfBar(_sayilariSirala(_soTum,6), GRF_KIRMIZI, 'noktada');
+  g2+=_tazelikGrafikleri(data);
   _html+='<div class="card"><div class="card-head"><div class="card-ic">🏪</div><div class="card-title">Ziyaret Edilen Noktalar</div></div><div class="card-body">'+_kartIci(k2,g2)+'</div></div>';
 
   // ── KART 3: STANT ──
