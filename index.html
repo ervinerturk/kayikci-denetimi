@@ -442,18 +442,18 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
   <div class="card">
     <div class="card-head">
       <div class="card-ic red">&#128663;</div>
-      <div><div class="card-title">İş Başı &amp; KM</div></div>
+      <div><div class="card-title">İş Başı ve Kapanış Saati &amp; KM</div></div>
     </div>
     <div class="card-body">
-      <div class="g3">
-        <div class="f"><label class="lb">Çıkış Saati</label><input type="time" class="inp" id="iCikis" value="08:00" oninput="kmFarkHesapla()" onchange="kmFarkHesapla()" style="-webkit-appearance:none;"></div>
-        <div class="f"><label class="lb">Dönüş Saati <span style="font-size:10px;color:var(--mid);font-weight:400;">(gün sonu)</span></label><input type="time" class="inp" id="iDonus" oninput="kmFarkHesapla()" onchange="kmFarkHesapla()" style="-webkit-appearance:none;"></div>
-        <div class="f"><label class="lb">Fark</label><input type="text" class="inp inp-blue" id="iFarkSaat" readonly placeholder="—"></div>
+      <div class="g3" style="align-items:end;grid-template-columns:repeat(3,minmax(0,1fr));">
+        <div class="f"><label class="lb">Çıkış Saati</label><input type="time" class="inp" id="iCikis" value="08:00" oninput="kmFarkHesapla()" onchange="kmFarkHesapla()" style="height:46px;box-sizing:border-box;-webkit-appearance:none;"></div>
+        <div class="f"><label class="lb">Dönüş Saati <span style="font-size:10px;color:var(--mid);font-weight:400;">(gün sonu)</span></label><input type="time" class="inp" id="iDonus" oninput="kmFarkHesapla()" onchange="kmFarkHesapla()" style="height:46px;box-sizing:border-box;-webkit-appearance:none;"></div>
+        <div class="f" style="margin-bottom:12px;"><label class="lb">Fark</label><input type="text" class="inp inp-blue" id="iFarkSaat" readonly placeholder="—" style="height:46px;box-sizing:border-box;padding-left:4px;padding-right:4px;text-align:center;font-size:14px;"></div>
       </div>
-      <div class="g3">
-        <div class="f"><label class="lb">Başlangıç KM</label><input type="number" class="inp" id="iKm1" placeholder="45200" inputmode="numeric" min="0" max="9999999" oninput="kmFarkHesapla()" onchange="kmFarkHesapla()"></div>
-        <div class="f"><label class="lb">Bitiş KM <span style="font-size:10px;color:var(--mid);font-weight:400;">(gün sonu)</span></label><input type="number" class="inp" id="iKm2" placeholder="—" inputmode="numeric" min="0" max="9999999" oninput="kmFarkHesapla()" onchange="kmFarkHesapla()"></div>
-        <div class="f"><label class="lb">Günlük KM</label><input type="text" class="inp inp-blue" id="iGunKM" readonly placeholder="—"></div>
+      <div class="g3" style="align-items:end;grid-template-columns:repeat(3,minmax(0,1fr));">
+        <div class="f"><label class="lb">Başlangıç KM</label><input type="number" class="inp" id="iKm1" placeholder="45200" inputmode="numeric" min="0" max="9999999" oninput="kmFarkHesapla()" onchange="kmFarkHesapla()" style="height:46px;box-sizing:border-box;"></div>
+        <div class="f"><label class="lb">Bitiş KM <span style="font-size:10px;color:var(--mid);font-weight:400;">(gün sonu)</span></label><input type="number" class="inp" id="iKm2" placeholder="—" inputmode="numeric" min="0" max="9999999" oninput="kmFarkHesapla()" onchange="kmFarkHesapla()" style="height:46px;box-sizing:border-box;"></div>
+        <div class="f" style="margin-bottom:12px;"><label class="lb">Günlük KM</label><input type="text" class="inp inp-blue" id="iGunKM" readonly placeholder="—" style="height:46px;box-sizing:border-box;padding-left:4px;padding-right:4px;text-align:center;font-size:14px;"></div>
       </div>
     </div>
   </div>
@@ -844,6 +844,27 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
     </div>
   </div>
 
+  <!-- İŞ BAŞI & KM (Bilgiler sayfasındaki panelin aynısı; iki yerde girilen değer birbirine yansır) -->
+  <div class="card" id="aynaKmKart">
+    <div class="card-head">
+      <div class="card-ic red">&#128663;</div>
+      <div><div class="card-title">İş Başı ve Kapanış Saati &amp; KM</div></div>
+    </div>
+    <div class="card-body">
+      <div style="font-size:11px;color:var(--mid);margin:-2px 0 10px;">Gün sonu: dönüş saatini ve bitiş KM'yi girip raporu gönderin. (Bilgiler sayfasındaki alanlarla aynıdır.)</div>
+      <div class="g3" style="align-items:end;grid-template-columns:repeat(3,minmax(0,1fr));">
+        <div class="f"><label class="lb">Çıkış Saati</label><input type="time" class="inp" id="aynCikis" data-hedef="iCikis" style="height:46px;box-sizing:border-box;-webkit-appearance:none;" oninput="_aynaYaz(this)" onchange="_aynaYaz(this);ozetYap()"></div>
+        <div class="f"><label class="lb">Dönüş Saati <span style="font-size:10px;color:var(--mid);font-weight:400;">(gün sonu)</span></label><input type="time" class="inp" id="aynDonus" data-hedef="iDonus" style="height:46px;box-sizing:border-box;-webkit-appearance:none;" oninput="_aynaYaz(this)" onchange="_aynaYaz(this);ozetYap()"></div>
+        <div class="f" style="margin-bottom:12px;"><label class="lb">Fark</label><input type="text" class="inp inp-blue" id="aynFark" readonly placeholder="—" style="height:46px;box-sizing:border-box;padding-left:4px;padding-right:4px;text-align:center;font-size:14px;"></div>
+      </div>
+      <div class="g3" style="align-items:end;grid-template-columns:repeat(3,minmax(0,1fr));">
+        <div class="f"><label class="lb">Başlangıç KM</label><input type="number" class="inp" id="aynKm1" data-hedef="iKm1" placeholder="45200" inputmode="numeric" min="0" max="9999999" oninput="_aynaYaz(this)" onchange="_aynaYaz(this);ozetYap()" style="height:46px;box-sizing:border-box;"></div>
+        <div class="f"><label class="lb">Bitiş KM <span style="font-size:10px;color:var(--mid);font-weight:400;">(gün sonu)</span></label><input type="number" class="inp" id="aynKm2" data-hedef="iKm2" placeholder="—" inputmode="numeric" min="0" max="9999999" oninput="_aynaYaz(this)" onchange="_aynaYaz(this);ozetYap()" style="height:46px;box-sizing:border-box;"></div>
+        <div class="f" style="margin-bottom:12px;"><label class="lb">Günlük KM</label><input type="text" class="inp inp-blue" id="aynGunKM" readonly placeholder="—" style="height:46px;box-sizing:border-box;padding-left:4px;padding-right:4px;text-align:center;font-size:14px;"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="btn-row">
     <button class="btn btn-white" onclick="goSayfa(1)">&#8592; Geri</button>
     <button class="btn btn-red" onclick="raporGonder()" id="bGonder">&#128228; Raporu Gönder</button>
@@ -879,7 +900,7 @@ var sv={Stant:'Var',Dz:'Evet',Gs:'Yok'};
 
 // ── SAYFA GEÇİŞ ──
 function goSayfa(n){
-  if(n===2) ozetYap();
+  if(n===2){ ozetYap(); try{ kmFarkHesapla(); }catch(e){} }
   ['pg0','pg1','pg2'].forEach(function(id,i){
     document.getElementById(id).classList.toggle('on',i===n);
   });
@@ -1689,6 +1710,27 @@ function kmFarkHesapla(){
   var gKM=document.getElementById('iGunKM');
   if(k1>0&&k2>0&&k2>k1){ gKM.value=(k2-k1)+' km'; }
   else { gKM.value='—'; }
+  _aynaGuncelle();
+}
+// ── Özet sayfasındaki İş Başı & KM paneli: Bilgiler'deki asıl alanların aynası ──
+// Asıl değerler her zaman Bilgiler'deki alanlarda tutulur (rapor, taslak, kontroller onları okur).
+var _AYNA={aynCikis:'iCikis', aynDonus:'iDonus', aynKm1:'iKm1', aynKm2:'iKm2', aynFark:'iFarkSaat', aynGunKM:'iGunKM'};
+function _aynaGuncelle(){
+  Object.keys(_AYNA).forEach(function(a){
+    var e=document.getElementById(a), k=document.getElementById(_AYNA[a]);
+    if(e && k && e!==document.activeElement && e.value!==k.value) e.value=k.value;
+  });
+}
+function _aynaYaz(el){
+  var k=document.getElementById(el.getAttribute('data-hedef')); if(!k) return;
+  if(k.value!==el.value) k.value=el.value;
+  kmFarkHesapla();
+}
+// Özet sayfasındayken eksik alan uyarısında imleç Özet'teki aynı alana gider
+function _kmOdak(id){
+  var p2=document.getElementById('pg2'), ayna={iCikis:'aynCikis',iDonus:'aynDonus',iKm1:'aynKm1',iKm2:'aynKm2'}[id];
+  var el=(p2 && p2.classList.contains('on') && ayna) ? document.getElementById(ayna) : document.getElementById(id);
+  if(el) el.focus();
 }
 function waAc(url){
   var a=document.createElement('a');
@@ -2338,7 +2380,7 @@ function raporGonder(){
   if(km1>0 && km2>0){
     if(km2<=km1){
       toast('\u26D4 Bitis KM, Baslangic KM den kucuk olamaz!','e');
-      document.getElementById('iKm2').focus();
+      _kmOdak('iKm2');
       return;
     }
     var fark=km2-km1;
@@ -2358,24 +2400,23 @@ function raporGonder(){
   }
   if(!donusGecerli && !km2Val){
     toast('⚠️ Dönüş Saati ve Bitiş KM girin!','e');
-    document.getElementById('iDonus').focus();
+    _kmOdak('iDonus');
     return;
   }
   if(!donusGecerli){
     toast('⚠️ Dönüş Saati seçin!','e');
-    document.getElementById('iDonus').focus();
+    _kmOdak('iDonus');
     return;
   }
   if(!km2Val){
     toast('⚠️ Bitiş KM girin!','e');
-    document.getElementById('iKm2').focus();
+    _kmOdak('iKm2');
     return;
   }
   // Başlangıç KM boşsa günlük KM, aracın toplam kilometresi olarak yazılıyordu → zorunlu
   if(!km1){
     toast('⚠️ Başlangıç KM girin!','e');
-    if(typeof goSayfa==='function') goSayfa(0);
-    document.getElementById('iKm1').focus();
+    _kmOdak('iKm1');
     return;
   }
 
