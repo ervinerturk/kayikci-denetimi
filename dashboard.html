@@ -400,7 +400,9 @@ function _derinKac(v, d){
 }
 function _coz(s){ var t=document.createElement('textarea'); t.innerHTML=String(s||''); return t.value; }
 
+var ZIYARET_KISA_DK=5;  // bundan kısa müşteri ziyareti "kısa ziyaret" sayılır
 var KM_GUNLUK_UST=1000; // bir günde bundan fazla KM hatalı giriş sayılır
+function _zSaat(iso){ var d=new Date(String(iso||'')); return isNaN(d)?'—':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function raporNormalle(r){
   if(!r || typeof r!=='object') return null;
   r=_derinKac(r);
@@ -771,6 +773,31 @@ document.addEventListener('dblclick', function(e){
   if(t) _tazDetayGoster(t.getAttribute('data-taz'));
 });
 
+// ── MÜKERRER KAYIT TEKLEME ──
+// Aynı gün + aynı temsilci + aynı müşteri birden fazla kez gelmişse (aynı rapora iki kez girilmiş ya da
+// iki ayrı raporla gönderilmiş) panelde TEK nokta sayılır. İki kaydın da giriş saati varsa ve aralarında
+// 30 dk veya fazla fark varsa gerçek ikinci ziyaret kabul edilir ve ikisi de sayılır. Kayıtların kendisi değişmez.
+function _mukerrerTekle(data){
+  var gor=Object.create(null), atilan=[];
+  var B=function(x){ return _coz(String(x==null?'':x)).toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim(); };
+  var sira=data.map(function(r,i){ return {r:r,i:i}; }).sort(function(a,b){ return String(a.r.zaman||'').localeCompare(String(b.r.zaman||'')) || a.i-b.i; });
+  var yeni=new Array(data.length);
+  sira.forEach(function(o){
+    var r=o.r, eski=r.noktalar||[];
+    var nl=eski.filter(function(n){
+      if(!n || !n.done || !n.ad) return true;
+      var k=String(r.tarih||'')+'|'+B(n.noktaST||r.st)+'|'+B(n.ad);
+      var onceki=gor[k]||(gor[k]=[]);
+      var t=n.girisZaman?new Date(_coz(n.girisZaman)).getTime():NaN;
+      var ayni=onceki.some(function(pt){ return isNaN(pt)||isNaN(t)||Math.abs(pt-t)<30*60000; });
+      if(onceki.length && ayni){ atilan.push({tarih:r.tarih, st:(n.noktaST||r.st||'—'), ad:n.ad}); return false; }
+      onceki.push(t); return true;
+    });
+    yeni[o.i]=(nl.length===eski.length)?r:Object.assign({}, r, {noktalar:nl});
+  });
+  return {data:yeni, atilan:atilan};
+}
+
 // Kalkan: beklenmedik bir veri yüzünden panel tamamen boş kalmasın
 function guncelle(){
   try{ _guncelleIc(); }
@@ -800,6 +827,7 @@ function _guncelleIc(){
     }).filter(Boolean);
   }
   if(st) data=data.filter(function(r){return r.st===st;});
+  var _mk=_mukerrerTekle(data); data=_mk.data;
   var _ozelHtml=_ozelKartHtml(_ozelData);
   var _gorevHtml=_gorevKartHtml(gy, st, donem);
 
@@ -875,12 +903,16 @@ function _guncelleIc(){
   var kmHatali=data.filter(function(r){ return r._kmHata; });
   if(kmHatali.length){
     var kmTip=kmHatali.slice(0,15).map(function(r){ return String(r.tarih||'').split('-').reverse().join('.')+' · '+(r.st||r.yoneticiAd||'—')+': '+r._kmHata; }).join(' | ')+(kmHatali.length>15?' | …':'');
-    k1+=row('⚠️ KM Hatalı Rapor', '<span data-tip="'+_kac(kmTip)+'" style="cursor:help;">'+kmHatali.length+' rapor (toplama katılmadı)</span>', 'r');
+    k1+=row('⚠️ KM Hatalı Rapor', '<span data-tip="'+kmTip.replace(/"/g,'&quot;')+'" style="cursor:help;">'+kmHatali.length+' rapor (toplama katılmadı)</span>', 'r');
   }
 
   k1+=secHd('📍 Ziyaret & Nokta');
   var duzN=done.filter(function(n){return n.duzZiyaret==='Evet';}).length;
   k1+=row('Ziyaret Edilen Nokta', N+' nokta');
+  if(_mk.atilan.length){
+    var mkTip=_mk.atilan.slice(0,15).map(function(x){ return String(x.tarih||'').split('-').reverse().join('.')+' · '+x.st+' · '+x.ad; }).join(' | ')+(_mk.atilan.length>15?' | …':'');
+    k1+=row('⚠️ Mükerrer Kayıt', '<span data-tip="'+mkTip.replace(/"/g,'&quot;')+'" style="cursor:help;">'+_mk.atilan.length+' nokta tek sayıldı</span>', 'o');
+  }
   k1+=row('Düzenli Ziyaret', duzN+' nokta'+(N>0?' (%'+Math.round(duzN/N*100)+')':''), duzN===N&&N>0?'g':'');
 
   var g1='', _kirilim=Object.create(null), _kirAd;
@@ -913,11 +945,26 @@ function _guncelleIc(){
     Object.keys(_soUrun).sort(function(a,b){return _soUrun[b]-_soUrun[a];}).slice(0,3).forEach(function(u){k2+=row('→ '+u,_soUrun[u]+' noktada','r');});
   }
 
+  // ── Ziyaret süresi (formda "Müşteriye Girdim" → kayıt = çıkış) ──
+  var _zSure=[]; var _zKir=Object.create(null);
+  data.forEach(function(r){ (r.noktalar||[]).forEach(function(n){
+    if(!n||!n.done||!n.girisZaman) return; var dk=parseInt(n.ziyaretDk,10); if(!(dk>=0)) return;
+    _zSure.push(dk);
+    var k=!gy?(r.yoneticiAd||r.yonetici||'—'):(r.st||'—'); var z=_zKir[k]||(_zKir[k]={t:0,s:0}); z.t+=dk; z.s++;
+  }); });
+  var _zOrt=_zSure.length?Math.round(_zSure.reduce(function(a,b){return a+b;},0)/_zSure.length):0;
+  var _zKisa=_zSure.filter(function(x){return x<ZIYARET_KISA_DK;}).length;
+  k2+=secHd('🕒 Ziyaret Süresi');
+  k2+=row('Ort. Ziyaret Süresi', _zSure.length?_zOrt+' dk':'—');
+  k2+=row('Kısa Ziyaret (<'+ZIYARET_KISA_DK+' dk)', _zKisa+' nokta', _zKisa>0?'r':(_zSure.length?'g':''));
+  k2+=row('Süre Kaydı Olan', _zSure.length+' / '+N+' nokta');
+
   var g2=_grfAd('🚫 Stok Out Durumu')+_grfYigin([{ad:'Stok out var',deger:soN,renk:GRF_KIRMIZI},{ad:'Sorunsuz',deger:N-soN,renk:GRF_GRI}],'nokta');
   var _soTum=Object.create(null);
   done.filter(function(n){return n.so==='Var';}).forEach(function(n){ (n.soUrunler||[]).forEach(function(u){ _soTum[u]=(_soTum[u]||0)+1; }); });
   g2+=_grfAd('📦 En Çok Stok Out Olan Ürünler (ilk 6)')+_grfBar(_sayilariSirala(_soTum,6), GRF_KIRMIZI, 'noktada');
   g2+=_tazelikGrafikleri(data);
+  if(!(gy&&st)) g2+=_grfAd('⏱ '+(!gy?'GY':'Temsilci')+' Bazında Ort. Ziyaret Süresi (dk)')+_grfBar(Object.keys(_zKir).map(function(k){ return {ad:k, deger:Math.round(_zKir[k].t/_zKir[k].s)}; }).sort(function(a,b){return b.deger-a.deger;}).slice(0,8), GRF_MAVI, 'dk ort.');
   _html+='<div class="card"><div class="card-head"><div class="card-ic">🏪</div><div class="card-title">Ziyaret Edilen Noktalar</div></div><div class="card-body">'+_kartIci(k2,g2)+'</div></div>';
 
   // ── KART 3: STANT ──
@@ -1083,10 +1130,11 @@ function raporDetayAc(ridx){
        +'<span>'+(i+1)+'. '+(n.ad||'—')+(n.il?' <span style="font-size:11px;font-weight:400;color:var(--mid);">'+n.il+'</span>':'')+'</span>'
        +(n.puan?'<span style="font-size:12px;font-weight:700;color:var(--accent);">★ '+n.puan+'/5</span>':'')
        +'</div>';
+      if(n.girisZaman) h+=row('Ziyaret',_zSaat(n.girisZaman)+' – '+_zSaat(n.cikisZaman)+' ('+(parseInt(n.ziyaretDk,10)||0)+' dk)');
       h+=row('Stant',n.stant||'—');
       if(n.stantKonum) h+=row('Konum',n.stantKonum);
       h+=row('Çeşit',(n.cesit||0)+' SKU');
-      h+=row('Stok Out',n.so==='Var'?'VAR ('+((n.soUrunler||[]).length)+' ürün)':'Yok','var:--color:'+soRenk+';');
+      h+=row('Stok Out',n.so==='Var'?'VAR ('+((n.soUrunler||[]).length)+' ürün)':'Yok', n.so==='Var'?'r':'g');
       h+=row('SKT',n.skt==='Evet'?'Evet ('+((n.sktUrunler||[]).length)+' ürün)':'Yok');
       h+=row('Tadımca',(n.tadimca&&n.tadimca!=='YOK'&&n.tadimca!=='')?'Var'+(n.tadimcaUrunler&&n.tadimcaUrunler.length?' ('+n.tadimcaUrunler.length+' çeşit)':''):'Yok');
       if(n.gorevler&&n.gorevler.length>0) h+='<div style="margin-top:5px;font-size:11px;color:#D97706;">📋 '+n.gorevler.map(function(g){return g.metin||g;}).join(', ')+'</div>';
@@ -1189,6 +1237,7 @@ function musteriDetayGoster(){
     h+='<div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;">';
     h+='<div style="font-weight:700;font-size:13px;margin-bottom:3px;">'+(i+1)+'. Ziyaret'+(n.il?' · '+n.il:'')+'</div>';
     if(n._rapor_tarih||n._rapor_st) h+='<div style="font-size:11px;color:var(--mid);margin-bottom:7px;">'+(n._rapor_tarih||'')+(n._rapor_st?' · '+n._rapor_st:'')+'</div>';
+    if(n.girisZaman) h+=row('Ziyaret Saati', _zSaat(n.girisZaman)+' – '+_zSaat(n.cikisZaman)+' ('+(parseInt(n.ziyaretDk,10)||0)+' dk)', (parseInt(n.ziyaretDk,10)||0)<ZIYARET_KISA_DK?'r':'');
     h+=row('Stant Durumu', n.stant||'—');
     if(n.stant==='Musteri') h+=row('Stant Tipi','Müşteri Reyonu');
     if(n.stantKonum) h+=row('Stant Konumu', n.stantKonum);
@@ -1198,7 +1247,7 @@ function musteriDetayGoster(){
     h+=row('Gereksiz Stok', n.gs==='Var'?'Var':'Yok', n.gs==='Var'?'r':'g');
     h+=row('Düzenli Ziyaret', n.dz||'—');
     h+=row('Çeşit Sayısı', (n.cesit||0)+' çeşit');
-    if(n.deger) h+=row('Puan', n.deger+' / 5');
+    if(n.deger) h+=row('Not', n.deger);   // formdaki "Gözlem ve notlar" alanı (puan değil)
     if(n.gorevler&&n.gorevler.length>0){
       h+='<div style="margin-top:6px;font-size:12px;color:var(--amber);">📋 '+n.gorevler.length+' görev: '+n.gorevler.map(function(g){return g.metin;}).join(', ')+'</div>';
     }
