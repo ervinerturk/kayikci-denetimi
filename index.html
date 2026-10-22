@@ -754,10 +754,11 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
         <textarea class="inp" id="iDeger" placeholder="Gözlem ve notlar..."></textarea>
       </div>
 
-      <!-- GÖREV ATA -->
-      <div class="divider"><span class="divider-text">Görev Ata</span></div>
-      <div class="gorev-box">
-        <div class="gorev-box-title">&#128203; Satış Temsilcisine Görev</div>
+      <!-- GÖREV ATA (İSTEĞE BAĞLI: her müşteriye görev verilmez; nokta kaydı ve rapor gönderimi görevsiz yapılır) -->
+      <div class="divider"><span class="divider-text">Görev Ata — İsteğe Bağlı</span></div>
+      <button type="button" id="gorevAcBtn" onclick="gorevAlanAc(true)" style="width:100%;padding:11px;border:1.5px dashed #FCD34D;border-radius:10px;background:var(--amber-l);color:var(--amber);font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;">&#128203; Temsilciye görev ver (zorunlu değil)</button>
+      <div class="gorev-box" id="gorevAlan" style="display:none;">
+        <div class="gorev-box-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">&#128203; Satış Temsilcisine Görev <button type="button" id="gorevKapatBtn" onclick="gorevAlanAc(false)" style="border:none;background:none;color:var(--mid);font-size:11px;font-weight:700;cursor:pointer;text-transform:none;font-family:'Inter',sans-serif;">✕ Vazgeç</button></div>
         <div class="gorev-inp-row">
           <input type="text" class="gorev-inp" id="gorevInp" placeholder="Görev yazın..."
             onkeydown="if(event.key==='Enter')gorevEkle()">
@@ -1621,6 +1622,15 @@ function gorevEkle(){
     }).catch(function(err){ bitir(); toast('⚠️ Görev kaydedilemedi: '+err.message,'e'); });
   }catch(err){ bitir(); toast('⚠️ Görev kaydedilemedi: '+err.message,'e'); }
 }
+// Görev alanı varsayılan kapalı; açılınca görev yazılır. Görev eklenmişse kapatılamaz (silinmesi gerekir).
+function gorevAlanAc(ac){
+  var a=document.getElementById('gorevAlan'), b=document.getElementById('gorevAcBtn'), k=document.getElementById('gorevKapatBtn');
+  if(!a||!b) return;
+  if(!ac && gorevler.length) ac=true;
+  a.style.display=ac?'':'none'; b.style.display=ac?'none':'';
+  if(k) k.style.display=gorevler.length?'none':'';
+  if(!ac){ var i=document.getElementById('gorevInp'); if(i) i.value=''; }
+}
 function gorevGuncelle(){
   var list=document.getElementById('gorevList');
   while(list.firstChild) list.removeChild(list.firstChild);
@@ -1636,6 +1646,7 @@ function gorevGuncelle(){
     b.appendChild(wa); b.appendChild(sil); d.appendChild(b);
     list.appendChild(d);
   });
+  var _k=document.getElementById('gorevKapatBtn'); if(_k) _k.style.display=gorevler.length?'none':'';
 }
 function gorevDurum(i,durum){
   gorevler[i].durum=durum;
@@ -1821,6 +1832,7 @@ function formTemizle(){
     if(el){el.textContent='—';el.className='urun-detail-val gun';}
   });
   document.getElementById('fBaslik').textContent='Nokta '+(nIdx+1)+' — Bilgi Girin';
+  gorevAlanAc(false);
   ziyaretUI();
 }
 // ── MÜKERRER MÜŞTERİ KONTROLÜ ──
@@ -1869,6 +1881,7 @@ function noktaKaydet(){
     toast('Kaydedilmedi.'+(_ayniMusteriIdx(ad)>=0?' Mevcut kaydı düzeltmek için listeden "Düzelt"e basın.':''),'e'); return;
   }
   var _ziyEski=(duzenleIdx>=0 && noktalar[nIdx])?noktalar[nIdx]:null, _ziyCikis=new Date().toISOString();
+  var _bekleyenGorev=((document.getElementById('gorevInp')||{}).value||'').trim();
   noktalar[nIdx]={
     done:true,ad:ad,il:il,
     girisZaman:_ziyEski?(_ziyEski.girisZaman||''):_ziyGiris,
@@ -1922,7 +1935,7 @@ function noktaKaydet(){
   formTemizle();
   kpiGuncelle();
   noktaListRender();
-  toast('✓ '+ad+' kaydedildi! Form temizlendi.','s');
+  toast('✓ '+ad+' kaydedildi! Form temizlendi.'+(_bekleyenGorev?' (Yazılan görev "+ Ekle"ye basılmadığı için eklenmedi.)':''),'s');
   window.scrollTo({top:0,behavior:'smooth'});
   autoSave();
 }
@@ -2005,6 +2018,7 @@ function _formuDoldur(n){
   // Noktanın görevleri korunur (önceden düzeltme kaydı görevleri siliyordu)
   gorevler=(n.gorevler||[]).slice(); gorevGuncelle();
   document.getElementById('gorevPayBtn').style.display=gorevler.length?'block':'none';
+  gorevAlanAc(gorevler.length>0);
 }
 // Formda o an girilmiş (henüz kaydedilmemiş) bilgilerin anlık kopyası — sayfa yenilenirse kaybolmasın
 function _formAnlik(){
