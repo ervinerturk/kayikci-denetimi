@@ -3164,6 +3164,7 @@ function loginUygula(u){
       sYon.disabled = true;
     }
     _taslakKontrol(u.gy);   // bugünün taslağı otomatik geri gelir
+    _panelimButonu();
     bugunRaporlariYukle();
     // Nav'da kullanıcı adını göster
     var navEl = document.querySelector('.nav-right');
@@ -3173,6 +3174,15 @@ function loginUygula(u){
   }
 }
 
+// GY'nin kendi paneline geçiş (formdaki veriler otomatik saklandığı için dönüşte kaybolmaz)
+function _panelimButonu(){
+  if(_onizleme || document.getElementById('panelimBtn')) return;
+  var d=document.getElementById('navDate'); if(!d || !d.parentNode) return;
+  var b=document.createElement('a'); b.id='panelimBtn'; b.href='dashboard.html'; b.textContent='📊 Panelim';
+  b.style.cssText='background:rgba(255,255,255,.15);color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;margin-left:auto;margin-right:8px;';
+  b.addEventListener('click', function(){ try{ autoSave(); }catch(e){} });
+  d.parentNode.insertBefore(b, d);
+}
 function cikisYap(){
   try{ sessionStorage.removeItem('kyk_kullanici'); localStorage.removeItem('kyk_kullanici'); }catch(e){}
   // Çıkışta bu cihazdaki müşteri listesi kopyasını da sil
