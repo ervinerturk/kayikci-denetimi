@@ -799,6 +799,40 @@ function _mukerrerTekle(data){
   return {data:yeni, atilan:atilan};
 }
 
+// ── TADIMCA: "Tadımca Var / Yok" satırına çift tıkla → o noktaların müşteri listesi ──
+var _tadDetay={var:[], yok:[]};
+function _tadDetayHazirla(data){
+  var v=[], y=[];
+  data.forEach(function(r){ (r.noktalar||[]).forEach(function(n){
+    if(!n || !n.done) return;
+    var x={ad:n.ad||'—', st:(n.noktaST||r.st||'—'), tarih:r.tarih||'', cesit:(n.tadimcaUrunler||[]).length};
+    if(n.tadimca && n.tadimca!=='YOK' && n.tadimca!=='') v.push(x); else y.push(x);
+  }); });
+  var sir=function(a,b){ return String(a.st).localeCompare(String(b.st),'tr') || String(a.ad).localeCompare(String(b.ad),'tr') || String(b.tarih).localeCompare(String(a.tarih)); };
+  _tadDetay={var:v.sort(sir), yok:y.sort(sir)};
+}
+function _tadDetayGoster(tip){
+  var el=document.getElementById('tadDetay'), l=_tadDetay[tip]; if(!el || !l) return;
+  if(el.style.display!=='none' && el.getAttribute('data-acik')===tip){ el.style.display='none'; el.removeAttribute('data-acik'); return; }
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">'
+    +'<b style="font-size:12px;">'+(tip==='yok'?'🔴 Tadımcası olmayan müşteriler':'🟢 Tadımcası olan müşteriler')+' <span style="font-weight:500;color:var(--mid);">('+l.length+' nokta)</span></b>'
+    +'<button type="button" onclick="document.getElementById(\'tadDetay\').style.display=\'none\'" style="border:none;background:none;font-size:16px;cursor:pointer;color:var(--soft);">✕</button></div>';
+  if(!l.length){ h+='<div style="font-size:12px;color:var(--mid);">Bu filtrede nokta yok.</div>'; }
+  else {
+    h+='<div style="overflow-x:auto;max-height:360px;overflow-y:auto;"><table class="tbl" style="width:100%;"><thead><tr><th>Müşteri</th><th>Temsilci</th><th>Ziyaret</th>'+(tip==='var'?'<th class="num">Çeşit</th>':'')+'</tr></thead><tbody>';
+    l.slice(0,300).forEach(function(m){
+      h+='<tr><td>'+m.ad+'</td><td>'+m.st+'</td><td style="white-space:nowrap;">'+String(m.tarih).split('-').reverse().join('.')+'</td>'+(tip==='var'?'<td class="num">'+m.cesit+'</td>':'')+'</tr>';
+    });
+    h+='</tbody></table></div>'+(l.length>300?'<div style="font-size:10px;color:var(--soft);margin-top:4px;">İlk 300 nokta gösteriliyor; temsilci filtresiyle daraltın.</div>':'');
+  }
+  el.innerHTML=h; el.style.display='block'; el.setAttribute('data-acik',tip);
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+document.addEventListener('dblclick', function(e){
+  var t=e.target && e.target.closest ? e.target.closest('[data-tad]') : null;
+  if(t) _tadDetayGoster(t.getAttribute('data-tad'));
+});
+
 // Kalkan: beklenmedik bir veri yüzünden panel tamamen boş kalmasın
 function guncelle(){
   try{ _guncelleIc(); }
@@ -1004,9 +1038,12 @@ function _guncelleIc(){
 
   k4+=secHd('🟡 Tadımca Bulunurluk');
   k4+='<table style="width:100%;border-collapse:collapse;margin-bottom:10px;"><tbody>';
-  k4+='<tr style="border-bottom:1px solid var(--border);"><td style="padding:7px 4px;font-size:13px;color:var(--mid);">Tadımca Var</td><td style="padding:7px 4px;font-size:13px;font-weight:700;color:'+(tadN>0?'var(--green)':'var(--mid)')+';">'+tadN+' nokta</td><td style="padding:7px 4px;font-size:13px;font-weight:700;color:'+(tadN>0?'var(--green)':'var(--mid)')+';">%'+tadPct+'</td><td style="padding:7px 4px;font-size:13px;font-weight:700;color:'+(tadimcaliNoktalar.length>0?'var(--green)':'var(--mid)')+';">'+(tadimcaliNoktalar.length>0?'Çeşit ortalama '+tadOrtCesit:'—')+'</td></tr>';
-  k4+='<tr><td style="padding:7px 4px;font-size:13px;color:var(--mid);">Tadımca Yok</td><td style="padding:7px 4px;font-size:13px;color:var(--mid);">'+tadYok+' nokta</td><td style="padding:7px 4px;font-size:13px;color:var(--mid);">%'+tadYokPct+'</td></tr>';
+  _tadDetayHazirla(data);
+  k4+='<tr data-tad="var" style="border-bottom:1px solid var(--border);cursor:pointer;" data-tip="Çift tıkla: tadımcası olan müşteriler"><td style="padding:7px 4px;font-size:13px;color:var(--mid);">Tadımca Var</td><td style="padding:7px 4px;font-size:13px;font-weight:700;color:'+(tadN>0?'var(--green)':'var(--mid)')+';">'+tadN+' nokta</td><td style="padding:7px 4px;font-size:13px;font-weight:700;color:'+(tadN>0?'var(--green)':'var(--mid)')+';">%'+tadPct+'</td><td style="padding:7px 4px;font-size:13px;font-weight:700;color:'+(tadimcaliNoktalar.length>0?'var(--green)':'var(--mid)')+';">'+(tadimcaliNoktalar.length>0?'Çeşit ortalama '+tadOrtCesit:'—')+'</td></tr>';
+  k4+='<tr data-tad="yok" style="cursor:pointer;" data-tip="Çift tıkla: tadımcası olmayan müşteriler"><td style="padding:7px 4px;font-size:13px;color:var(--mid);">Tadımca Yok</td><td style="padding:7px 4px;font-size:13px;color:var(--mid);">'+tadYok+' nokta</td><td style="padding:7px 4px;font-size:13px;color:var(--mid);">%'+tadYokPct+'</td></tr>';
   k4+='</tbody></table>';
+  k4+='<div style="font-size:10px;color:var(--soft);margin:-4px 0 8px;">"Tadımca Var" ya da "Tadımca Yok" satırına çift tıklayınca müşteriler listelenir.</div>'
+    +'<div id="tadDetay" style="display:none;margin:0 0 12px;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;"></div>';
 
   // En Eski Üretim
   var tadEskiDetay=done.filter(function(n){return n.tadimcaEskiT&&n.tadimcaEskiUrun;}).map(function(n){
