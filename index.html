@@ -2724,6 +2724,10 @@ function loginKontrol(){
 // Bu veriler eskiden sayfanın içindeydi ve herkese açıktı. Artık Firestore'da;
 // kurallar gereği her GY yalnızca kendi rut belgesini okuyabilir.
 function _trBuyuk(s){ return String(s||'').toLocaleUpperCase('tr-TR').replace(/\s+/g,' ').trim(); }
+// Temsilci adı eşleştirme anahtarı: büyük/küçük harf, Türkçe karakter (İ/I, Ş/S…) ve boşluk/nokta farkı yok sayılır
+// (Excel'deki yazım YO listesindekinden biraz farklı olsa da temsilcinin müşterileri doğru temsilciye bağlanır)
+function _adAnahtar(s){ return _trBuyuk(s).replace(/İ/g,'I').replace(/Ş/g,'S').replace(/Ğ/g,'G').replace(/Ü/g,'U').replace(/Ö/g,'O').replace(/Ç/g,'C').replace(/[^A-Z0-9]/g,''); }
+function _yoEslestir(){ var m={}; Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(x){ m[_adAnahtar(x)]=x; }); }); return function(k){ return m[_adAnahtar(k)]||''; }; }
 // GÜVENLİK: Rut verisi sayfada pek çok yerde innerHTML ve onclick içine basılıyor.
 // Tek giriş noktasında temizlenir: HTML/JS'ye dönüşebilecek karakterler etkisizleştirilir.
 // (' → ’ ve & → ＆ görsel olarak aynı; < > " ` \ kaldırılır)
@@ -2745,30 +2749,31 @@ function _musteriTemiz(m){
 function rutVerisiUygula(rutDoc, gyAd, telMap){
   var yoAdlari={};
   Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(s){ yoAdlari[_trBuyuk(s)]=s; }); });
-  var yeni={}, st=(rutDoc&&rutDoc.st&&typeof rutDoc.st==='object')?rutDoc.st:{};
+  var yeni={}, st=(rutDoc&&rutDoc.st&&typeof rutDoc.st==='object')?rutDoc.st:{}, _yoBul=_yoEslestir();
   Object.keys(st).forEach(function(s){
     var gunler={}, kaynak=(st[s]&&typeof st[s]==='object')?st[s]:{};
     _GUNLER.forEach(function(g){ if(Array.isArray(kaynak[g])) gunler[g]=kaynak[g].map(_musteriTemiz); });
-    yeni[yoAdlari[_trBuyuk(s)]||_rutTemiz(s)]={y:gyAd, g:gunler};
+    yeni[yoAdlari[_trBuyuk(s)]||_yoBul(s)||_rutTemiz(s)]={y:gyAd, g:gunler};
   });
   RUT=yeni;
   if(telMap && typeof telMap==='object'){
     var tel={};
-    Object.keys(telMap).forEach(function(k){ var v=_telNormal(telMap[k]); if(v) tel[yoAdlari[_trBuyuk(k)]||_rutTemiz(k)]=v; });
+    Object.keys(telMap).forEach(function(k){ var v=_telNormal(telMap[k]); if(v) tel[yoAdlari[_trBuyuk(k)]||_yoBul(k)||_rutTemiz(k)]=v; });
     ST_TEL=tel;
   }
 }
 // Diğer ekiplerin temsilcileri için YALNIZ müşteri adları (adres/konum/telefon yok); Satış Müdürü paneli yayınlar
 var MUSTERI_ADLARI={};
 function musteriAdlariUygula(doc){
-  var yoAdlari={}, yeni={}, st=(doc&&doc.st&&typeof doc.st==='object')?doc.st:{};
+  var yoAdlari={}, yeni={}, st=(doc&&doc.st&&typeof doc.st==='object')?doc.st:{}, _yoBul=_yoEslestir();
   Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(x){ yoAdlari[_trBuyuk(x)]=x; }); });
   Object.keys(st).forEach(function(k){
-    var ad=yoAdlari[_trBuyuk(k)];   // yalnız tanınan temsilci adları kabul edilir
+    var ad=yoAdlari[_trBuyuk(k)]||_yoBul(k);   // yalnız tanınan temsilci adları kabul edilir
     if(!ad || !Array.isArray(st[k])) return;
     yeni[ad]=st[k].slice(0,3000).filter(function(v){ return typeof v==='string'; }).map(_rutTemiz).filter(Boolean);
   });
   MUSTERI_ADLARI=yeni;
+  if(_onizleme) _onizlemeAdlariEkle();
 }
 function _rutYenile(){ try{ onST(); }catch(e){ console.warn('rut yenileme:', e.message); } try{ if(_ozelAcik){ _ozelGYListesi(); _ozelSTListeleri(); } }catch(e){} }
 function rutYukle(u, email){
@@ -2925,8 +2930,10 @@ function _ozelOneriGoster(i){
   if(!s.value){ dd.style.display='none'; return; }
   var tum=_ozelMusterileri(s.value);
   if(!tum.length){ satir('Bu temsilcinin müşteri listesi henüz yok — müşteri adını yazın.', false); dd.style.display='block'; return; }
-  var q=_trBuyuk(inp.value);
-  var bul=tum.filter(function(a){ return !q || _trBuyuk(a).indexOf(q)===0; });
+  // Arama: büyük/küçük harf ve Türkçe karakter (ı/i, ş/s…) farkı yok sayılır
+  var _kat=function(x){ return _trBuyuk(String(x||'').replace(/i/g,'İ').replace(/ı/g,'I')).replace(/İ/g,'I').replace(/Ş/g,'S').replace(/Ğ/g,'G').replace(/Ü/g,'U').replace(/Ö/g,'O').replace(/Ç/g,'C'); };
+  var q=_kat(inp.value);
+  var bul=tum.filter(function(a){ return !q || _kat(a).indexOf(q)===0; });
   if(!bul.length){ satir('Eşleşen müşteri yok — ad elle yazılabilir.', false); dd.style.display='block'; return; }
   bul.slice(0,100).forEach(function(a){ satir(a, true); });
   if(bul.length>100) satir('… '+(bul.length-100)+' müşteri daha — aramayı daraltın', false);
@@ -3080,8 +3087,30 @@ function loginYap(){
 // Formu GY gözüyle görmek için: her GY seçilebilir, o GY'nin rutu yüklenir; GÖNDERİM KAPALI (hiç kayıt oluşmaz).
 var _onizleme=false;
 function _onizlemeIstendi(){ try{ return /(^|[?&])onizleme(=|&|$)/.test(String(location.search).slice(1)); }catch(e){ return false; } }
+// Önizlemede Satış Müdürü tüm GY rutlarını okuyabilir: her temsilcinin müşteri adları doğrudan buradan alınır
+// (GY seçilmemiş olsa ya da yayınlanan ad listesi eski kalsa bile Özel Çalışma'da müşteriler gelir)
+var _onzAdlar={};
+function _onizlemeAdlariEkle(){ Object.keys(_onzAdlar).forEach(function(k){ if(_onzAdlar[k].length) MUSTERI_ADLARI[k]=_onzAdlar[k]; }); }
+function onizlemeTumAdlariYukle(){
+  if(!_db) return;
+  var bul=_yoEslestir();
+  Promise.all(Object.keys(YO).map(function(g){ return _db.collection('rutlar').doc(g).get().catch(function(){ return null; }); })).then(function(sn){
+    var t={};
+    sn.forEach(function(d){
+      if(!d || !d.exists) return;
+      var v=d.data()||{}, m=(v.st && typeof v.st==='object')?v.st:{};
+      Object.keys(m).forEach(function(k){
+        var isim=bul(k); if(!isim) return;
+        var ad=t[isim]||(t[isim]={}), gunler=(m[k]&&typeof m[k]==='object')?m[k]:{};
+        Object.keys(gunler).forEach(function(gun){ if(Array.isArray(gunler[gun])) gunler[gun].forEach(function(x){ if(x && typeof x.a==='string'){ var a=_rutTemiz(x.a).trim(); if(a) ad[a]=1; } }); });
+      });
+    });
+    _onzAdlar={}; Object.keys(t).forEach(function(k){ _onzAdlar[k]=Object.keys(t[k]).sort(function(a,b){ return a.localeCompare(b,'tr'); }); });
+    _onizlemeAdlariEkle(); _rutYenile();
+  }).catch(function(e){ console.warn('Önizleme müşteri adları:', e && e.message); });
+}
 function onizlemeRutYukle(gy){
-  RUT={}; MUSTERI_ADLARI={};
+  RUT={}; MUSTERI_ADLARI={}; _onizlemeAdlariEkle();
   if(!gy || !_db){ _rutYenile(); return; }
   Promise.all([
     _db.collection('rutlar').doc(gy).get(),
@@ -3105,6 +3134,7 @@ function onizlemeBaslat(u){
   var git=document.createElement('a'); git.href='dashboard.html'; git.textContent='← Panele dön'; git.style.cssText='color:#92400E;text-decoration:underline;margin-left:4px;white-space:nowrap;';
   serit.appendChild(git);
   document.body.insertBefore(serit, document.body.firstChild);
+  onizlemeTumAdlariYukle();
   var sYon=document.getElementById('sYon');
   if(sYon){
     sYon.disabled=false;
