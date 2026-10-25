@@ -103,14 +103,15 @@ button,input,select{font-family:inherit;}
 <div id="giris">
   <div class="gk">
     <h1>Kayıkçı · ST Paneli</h1>
-    <p>Satış Temsilcisi girişi. Kodunuzu ve 6 haneli PIN'inizi girin.</p>
+    <p>Satış Temsilcisi girişi. ST kodunuzu ve şifrenizi girin.</p>
     <label for="gKod">ST Kodu</label>
     <input id="gKod" inputmode="numeric" autocomplete="username" maxlength="4" placeholder="örn. 105">
-    <label for="gPin">PIN</label>
-    <input id="gPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6" placeholder="••••••">
+    <label for="gPin">Şifre</label>
+    <div style="position:relative;"><input id="gPin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="64" placeholder="Şifreniz" style="padding-right:48px;letter-spacing:normal;">
+    <button type="button" id="gGoster" onclick="sifreGoster()" aria-label="Şifreyi göster" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:auto;margin:0;padding:6px 8px;background:none;color:var(--mid);font-size:18px;">👁</button></div>
     <button id="gBtn" type="button" onclick="girisYap()">Giriş</button>
     <div id="gHata"></div>
-    <div class="gnot">PIN'inizi unuttuysanız Grup Yöneticinize başvurun.<br>Giriş bu telefonda açık kalır.</div>
+    <div class="gnot">Şifrenizi unuttuysanız Grup Yöneticinize başvurun.<br>Giriş bu telefonda açık kalır.</div>
   </div>
 </div>
 
@@ -158,21 +159,22 @@ function tost(m){ var t=document.getElementById('tost'); t.textContent=m; t.styl
 // ── Giriş ──
 function gHata(m){ var e=document.getElementById('gHata'); e.textContent=m||''; e.style.display=m?'block':'none'; }
 function girisYap(){
-  var kod=(document.getElementById('gKod').value||'').trim(), pin=(document.getElementById('gPin').value||'').trim();
+  var kod=(document.getElementById('gKod').value||'').trim(), pin=String(document.getElementById('gPin').value||'');
   gHata('');
   if(!/^[0-9]{2,4}$/.test(kod)){ gHata('ST kodunu rakam olarak girin.'); return; }
-  if(!/^[0-9]{6}$/.test(pin)){ gHata('PIN 6 haneli olmalı.'); return; }
+  if(pin.length<6){ gHata('Şifre en az 6 karakter olmalı.'); return; }
   if(!auth){ gHata('Sunucuya bağlanılamadı. İnterneti kontrol edin.'); return; }
   var b=document.getElementById('gBtn'); b.disabled=true; b.textContent='Giriş yapılıyor…';
   auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
     .then(function(){ return auth.signInWithEmailAndPassword('st'+kod+'@'+ST_ALAN, pin); })
     .catch(function(err){
       var k=(err&&err.code)||'';
-      gHata(/network-request-failed/.test(k)?'İnternet bağlantısı yok.':/too-many-requests/.test(k)?'Çok fazla hatalı deneme. Birkaç dakika sonra tekrar deneyin.':'ST kodu veya PIN hatalı.');
+      gHata(/network-request-failed/.test(k)?'İnternet bağlantısı yok.':/too-many-requests/.test(k)?'Çok fazla hatalı deneme. Birkaç dakika sonra tekrar deneyin.':'ST kodu veya şifre hatalı.');
       document.getElementById('gPin').value='';
     }).then(function(){ b.disabled=false; b.textContent='Giriş'; });
 }
 document.getElementById('gPin').addEventListener('keydown', function(e){ if(e.key==='Enter') girisYap(); });
+function sifreGoster(){ var i=document.getElementById('gPin'), a=i.type==='password'; i.type=a?'text':'password'; document.getElementById('gGoster').textContent=a?'🙈':'👁'; }
 function cikisYap(){
   var bek=Object.keys(BEKLEYEN).some(function(k){ return BEKLEYEN[k]>0; });
   if(!confirm(bek?'Gönderilmeyi bekleyen kayıtlar var! Çıkış yaparsanız kaybolabilir. Yine de çıkılsın mı?':'Çıkış yapılsın mı?')) return;

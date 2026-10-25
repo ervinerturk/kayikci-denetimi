@@ -1336,8 +1336,8 @@ function odakHesapAc(){
 function _odHesapCiz(msj){
   var l=_odHesap||[], yeni=l.filter(function(x){ return !x.kayitli; }).length;
   var h='<div style="font-size:16px;font-weight:800;color:#1E3A5F;margin-bottom:4px;">👤 ST Hesapları</div>'
-    +'<div style="font-size:12px;color:var(--mid);line-height:1.6;margin-bottom:10px;">ST\'ler <b>st.html</b> sayfasına <b>ST Kodu + 6 haneli PIN</b> ile girer (e-posta gerekmez).<br>'
-    +'1) Aşağıdaki listeyi <b>Kaydet</b>. 2) Firebase Console → Authentication → Users → <b>Add user</b>: e-posta = listedeki adres, şifre = sizin belirlediğiniz <b>6 haneli PIN</b>. 3) ST\'ye kodunu ve PIN\'ini kendiniz iletin (PIN\'ler hiçbir dosyaya yazılmaz).</div>'
+    +'<div style="font-size:12px;color:var(--mid);line-height:1.6;margin-bottom:10px;">ST\'ler <b>st.html</b> sayfasına <b>ST Kodu + şifre</b> ile girer (e-posta gerekmez).<br>'
+    +'1) Aşağıdaki listeyi <b>Kaydet</b>. 2) Firebase Console → Authentication → Users → <b>Add user</b>: e-posta = listedeki adres, şifre = sizin belirlediğiniz <b>şifre (en az 6 karakter)</b>. 3) ST\'ye kodunu ve şifresini kendiniz iletin (şifreler hiçbir dosyaya yazılmaz).</div>'
     +(msj?'<div id="odHesapMsj" style="background:#F0FDF4;color:#15803D;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;margin-bottom:8px;">'+msj+'</div>':'')
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><button type="button" id="odHesapKaydet" onclick="odakHesapKaydet()" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;">💾 Kaydet'+(yeni?' ('+yeni+' yeni)':'')+'</button>'
     +'<button type="button" onclick="odakHesapExcel()" style="background:#EFF6FF;color:var(--blue);border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;">⬇ Listeyi Excel\'e indir</button></div>'
