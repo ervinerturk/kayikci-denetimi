@@ -867,17 +867,27 @@ function _bkTarihTr(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); re
 function _bkZamanTr(s){ var d=new Date(s); return isNaN(d)?'—':d.toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
 
 // ── Excel okuma ──
+// Octapull dışa aktarımının iki biçimi de okunur:
+//  • Ham dışa aktarım: PlasiyerAdi | CariKodu | CariAdi | MusteriGrubu | 0-06 (Sum) … 63-69 (Sum) | 70Ustu (Sum) | GuncelBakiye (Sum)
+//  • Düzenlenmiş rapor: Plasiyer | Cari Kodu | Cari Adı | Müşteri Grubu | 0-06 … 49-55 | Güncel Bakiye
+// Başlıklar büyük/küçük harf, Türkçe karakter, boşluk ve "(Sum)" eki yok sayılarak eşleştirilir.
+function _bkBaslik(x){ return _bkKat(x).replace(/SUM$/,''); }
+function _bkKovaEtiket(x){
+  var t=String(x==null?'':x).replace(/\(\s*sum\s*\)/ig,'').replace(/\s+/g,'');
+  var m=/^(\d{1,3})-(\d{1,3})$/.exec(t); if(m) return m[1]+'-'+m[2];
+  m=/^(\d{1,3})(\+|[uü]st[uü]|ve[uü]st[uü]|veüzeri|üzeri)$/i.exec(t); if(m) return m[1]+'+';
+  return '';
+}
 function bakiyeExcelCoz(wb){
-  var B=function(x){ return String(x==null?'':x).toLocaleLowerCase('tr-TR').replace(/\s+/g,''); };
+  var B=_bkBaslik;
   for(var si=0; si<wb.SheetNames.length; si++){
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[si]], {header:1, defval:'', raw:true});
     for(var h=0; h<Math.min(rows.length,40); h++){
-      var bas=rows[h].map(B), ip=bas.indexOf('plasiyer');
+      var bas=rows[h].map(B), ip=bas.indexOf('PLASIYER'); if(ip<0) ip=bas.indexOf('PLASIYERADI');
       if(ip<0) continue;
-      var ik=bas.indexOf('carikodu'), ia=bas.indexOf('cariadı'), ig=bas.indexOf('müşterigrubu'), it=bas.indexOf('güncelbakiye');
-      if(ia<0) ia=bas.indexOf('cariadi');
+      var ik=bas.indexOf('CARIKODU'), ia=bas.indexOf('CARIADI'), ig=bas.indexOf('MUSTERIGRUBU'), it=bas.indexOf('GUNCELBAKIYE');
       if(ia<0 || it<0) throw new Error('"Cari Adı" ve "Güncel Bakiye" sütunları bulunamadı.');
-      var kv=[]; rows[h].forEach(function(c,i){ var t=String(c==null?'':c).replace(/\s+/g,''); if(/^\d{1,3}-\d{1,3}$/.test(t)||/^\d{1,3}\+$/.test(t)) kv.push({i:i, ad:t}); });
+      var kv=[]; rows[h].forEach(function(c,i){ var e=_bkKovaEtiket(c); if(e) kv.push({i:i, ad:e}); });
       if(!kv.length) throw new Error('Gün aralığı sütunları (0-06, 07-13 …) bulunamadı.');
       var satir=[];
       for(var r=h+1; r<rows.length; r++){
@@ -890,7 +900,7 @@ function bakiyeExcelCoz(wb){
       return {kovalar:kv.map(function(o){ return o.ad; }), satirlar:satir, sayfa:wb.SheetNames[si]};
     }
   }
-  throw new Error('"Plasiyer" başlıklı sütun bulunamadı. Octapull bakiye raporunu yükleyin.');
+  throw new Error('"Plasiyer" / "PlasiyerAdi" başlıklı sütun bulunamadı. Octapull bakiye raporunu yükleyin.');
 }
 // Satırları GY belgelerine böl
 function bakiyeGrupla(coz){
@@ -899,6 +909,9 @@ function bakiyeGrupla(coz){
   coz.satirlar.forEach(function(s){ var t=bul(s.p); if(t){ s.p=t.st; gr[t.gy].push(s); } else es.push(s); });
   return {gruplar:gr, eslesmeyen:es};
 }
+// Seçili satırlarda hiç tutarı olmayan gün aralıkları (ör. "70+") tablolarda gizlenir
+function _bkDoluKovalar(sat, K){ return K.map(function(k,i){ return i; }).filter(function(i){ return sat.some(function(s){ return Math.abs(s.b[i]||0)>=0.5; }); }); }
+function _bkKovaAd(k){ return /\+$/.test(k) ? k.replace('+',' gün ve üstü') : k; }
 function _bkUst21(s, kovalar){ var t=0; kovalar.forEach(function(k,i){ if(_bkKovaBas(k)>=21) t+=(s.b[i]||0); }); return t; }
 
 // ── Yükleme ekranı (Müdür: pencere; Operatör: sayfa içinde) ──
@@ -906,7 +919,7 @@ var _bkYuklenecek=null;
 function bakiyeYukleHtml(){
   var bugun=(function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
   return '<div style="font-size:15px;font-weight:700;color:#0F1923;margin-bottom:6px;">💰 Bakiye Raporu Yükle</div>'
-    +'<p style="font-size:12px;color:#4A5568;margin:0 0 12px;line-height:1.5;">Octapull\'dan alınan günlük <b>Bakiye raporu (21 gün analizi)</b> Excel dosyasını seçin. Sütunlar: <b>Plasiyer | Cari Kodu | Cari Adı | Müşteri Grubu | 0-06 … 49-55 | Güncel Bakiye</b>. Her yükleme bir önceki raporun yerine geçer.</p>'
+    +'<p style="font-size:12px;color:#4A5568;margin:0 0 12px;line-height:1.5;">Octapull\'dan alınan günlük bakiye dışa aktarımını (Excel) seçin. Sütunlar: <b>PlasiyerAdi | CariKodu | CariAdi | MusteriGrubu | 0-06 … 63-69 | 70Ustu | GuncelBakiye</b>. Her yükleme bir önceki raporun yerine geçer.</p>'
     +'<label style="display:block;font-size:11px;font-weight:700;color:#4A5568;margin-bottom:4px;">Rapor tarihi</label>'
     +'<input type="date" id="bkTarih" value="'+bugun+'" style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;margin-bottom:12px;box-sizing:border-box;font-family:Inter,sans-serif;">'
     +'<div id="bkDrop" onclick="document.getElementById(\'bkDosya\').click()" style="border:2px dashed #CBD5E0;border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:12px;">'
@@ -951,7 +964,8 @@ function bakiyeDosyaOku(file){
       _bkYuklenecek={coz:coz, g:g, dosya:_bkTemiz(file.name,120)};
       var top=0, ust=0; coz.satirlar.forEach(function(s){ top+=s.t; ust+=_bkUst21(s,coz.kovalar); });
       var h='<div style="font-weight:700;color:#1E3A5F;margin-bottom:6px;">📋 Önizleme — '+_kac(_bkYuklenecek.dosya)+'</div>'
-        +'✅ <b>'+coz.satirlar.length+'</b> müşteri satırı · Toplam bakiye <b>'+_bkPara(top)+'</b> · 21+ gün <b style="color:#DC2626;">'+_bkPara(ust)+'</b><br>';
+        +'✅ <b>'+coz.satirlar.length+'</b> müşteri satırı · Toplam bakiye <b>'+_bkPara(top)+'</b> · 21+ gün <b style="color:#DC2626;">'+_bkPara(ust)+'</b><br>'
+        +(function(){ var d=_bkDoluKovalar(coz.satirlar, coz.kovalar), b=coz.kovalar.filter(function(k,i){ return d.indexOf(i)<0; }); return '🗓 Gün aralıkları: '+_kac(coz.kovalar.map(_bkKovaAd).join(', '))+(b.length?' <span style="color:#8896A7;">(boş olanlar raporda gizlenir: '+_kac(b.map(_bkKovaAd).join(', '))+')</span>':'')+'<br>'; })();
       Object.keys(g.gruplar).forEach(function(gy){
         var l=g.gruplar[gy], t=l.reduce(function(a,s){ return a+s.t; },0), st=Object.keys(l.reduce(function(o,s){ o[s.p]=1; return o; },{})).length;
         h+='• '+_kac(gy)+': '+st+' temsilci, '+l.length+' müşteri, '+_bkPara(t)+'<br>';
@@ -1061,10 +1075,11 @@ function _bakiyeCiz(sadeceArama){
   // Temsilci tablosu (satıra tıkla → müşteriler)
   var tt=secHd('🧑‍💼 Temsilci Bazında (satıra tıklayınca müşteriler açılır)')
     +'<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;"><thead><tr><th>Temsilci</th><th class="num">21+ Gün</th><th class="num">Toplam</th><th class="num">21+ %</th><th class="num">Müşteri</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
-  var kovaBas='<th>Cari Kodu</th><th>Cari Adı</th><th>Grup</th>'+K.map(function(k){ return '<th class="num" style="white-space:nowrap;'+(_bkKovaBas(k)>=21?'color:var(--red);':'')+'">'+_kac(k)+'</th>'; }).join('')+'<th class="num">Güncel Bakiye</th>';
+  var KD=_bkDoluKovalar(sat, K);   // boş gün aralığı sütunları gizli
+  var kovaBas='<th>Cari Kodu</th><th>Cari Adı</th><th>Grup</th>'+KD.map(function(i){ var k=K[i]; return '<th class="num" style="white-space:nowrap;'+(_bkKovaBas(k)>=21?'color:var(--red);':'')+'">'+_kac(_bkKovaAd(k))+'</th>'; }).join('')+'<th class="num">Güncel Bakiye</th>';
   var musSatir=function(s){
     return '<tr><td style="white-space:nowrap;">'+_kac(s.k)+'</td><td>'+_kac(s.a)+'</td><td style="white-space:nowrap;font-size:11px;">'+_kac(s.g)+'</td>'
-      +K.map(function(k,i){ var v=s.b[i]||0, kir=_bkKovaBas(k)>=21 && v>0.5; return '<td class="num" style="white-space:nowrap;'+(kir?'color:var(--red);font-weight:700;background:#FEF2F2;':'')+'">'+(v>0.5||v<-0.5?Math.round(v).toLocaleString('tr-TR'):'')+'</td>'; }).join('')
+      +KD.map(function(i){ var k=K[i], v=s.b[i]||0, kir=_bkKovaBas(k)>=21 && v>0.5; return '<td class="num" style="white-space:nowrap;'+(kir?'color:var(--red);font-weight:700;background:#FEF2F2;':'')+'">'+(v>0.5||v<-0.5?Math.round(v).toLocaleString('tr-TR'):'')+'</td>'; }).join('')
       +'<td class="num" style="white-space:nowrap;font-weight:700;">'+Math.round(s.t).toLocaleString('tr-TR')+'</td></tr>';
   };
   tl.forEach(function(o,i){
