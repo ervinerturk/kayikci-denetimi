@@ -1242,7 +1242,7 @@ function _odakCiz(){
     });
   });
   var h='';
-  h+='<div style="font-size:12px;color:var(--mid);margin-bottom:10px;">'+(G.durum==='aktif'?'<b style="color:var(--green);">🟢 Aktif</b>':'<b>⚪ Kapalı</b>')+(G.donem?' · Satış dönemi: <b>'+_kac(G.donem)+'</b>':'')+(G.bitis?' · Bitiş: '+_kac(G.bitis.split('-').reverse().join('.')):'')+' · '+NU+' ürün'+(fgy?' · '+_kac(fgy):'')+(fst?' · '+_kac(fst):'')+'</div>';
+  h+='<div style="font-size:12px;color:var(--mid);margin-bottom:10px;">'+(G.durum==='aktif'?'<b style="color:var(--green);">🟢 Aktif</b>':'<b>⚪ Kapalı</b>')+(G.donem?' · Satış dönemi: <b>'+_kac(G.donem)+'</b>':'')+(G.bitis?' · Bitiş: '+_kac(G.bitis.split('-').reverse().join('.')):'')+' · '+NU+' ürün'+((G.ham&&G.ham.filtre==='cesit0')?' · <b style="color:#B91C1C;">Yalnız çeşit 0 müşteriler</b>':'')+(fgy?' · '+_kac(fgy):'')+(fst?' · '+_kac(fst):'')+'</div>';
   var kutu=function(v,l,renk,bg){ return '<div style="background:'+(bg||'#EFF6FF')+';border-radius:10px;padding:10px;text-align:center;"><b style="display:block;font-size:17px;color:'+(renk||'#1E3A5F')+';">'+v+'</b><span style="font-size:10px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">'
     +kutu(satir.length.toLocaleString('tr-TR'),'Müşteri')
@@ -1432,6 +1432,7 @@ function _odYeniCiz(){
     +'<div style="font-size:13px;font-weight:700;color:#1E3A5F;margin:6px 0;">Odak ürünler <span id="odSecSay" style="color:var(--green);"></span></div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;"><input id="odUrunAra" class="fsel" style="cursor:text;background-image:none;max-width:260px;" placeholder="🔎 Ürün ara (örn. TADIMCA)" oninput="_odUrunListe()"><button type="button" onclick="_odAramadakileriSec(true)" style="background:#F0FDF4;color:#15803D;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">☑ Aramadakileri seç</button><button type="button" onclick="_odAramadakileriSec(false)" style="background:#F1F5F9;color:var(--mid);border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">☐ Seçimi temizle</button></div>'
     +'<div id="odUrunListe" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:6px 8px;"></div>'
+    +'<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;margin-top:10px;cursor:pointer;background:#FEF2F2;border-radius:10px;padding:8px 10px;"><input type="checkbox" id="odCesit0" onchange="_odOnizleme()" style="margin-top:2px;"><span><b>Yalnız çeşit 0 müşteriler</b> — seçili ürünlerden <b>hiçbiri</b> olmayan müşteriler listelenir (1 ve üzeri çeşidi olanlar çıkarılır). ST daha odaklı çalışır.</span></label>'
     +'<div id="odOnizleme" style="margin-top:12px;"></div>';
   _odUrunListe();
 }
@@ -1469,9 +1470,9 @@ function _odListeleriKur(v, rutlar){
     var m=Object.keys(o.m).map(function(c){ var r=o.m[c], x=v.cari[c];
       r.gun.sort(function(a,b){ return OD_GUNLER.indexOf(a)-OD_GUNLER.indexOf(b); });
       r.ciro=x?Math.round(x.ciro):0; r.u={};
-      if(x){ if(!r.a) r.a=x.a; sec.forEach(function(u){ var q=_odAdet(x.u[u.k]); if(q>0){ r.u[u.k]=q; top.dolu++; } }); }
-      return r; }).sort(function(a,b){ var ga=a.gun.length?OD_GUNLER.indexOf(a.gun[0]):9, gb=b.gun.length?OD_GUNLER.indexOf(b.gun[0]):9; return ga-gb || (a.s||999)-(b.s||999); });
-    top.st++; top.m+=m.length; top.hucre+=m.length*sec.length;
+      if(x){ if(!r.a) r.a=x.a; sec.forEach(function(u){ var q=_odAdet(x.u[u.k]); if(q>0){ r.u[u.k]=q; } }); }
+      return r; }).filter(function(r){ return !v.cesit0 || !Object.keys(r.u).length; }).sort(function(a,b){ var ga=a.gun.length?OD_GUNLER.indexOf(a.gun[0]):9, gb=b.gun.length?OD_GUNLER.indexOf(b.gun[0]):9; return ga-gb || (a.s||999)-(b.s||999); });
+    if(m.length){ top.st++; top.m+=m.length; top.hucre+=m.length*sec.length; m.forEach(function(r){ top.dolu+=Object.keys(r.u).length; }); }
     return {st:o.st, gy:o.gy, m:m}; }).filter(function(o){ return o.m.length; });
   return {liste:liste, sec:sec, top:top, eslesmeyen:Object.keys(eslesmeyen), kodsuz:kodsuz};
 }
@@ -1482,6 +1483,7 @@ function _odOnizleme(){
   if(!n){ el.innerHTML='<div style="font-size:12px;color:var(--mid);">Görev için en az bir ürün seçin.</div>'; return; }
   if(n>20){ el.innerHTML='<div style="font-size:12px;color:var(--red);">En fazla 20 ürün seçilebilir (ST ekranında okunaklı kalsın).</div>'; return; }
   var ciz=function(){
+    v.cesit0=!!(document.getElementById('odCesit0')||{}).checked;
     var R=_odListeleriKur(v,_odRutlar), t=R.top;
     el.innerHTML='<div style="background:#F8FAFC;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.7;">'
       +'<b>Önizleme:</b> '+t.st+' temsilci · '+t.m.toLocaleString('tr-TR')+' müşteri · '+t.hucre.toLocaleString('tr-TR')+' hücre · satıştan dolu '+t.dolu.toLocaleString('tr-TR')+' (%'+(t.hucre?Math.round(t.dolu/t.hucre*1000)/10:0).toLocaleString('tr-TR')+') · <b style="color:#B91C1C;">fırsat '+(t.hucre-t.dolu).toLocaleString('tr-TR')+'</b>'
@@ -1498,11 +1500,12 @@ function odakYayinla(){
   var v=_odYeni; if(!v || !_odRutlar) return;
   var ad=_odTemiz((document.getElementById('odAd')||{}).value,60), donem=_odTemiz((document.getElementById('odDonem')||{}).value,40), bitis=String((document.getElementById('odBitis')||{}).value||'').slice(0,10);
   if(!ad){ alert('Görev adı yazın.'); return; }
+  v.cesit0=!!(document.getElementById('odCesit0')||{}).checked;
   var R=_odListeleriKur(v,_odRutlar); if(!R.liste.length){ alert('Seçilen ürünlerle eşleşen temsilci/müşteri bulunamadı.'); return; }
   var b=document.getElementById('odYayinla'); if(b){ b.disabled=true; b.textContent='⏳ Yayınlanıyor…'; }
   var d=new Date(), id='g'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+String(d.getSeconds()).padStart(2,'0');
   var gorev={ad:ad, donem:donem, bitis:/^\d{4}-\d{2}-\d{2}$/.test(bitis)?bitis:'', durum:'aktif', urunler:R.sec.map(function(u){ return {k:u.k, a:u.a}; }),
-    olusturma:d.toISOString(), olusturan:(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', kaynak:v.dosya||'', ozet:{st:R.top.st, musteri:R.top.m, hucre:R.top.hucre, dolu:R.top.dolu}};
+    olusturma:d.toISOString(), olusturan:(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', kaynak:v.dosya||'', filtre:v.cesit0?'cesit0':'', ozet:{st:R.top.st, musteri:R.top.m, hucre:R.top.hucre, dolu:R.top.dolu}};
   // Önce listeler, sonra görev (ST, listesi hazır olmayan görevi görmesin)
   Promise.all(R.liste.map(function(o){ return db.collection('odakListe').doc(id+'__'+_bkKat(o.st)).set({gorev:id, st:o.st, gy:o.gy, m:o.m}); }))
     .then(function(){ return db.collection('odakGorev').doc(id).set(gorev); })
