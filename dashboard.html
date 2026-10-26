@@ -1365,7 +1365,7 @@ function odakYeniGorevAc(){
   _odYeni=null;
   _odModal('<div style="font-size:16px;font-weight:800;color:#1E3A5F;margin-bottom:4px;">＋ Yeni Odak Görevi</div>'
     +'<div style="font-size:12px;color:var(--mid);margin-bottom:10px;">Octapull <b>Ürün Detay Satış Raporu</b>nun <b>son '+OD_GUN+' günlük</b> ham dosyasını yükleyin (sayfa "Rapor": Plasiyer, Cari Kodu, Cari Unvanı, Ürün Kod, Ürün, Miktar (PAK), Net Fiyat). Özet tabloyu panel kendisi hazırlar.</div>'
-    +'<div onclick="document.getElementById(\'odDosya\').click()" style="border:2px dashed var(--border);border-radius:12px;padding:18px;text-align:center;cursor:pointer;"><div style="font-size:26px;">📂</div><div style="font-size:13px;font-weight:600;color:#4A5568;">Satış dosyasını seçin</div><div style="font-size:11px;color:#8896A7;">.xlsx — büyük dosyalarda okuma 10-30 sn sürebilir</div></div>'
+    +'<div id="odBirak" onclick="document.getElementById(\'odDosya\').click()" ondragover="event.preventDefault();this.style.borderColor=\'#16A34A\';this.style.background=\'#F0FDF4\'" ondragleave="this.style.borderColor=\'\';this.style.background=\'\'" ondrop="event.preventDefault();this.style.borderColor=\'\';this.style.background=\'\';if(event.dataTransfer&&event.dataTransfer.files[0])odakDosyaOku(event.dataTransfer.files[0])" style="border:2px dashed var(--border);border-radius:12px;padding:18px;text-align:center;cursor:pointer;"><div style="font-size:26px;">📂</div><div style="font-size:13px;font-weight:600;color:#4A5568;">Satış dosyasını seçin veya buraya sürükleyin</div><div style="font-size:11px;color:#8896A7;">.xlsx — büyük dosyalarda okuma 10-30 sn sürebilir</div></div>'
     +'<input type="file" id="odDosya" accept=".xlsx,.xls" style="display:none" onchange="odakDosyaOku(this.files[0])">'
     +'<div id="odDosyaDurum" style="font-size:12px;margin-top:8px;"></div><div id="odYeniIc"></div>');
 }
@@ -1377,7 +1377,7 @@ function odakDosyaOku(f){
     try{
       var wb=XLSX.read(e.target.result,{type:'array'});
       var v=odakSatisCoz(wb); v.dosya=_odTemiz(f.name,120);
-      _odYeni=v; du.style.color='var(--green)'; du.textContent='✅ '+v.satir.toLocaleString('tr-TR')+' satır okundu · '+Object.keys(v.cari).length.toLocaleString('tr-TR')+' müşteri · '+v.urunler.length+' ürün'+(v.donemNot?' · '+v.donemNot:' · Dosyada tarih sütunu yok: tamamı kullanıldı (Octapull\'dan son '+OD_GUN+' günlük raporu alın)');
+      _odYeni=v; du.style.color='var(--green)'; du.textContent=v.liste ? '✅ Hazır müşteri listesi: '+Object.keys(v.cari).length.toLocaleString('tr-TR')+' müşteri · '+v.urunler.length+' ürün (sayfa: '+v.sayfalar.join(', ')+'). Ürünler otomatik seçildi; yalnız bu listedeki müşteriler göreve girer.' : '✅ '+v.satir.toLocaleString('tr-TR')+' satır okundu · '+Object.keys(v.cari).length.toLocaleString('tr-TR')+' müşteri · '+v.urunler.length+' ürün'+(v.donemNot?' · '+v.donemNot:' · Dosyada tarih sütunu yok: tamamı kullanıldı (Octapull\'dan son '+OD_GUN+' günlük raporu alın)');
       _odYeniCiz();
     }catch(err){ du.style.color='var(--red)'; du.textContent='⚠️ '+err.message; document.getElementById('odYeniIc').innerHTML=''; }
   },30); };
@@ -1397,7 +1397,8 @@ function odakSatisCoz(wb){
   };
   var ad=null, yer=null;
   for(var s=0;s<wb.SheetNames.length;s++){ yer=bul(wb.Sheets[wb.SheetNames[s]]); if(yer){ ad=wb.SheetNames[s]; break; } }
-  if(!yer) throw new Error('Satış dosyası tanınamadı: "Plasiyer", "Cari Kodu", "Ürün" ve "Miktar" başlıkları bulunamadı. Octapull "Ürün Detay Satış Raporu" ham dosyasını yükleyin.');
+  if(!yer){ var LV=odakListeCoz(wb); if(LV) return LV; }
+  if(!yer) throw new Error('Dosya tanınamadı: ham satış dosyası ("Plasiyer", "Cari Kodu", "Ürün", "Miktar") ya da hazır müşteri listesi ("Plasiyer", "Cari Kodu", "Cari Unvanı" + ürün sütunları) bekleniyor.');
   var C=yer.c, rows=XLSX.utils.sheet_to_json(wb.Sheets[ad],{header:1,defval:'',raw:true});
   var urun=Object.create(null), cari=Object.create(null), ay=Object.create(null), n=0;
   // Tarih sütunu varsa: dosyadaki en son tarihten geriye OD_GUN gün
@@ -1421,6 +1422,40 @@ function odakSatisCoz(wb){
   var tStr=function(x){ var d=new Date((x-25569)*864e5); return String(d.getUTCDate()).padStart(2,'0')+'.'+String(d.getUTCMonth()+1).padStart(2,'0')+'.'+d.getUTCFullYear(); };
   return {satir:n, urunler:ul, cari:cari, ay:Object.keys(ay), secili:Object.create(null), donemNot: tMax ? 'Son '+OD_GUN+' gün: '+tStr(tMin||tAlt)+' – '+tStr(tMax)+(atlanan?' ('+atlanan.toLocaleString("tr-TR")+' eski satır dışarıda)':'') : ''};
 }
+// Hazır müşteri listesi (ör. "Yalnız çeşit 0" özet Excel'i): satırlar = görevin müşterileri, ürün sütunları = görev ürünleri.
+// Başlık tek satır ya da iki satır (birleştirilmiş üst başlık + alt satırda ürün adının devamı) olabilir.
+var OD_META=['GRUPYONETICISI','MUFETTIS','PLASIYER','PLASIYERADI','SATISTEMSILCISI','RUTGUNU','GUN','SIRA','ZIYARETSIRASI','CARIKODU','MUSTERIKODU','CARIUNVANI','CARIADI','MUSTERIUNVANI','MUSTERIADI','CARIKODUADI',
+  'MUSTERIGRUBU','MUSTERIGRUP','DONEMCIROSU','CIRO','2026CIRO','CESIT','DOLUSKU','BOSSKU','GERIBILDIRIM','ACIKLAMA','ZIYARETTARIHI','AY','ILCE','ADRES','KOORDINATX','KOORDINATY','GUNCELBAKIYE','BAKIYE','TOPLAM','TOPLAMBAKIYE'];
+function odakListeCoz(wb){
+  var cari=Object.create(null), urunAd=null, n=0, sayfa=[];
+  wb.SheetNames.forEach(function(sn){
+    var ws=wb.Sheets[sn]; if(!ws || !ws['!ref']) return;
+    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+    for(var i=0;i<Math.min(rows.length,15);i++){
+      var h=rows[i].map(_bkKat), ix=function(adlar){ for(var j=0;j<h.length;j++){ if(adlar.indexOf(h[j])>-1) return j; } return -1; };
+      var P=ix(['PLASIYER','PLASIYERADI','SATISTEMSILCISI']), C=ix(['CARIKODU','MUSTERIKODU']), A=ix(['CARIUNVANI','CARIADI','MUSTERIUNVANI','MUSTERIADI']);
+      if(P<0 || C<0 || A<0) continue;
+      var G=ix(['MUSTERIGRUBU','MUSTERIGRUP']), Z=-1; h.forEach(function(x,j){ if(Z<0 && (x.indexOf('CIRO')>-1)) Z=j; });
+      var alt=rows[i+1]||[], ikiSatir=!String(alt[P]||'').trim() && !String(alt[C]||'').trim() && alt.some(function(x){ return String(x||'').trim(); });
+      var pc=[]; rows[i].forEach(function(x,j){ var ad=(String(x||'').trim()+(ikiSatir?' '+String(alt[j]||'').trim():'')).replace(/\s+/g,' ').trim(); if(ad && !/^[0-9]/.test(ad) && /[A-Za-zÇĞİÖŞÜçğıöşü]{2}/.test(ad) && OD_META.indexOf(_bkKat(ad))<0 && OD_META.indexOf(h[j])<0 && j!==Z) pc.push({j:j, a:_odTemiz(ad,80)}); });
+      if(!pc.length) return;
+      if(!urunAd) urunAd=pc.map(function(x){ return x.a; });
+      sayfa.push(sn);
+      for(var r=i+(ikiSatir?2:1); r<rows.length; r++){
+        var R=rows[r], p=String(R[P]||'').trim(), c=String(R[C]||'').trim(); if(!p || !c || !/^[A-Za-z0-9_-]{1,20}$/.test(c)) continue;
+        n++;
+        var o=cari[c]||(cari[c]={a:_odTemiz(R[A],120), g:G>-1?_odTemiz(R[G],40):'', ciro:0, u:Object.create(null), p:Object.create(null)});
+        if(Z>-1) o.ciro=Math.max(o.ciro, _bkSayi(R[Z])); o.p[p]=1;
+        pc.forEach(function(x){ if(urunAd.indexOf(x.a)<0) return; var q=_bkSayi(R[x.j]), k=_bkKat(x.a).slice(0,30); if(q>0) o.u[k]=(o.u[k]||0)+q; });
+      }
+      return;
+    }
+  });
+  if(!n || !urunAd) return null;
+  var ul=urunAd.map(function(a){ var k=_bkKat(a).slice(0,30), m=0; Object.keys(cari).forEach(function(c){ if(cari[c].u[k]>0) m++; }); return {k:k, a:a, q:0, m:m}; });
+  var sec=Object.create(null); ul.forEach(function(u){ sec[u.k]=1; });
+  return {satir:n, urunler:ul, cari:cari, ay:[], secili:sec, liste:true, sayfalar:sayfa, donemNot:''};
+}
 function _odYeniCiz(){
   var v=_odYeni, ic=document.getElementById('odYeniIc'); if(!v || !ic) return;
   var bit=new Date(Date.now()+30*864e5), bitS=bit.getFullYear()+'-'+String(bit.getMonth()+1).padStart(2,'0')+'-'+String(bit.getDate()).padStart(2,'0');
@@ -1439,7 +1474,7 @@ function _odYeniCiz(){
 function _odUrunListe(){
   var v=_odYeni; if(!v) return; var q=_bkKat((document.getElementById('odUrunAra')||{}).value||'');
   var l=v.urunler.filter(function(u){ return !q || _bkKat(u.a).indexOf(q)>-1 || _bkKat(u.k).indexOf(q)>-1; });
-  document.getElementById('odUrunListe').innerHTML=l.length?l.map(function(u){ return '<label style="display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 0;cursor:pointer;"><input type="checkbox" data-k="'+_kac(u.k)+'"'+(v.secili[u.k]?' checked':'')+' onchange="_odUrunIsaret(this)"><span style="flex:1;">'+_kac(u.a)+' <span style="color:var(--soft);">('+_kac(u.k)+')</span></span><span style="color:var(--soft);white-space:nowrap;">'+u.m.toLocaleString('tr-TR')+' müşteri</span></label>'; }).join(''):'<div style="font-size:12px;color:var(--mid);">Eşleşen ürün yok.</div>';
+  document.getElementById('odUrunListe').innerHTML=l.length?l.map(function(u){ return '<label style="display:flex;gap:8px;align-items:center;font-size:12px;padding:3px 0;cursor:pointer;"><input type="checkbox" data-k="'+_kac(u.k)+'"'+(v.secili[u.k]?' checked':'')+' onchange="_odUrunIsaret(this)"><span style="flex:1;">'+_kac(u.a)+(v.liste?'':' <span style="color:var(--soft);">('+_kac(u.k)+')</span>')+'</span><span style="color:var(--soft);white-space:nowrap;">'+u.m.toLocaleString('tr-TR')+' müşteri</span></label>'; }).join(''):'<div style="font-size:12px;color:var(--mid);">Eşleşen ürün yok.</div>';
   _odOnizleme();
 }
 function _odUrunIsaret(el){ var k=el.getAttribute('data-k'); if(el.checked) _odYeni.secili[k]=1; else delete _odYeni.secili[k]; _odOnizleme(); }
@@ -1458,13 +1493,13 @@ function _odListeleriKur(v, rutlar){
   Object.keys(rutlar).forEach(function(g){ var m=rutlar[g]||{};
     Object.keys(m).forEach(function(stAd){ var o=ekle(stAd); if(!o) return; var gunler=m[stAd]||{};
       Object.keys(gunler).forEach(function(gun){ (Array.isArray(gunler[gun])?gunler[gun]:[]).forEach(function(x){
-        var c=String(x&&x.k||'').trim(); if(!c){ kodsuz++; return; } rutCari[c]=1;
-        var r=o.m[c]||(o.m[c]={c:_odTemiz(c,20), a:_odTemiz(x.a,120), g:_odTemiz(x.gr,40), gun:[], s:0});
+        var c=String(x&&x.k||'').trim(); if(!c){ kodsuz++; return; } rutCari[c]=1; if(v.liste && !v.cari[c]) return;
+        var r=o.m[c]||(o.m[c]={c:_odTemiz(c,20), a:_odTemiz(x.a,120), g:_odTemiz(x.gr,40)||(v.liste&&v.cari[c]?v.cari[c].g:''), gun:[], s:0});
         if(r.gun.indexOf(gun)===-1) r.gun.push(gun); var s=parseInt(x.s)||0; if(s && (!r.s || s<r.s)) r.s=s;
       }); }); }); });
   Object.keys(v.cari).forEach(function(c){ if(rutCari[c]) return; var x=v.cari[c];
     Object.keys(x.p).forEach(function(p){ var o=ekle(p); if(!o){ eslesmeyen[p]=1; return; }
-      if(!o.m[c]) o.m[c]={c:_odTemiz(c,20), a:x.a, g:'', gun:[], s:0}; }); });
+      if(!o.m[c]) o.m[c]={c:_odTemiz(c,20), a:x.a, g:x.g||'', gun:[], s:0}; }); });
   var top={st:0, m:0, hucre:0, dolu:0};
   var liste=Object.keys(L).map(function(k){ var o=L[k];
     var m=Object.keys(o.m).map(function(c){ var r=o.m[c], x=v.cari[c];
@@ -1505,7 +1540,7 @@ function odakYayinla(){
   var b=document.getElementById('odYayinla'); if(b){ b.disabled=true; b.textContent='⏳ Yayınlanıyor…'; }
   var d=new Date(), id='g'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+String(d.getSeconds()).padStart(2,'0');
   var gorev={ad:ad, donem:donem, bitis:/^\d{4}-\d{2}-\d{2}$/.test(bitis)?bitis:'', durum:'aktif', urunler:R.sec.map(function(u){ return {k:u.k, a:u.a}; }),
-    olusturma:d.toISOString(), olusturan:(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', kaynak:v.dosya||'', filtre:v.cesit0?'cesit0':'', ozet:{st:R.top.st, musteri:R.top.m, hucre:R.top.hucre, dolu:R.top.dolu}};
+    olusturma:d.toISOString(), olusturan:(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', kaynak:v.dosya||'', filtre:v.cesit0?'cesit0':(v.liste?'liste':''), ozet:{st:R.top.st, musteri:R.top.m, hucre:R.top.hucre, dolu:R.top.dolu}};
   // Önce listeler, sonra görev (ST, listesi hazır olmayan görevi görmesin)
   Promise.all(R.liste.map(function(o){ return db.collection('odakListe').doc(id+'__'+_bkKat(o.st)).set({gorev:id, st:o.st, gy:o.gy, m:o.m}); }))
     .then(function(){ return db.collection('odakGorev').doc(id).set(gorev); })
