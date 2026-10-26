@@ -162,6 +162,7 @@ function girisYap(){
   var kod=(document.getElementById('gKod').value||'').trim(), pin=String(document.getElementById('gPin').value||'');
   gHata('');
   if(!/^[0-9]{2,4}$/.test(kod)){ gHata('ST kodunu rakam olarak girin.'); return; }
+  if(!pin){ gHata('Şifrenizi yazın.'); document.getElementById('gPin').focus(); return; }
   if(pin.length<6){ gHata('Şifre en az 6 karakter olmalı.'); return; }
   if(!auth){ gHata('Sunucuya bağlanılamadı. İnterneti kontrol edin.'); return; }
   var b=document.getElementById('gBtn'); b.disabled=true; b.textContent='Giriş yapılıyor…';
@@ -169,7 +170,7 @@ function girisYap(){
     .then(function(){ return auth.signInWithEmailAndPassword('st'+kod+'@'+ST_ALAN, pin); })
     .catch(function(err){
       var k=(err&&err.code)||'';
-      gHata(/network-request-failed/.test(k)?'İnternet bağlantısı yok.':/too-many-requests/.test(k)?'Çok fazla hatalı deneme. Birkaç dakika sonra tekrar deneyin.':'ST kodu veya şifre hatalı.');
+      gHata(/network-request-failed/.test(k)?'İnternet bağlantısı yok.':/too-many-requests/.test(k)?'Çok fazla hatalı deneme. Birkaç dakika sonra tekrar deneyin.':'ST kodu veya şifre hatalı. Şifreyi 👁 ile görerek tekrar yazın (büyük/küçük harfe dikkat).');
       document.getElementById('gPin').value='';
     }).then(function(){ b.disabled=false; b.textContent='Giriş'; });
 }
@@ -195,7 +196,13 @@ if(auth) auth.onAuthStateChanged(function(u){
     document.getElementById('uGy').textContent='ST '+BEN.k+' · '+BEN.gy;
     document.getElementById('giris').classList.add('gizli'); document.getElementById('ana').classList.remove('gizli');
     gorevleriOku();
-  }).catch(function(err){ gHata('Hesap bilgisi okunamadı: '+((err&&err.message)||err)); });
+  }).catch(function(err){
+    var m=(err&&err.message)||String(err);
+    // Kural gereği tanımsız ST hesabı (stHesaplar belgesi yok) "yetki yok" hatası alır
+    if(/permission|insufficient/i.test(m)) gHata('Şifreniz doğru, ancak hesabınız panelde henüz tanımlanmamış (ST '+e.replace(/^st([0-9]+)@.*$/,'$1')+'). Satış Müdürünüze bildirin.');
+    else gHata('Hesap bilgisi okunamadı: '+m);
+    auth.signOut();
+  });
 });
 
 // ── Görevler ──
