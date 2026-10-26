@@ -884,13 +884,18 @@ function _bkKovaEtiket(x){
 }
 function bakiyeExcelCoz(wb){
   var B=_bkBaslik;
-  for(var si=0; si<wb.SheetNames.length; si++){
+  // Octapull bakiye dosyası birden çok sayfa içerir (Temsilci, Cari Adı, Kılavuz 1): veri her zaman "Kılavuz 1" sayfasından okunur.
+  // Tek sayfalı (eski biçim) dosyada o sayfa okunur.
+  var kil=wb.SheetNames.filter(function(n){ return _bkKat(n)==='KILAVUZ1'; });
+  if(!kil.length && wb.SheetNames.length>1) throw new Error('"Kılavuz 1" sayfası bulunamadı. Dosyadaki sayfalar: '+wb.SheetNames.map(function(n){ return '"'+_bkTemiz(n,40)+'"'; }).join(', ')+'.');
+  var sayfalar=kil.length ? [wb.SheetNames.indexOf(kil[0])] : [0];
+  for(var _s=0; _s<sayfalar.length; _s++){ var si=sayfalar[_s];
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[si]], {header:1, defval:'', raw:true});
     for(var h=0; h<Math.min(rows.length,40); h++){
       var bas=rows[h].map(B), ip=bas.indexOf('PLASIYER'); if(ip<0) ip=bas.indexOf('PLASIYERADI');
       if(ip<0) continue;
       var ik=bas.indexOf('CARIKODU'), ia=bas.indexOf('CARIADI'), ig=bas.indexOf('MUSTERIGRUBU'), it=bas.indexOf('GUNCELBAKIYE');
-      if(ia<0 || it<0) throw new Error('"Cari Adı" ve "Güncel Bakiye" sütunları bulunamadı.');
+      if(ia<0 || it<0) throw new Error('"'+_bkTemiz(wb.SheetNames[si],40)+'" sayfasında "Cari Adı" ve "Güncel Bakiye" sütunları bulunamadı.');
       var kv=[]; rows[h].forEach(function(c,i){ var e=_bkKovaEtiket(c); if(e) kv.push({i:i, ad:e}); });
       if(!kv.length) throw new Error('Gün aralığı sütunları (0-06, 07-13 …) bulunamadı.');
       var satir=[];
