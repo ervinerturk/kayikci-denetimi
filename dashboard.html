@@ -1407,6 +1407,8 @@ function _aracCiz(sadeceArama){
 // Müdür: Octapull "Ürün Detay Satış Raporu" ham dosyasından görev tanımlar (ürünleri seçer), ST hesaplarını eşler.
 // Müdür + GY: ST'lerin st.html'den girdiği miktarları canlı izler (GY yalnız kendi ekibi — sunucu kuralıyla).
 // Boş hücre = FIRSAT (yönlendirme; "her üründen olsun" hedefi yok). ST ürün verince miktarı girer → yeşil.
+var _odOlcu='cesit';
+function odakOlcu(x){ _odOlcu=(x==='syms')?'syms':'cesit'; _odakCiz(); }
 var _odAcik=false, _odGorevler=null, _odSecili='', _odListe=null, _odGiris=null, _odDinle=null, _odHata='', _odYuk=false, _odYeni=null;
 var OD_ST_ALAN='st.kayikci.com.tr';
 var OD_GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
@@ -1506,31 +1508,35 @@ function _odakCiz(){
   var stSet=Object.create(null); satir.forEach(function(r){ stSet[r.st]=1; });
   (_odGiris||[]).forEach(function(e){ if(!stSet[e.st]) return; if(e.gun===bugun && e.tamam) bugunTamam++;
     Object.keys(e.u).forEach(function(k){ var v=_odAdet(e.u[k]); if(v>0){ topPak+=v; sonGiris.push({z:e.zaman, st:e.st, c:e.c, k:k, v:v}); } }); });
-  var firsat=0, dolu=0, deger=0, ST=Object.create(null), UR=U.map(function(){ return {satis:0, st:0}; });
+  var firsat=0, dolu=0, deger=0, syms=0, ST=Object.create(null), UR=U.map(function(){ return {satis:0, st:0}; });
   satir.forEach(function(r){
-    var o=ST[r.st]||(ST[r.st]={st:r.st, gy:r.gy, m:0, f:0, d:0}); o.m++;
-    var gi=GR[r.st+'|'+r.c];
+    var o=ST[r.st]||(ST[r.st]={st:r.st, gy:r.gy, m:0, f:0, d:0, s:0}); o.m++;
+    var gi=GR[r.st+'|'+r.c], d0=o.d;
     U.forEach(function(u,i){
       if(_odAdet(r.u[u.k])>0){ dolu++; UR[i].satis++; }
       else { firsat++; o.f++; if(gi && gi.u[u.k]>0){ deger++; o.d++; UR[i].st++; } }
     });
+    if(o.d>d0){ o.s++; syms++; }
   });
   var h='';
   h+='<div style="font-size:12px;color:var(--mid);margin-bottom:10px;">'+(G.durum==='aktif'?'<b style="color:var(--green);">🟢 Aktif</b>':'<b>⚪ Kapalı</b>')+(G.donem?' · Satış dönemi: <b>'+_kac(G.donem)+'</b>':'')+(G.bitis?' · Bitiş: '+_kac(G.bitis.split('-').reverse().join('.')):'')+' · '+NU+' ürün'+((G.ham&&G.ham.filtre==='cesit0')?' · <b style="color:#B91C1C;">Yalnız çeşit 0 müşteriler</b>':'')+(fgy?' · '+_kac(fgy):'')+(fst?' · '+_kac(fst):'')+'</div>';
+  var sy=_odOlcu==='syms', dv=function(o){ return sy?o.s:o.d; };
+  h+='<div style="display:flex;justify-content:flex-end;margin:-4px 0 8px;"><div role="group" aria-label="Ölçü" style="display:inline-flex;background:#F1F5F9;border-radius:10px;padding:3px;">'
+    +['cesit','syms'].map(function(x){ var ac=(x==='syms')===sy; return '<button type="button" id="odOlcu_'+x+'" aria-pressed="'+ac+'" onclick="odakOlcu(\''+x+'\')" style="border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;'+(ac?'background:#1E3A5F;color:#fff;':'background:transparent;color:var(--mid);')+'">'+(x==='syms'?'İlgili Dönem SYMS':'Artırılan çeşit')+'</button>'; }).join('')+'</div></div>';
   var kutu=function(v,l,renk,bg){ return '<div style="background:'+(bg||'#EFF6FF')+';border-radius:10px;padding:10px;text-align:center;"><b style="display:block;font-size:17px;color:'+(renk||'#1E3A5F')+';">'+v+'</b><span style="font-size:10px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">'
     +kutu(satir.length.toLocaleString('tr-TR'),'Müşteri')
     +kutu(firsat.toLocaleString('tr-TR'),'Fırsat (boş hücre)','#B91C1C','#FEF2F2')
-    +kutu(deger.toLocaleString('tr-TR'),'ST\'nin değerlendirdiği fırsat','#15803D','#F0FDF4')
+    +kutu((sy?syms:deger).toLocaleString('tr-TR'),sy?'İlgili Dönem SYMS':'Artırılan çeşit','#15803D','#F0FDF4')
     +kutu(Math.round(topPak).toLocaleString('tr-TR'),'ST\'nin girdiği toplam PAK','#15803D','#F0FDF4')
     +kutu(bugunTamam.toLocaleString('tr-TR'),'Bugün tamamlanan ziyaret')
     +kutu('%'+(satir.length*NU?Math.round(dolu/(satir.length*NU)*1000)/10:0).toLocaleString('tr-TR'),'Satıştan gelen doluluk (bilgi)')+'</div>';
   h+='<div style="font-size:11px;color:var(--soft);margin:-6px 0 12px;">Boş hücre bir <b>yönlendirmedir</b>: ST hangi ürünün o müşteriye uygun olduğuna sahada karar verir. Renkler: <span style="background:'+OD_RENK.satis+';padding:1px 6px;border-radius:4px;">satıştan var</span> <span style="background:'+OD_RENK.az+';padding:1px 6px;border-radius:4px;">az satış (1-'+OD_AZ+' PAK)</span> <span style="background:'+OD_RENK.st+';padding:1px 6px;border-radius:4px;">ST girdi</span> <span style="background:'+OD_RENK.firsat+';padding:1px 6px;border-radius:4px;">fırsat</span></div>';
   // Grafikler
-  var stl=Object.keys(ST).map(function(k){ return ST[k]; }).sort(function(a,b){ return b.d-a.d || a.st.localeCompare(b.st,'tr'); });
-  var mx1=Math.max.apply(null, stl.map(function(o){ return o.d; }).concat([1]));
-  var g1=_grfAd('🟢 Temsilci Bazında Değerlendirilen Fırsat')+(stl.some(function(o){ return o.d>0; })?stl.filter(function(o){ return o.d>0; }).slice(0,15).map(function(o){
-    return '<div class="hbar" data-tip="'+_kac(o.st)+': '+o.d+' fırsat değerlendirildi / '+o.f+' fırsat"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.d/mx1*100).toFixed(1)+'%;background:#16A34A;"></span></span><span class="hbar-v">'+o.d+'</span></div>'; }).join(''):'<div class="grf-bos">Henüz ST girişi yok.</div>');
+  var stl=Object.keys(ST).map(function(k){ return ST[k]; }).sort(function(a,b){ return dv(b)-dv(a) || a.st.localeCompare(b.st,'tr'); });
+  var mx1=Math.max.apply(null, stl.map(dv).concat([1]));
+  var g1=_grfAd(sy?'🟢 Temsilci Bazında İlgili Dönem SYMS (müşteri)':'🟢 Temsilci Bazında Artırılan Çeşit')+(stl.some(function(o){ return o.d>0; })?stl.filter(function(o){ return o.d>0; }).slice(0,15).map(function(o){
+    return '<div class="hbar" data-tip="'+_kac(o.st)+': '+o.d+' çeşit artırıldı · '+o.s+' müşteride (SYMS) / '+o.m+' müşteri"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(dv(o)/mx1*100).toFixed(1)+'%;background:#16A34A;"></span></span><span class="hbar-v">'+dv(o)+'</span></div>'; }).join(''):'<div class="grf-bos">Henüz ST girişi yok.</div>');
   var mx2=Math.max.apply(null, UR.map(function(x){ return x.satis+x.st; }).concat([1]));
   var g2=_grfAd('📦 Ürün Bazında: Satıştan Var + ST ile Eklenen (müşteri)')+U.map(function(u,i){ var x=UR[i];
     return '<div class="hbar" data-tip="'+_kac(u.a)+': satıştan '+x.satis+', ST ile eklenen '+x.st+' müşteri"><span class="hbar-l">'+_kac(u.a)+'</span><span class="hbar-t" style="display:flex;"><span class="hbar-f" style="width:'+(x.satis/mx2*100).toFixed(1)+'%;background:#86C99B;border-radius:0;"></span><span class="hbar-f" style="width:'+(x.st/mx2*100).toFixed(1)+'%;background:#16A34A;'+(x.st?'':'display:none;')+'"></span></span><span class="hbar-v">'+x.satis+(x.st?' +'+x.st:'')+'</span></div>'; }).join('');
