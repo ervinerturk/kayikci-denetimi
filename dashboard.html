@@ -202,6 +202,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
     <button onclick="rutPaneliAc()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">⬆ Rut Güncelle</button>
     <button id="navBakiyeYukleBtn" onclick="bakiyeYuklePaneliAc()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">⬆ Bakiye Yükle</button>
     <button id="navOdakBtn" onclick="odakGorunumToggle()" style="background:#16A34A;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">🎯 Odak Görevi</button>
+    <button id="navAracBtn" onclick="aracGorunumToggle()" style="background:#2563EB;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">🚚 Araç Stok</button>
     <button id="navBakiyeBtn" onclick="bakiyeGorunumToggle()" style="background:#F59E0B;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">💰 Bakiye Raporu</button>
     <button id="navTaniBtn" onclick="taniGoster()" style="background:rgba(255,200,0,.25);color:#FFD700;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">🔍 Tanı</button>
     <div class="nav-date" id="navDate"></div>
@@ -258,6 +259,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 
   <!-- ODAK GÖREVİ (nav'daki "🎯 Odak Görevi" ile açılır; ST'ler st.html'den giriş yapar) -->
   <div id="odakAlan" style="display:none;"></div>
+
+  <!-- ARAÇ STOK (nav'daki "🚚 Araç Stok" ile açılır; Merkez Depo yalnız Müdür) -->
+  <div id="aracAlan" style="display:none;"></div>
 
   <!-- ÖZET BAR -->
   <div class="ozet-bar">
@@ -1034,6 +1038,7 @@ function bakiyeVeriOku(){
 function bakiyeGorunumToggle(ac){
   _bkAcik=(typeof ac==='boolean')?ac:!_bkAcik;
   if(_bkAcik && typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false);
+  if(_bkAcik && typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false);
   var alan=document.getElementById('bakiyeAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navBakiyeBtn');
   if(alan) alan.style.display=_bkAcik?'block':'none';
   if(bar) bar.style.display=_bkAcik?'none':'';
@@ -1123,8 +1128,9 @@ function operatorEkrani(){
   var o=document.getElementById('operatorAlan');
   if(!o){ o=document.createElement('div'); o.id='operatorAlan'; w.insertBefore(o, w.firstChild); }
   o.style.display='block';
-  o.innerHTML='<div class="card"><div class="card-body" style="padding:20px;">'+bakiyeYukleHtml()+'</div></div><div class="card"><div class="card-head"><div class="card-ic">🕒</div><div class="card-title">Son Yükleme</div></div><div class="card-body" id="opSon" style="font-size:13px;color:var(--mid);">⏳ Okunuyor…</div></div>';
-  _bkSurukleBagla(); operatorSonYukleme();
+  o.innerHTML='<div class="card"><div class="card-body" style="padding:20px;">'+bakiyeYukleHtml()+'</div></div><div class="card"><div class="card-head"><div class="card-ic">🕒</div><div class="card-title">Son Yükleme</div></div><div class="card-body" id="opSon" style="font-size:13px;color:var(--mid);">⏳ Okunuyor…</div></div>'
+    +'<div class="card"><div class="card-body" style="padding:20px;">'+aracYukleHtml()+'</div></div><div class="card"><div class="card-head"><div class="card-ic">🚚</div><div class="card-title">Son Araç Stok Yüklemesi</div></div><div class="card-body" id="opAracSon" style="font-size:13px;color:var(--mid);">⏳ Okunuyor…</div></div>';
+  _bkSurukleBagla(); operatorSonYukleme(); _asSurukleBagla(); aracSonYukleme();
 }
 function operatorSonYukleme(){
   var el=document.getElementById('opSon'); if(!el || !db) return;
@@ -1133,6 +1139,268 @@ function operatorSonYukleme(){
     l.forEach(function(d){ var x=d&&d.exists?d.data():null; if(!x) return; if(!son || String(x.yuklendi)>String(son.yuklendi)) son=x; (x.satirlar||[]).forEach(function(s){ n++; t+=_bkSayi(s&&s.t); }); });
     el.innerHTML=son ? ('📅 Rapor tarihi: <b>'+_bkTarihTr(son.tarih)+'</b><br>⏱ Yüklendi: '+_bkZamanTr(son.yuklendi)+' · '+_kac(_bkTemiz(son.yukleyen,80))+'<br>📄 '+_kac(_bkTemiz(son.dosya,120))+' · '+n+' müşteri · '+_bkPara(t)) : 'Henüz yükleme yapılmadı.';
   }).catch(function(e){ el.textContent='Okunamadı: '+(e&&e.message); });
+}
+
+// ===== ARAÇ STOK TAKİBİ =====
+// Kaynak: Octapull "Depo Bakiye Raporu" (sayfa başlıkları: Ürün Grubu | Depo Kodu | Depo Adı | Ürün Kodu | Ürün Adı | Birim Fiyat | Bakiye (PK) | Tutar (PK) …).
+// Her ST'nin aracı bir depo ("ADEM GÜNEY DEPO"). Yükleme: Operatör (ve Müdür). Saklama: aracStok/{GY} + aracStok/_merkez (Merkez Depo + eşleşmeyenler, yalnız Müdür).
+// Görünüm: GY → ST satırları, sütunlar ürün grupları; ölçü filtresi "Stok TL" / "Stok Pk."; ST'ye tıklayınca ürün listesi.
+var _asVeri=null, _asAcik=false, _asYuk=false, _asYuklenecek=null, _asAcikST=Object.create(null), _asOlcu='tl';
+var AS_GRUP_SIRA=['Çekirdek','Kuru Yemiş','Çiğ Kuru Yemiş','Kuru Meyve','Tadımca','Diğer','TEST'];
+function _asGrupSirala(a,b){ var i=AS_GRUP_SIRA.indexOf(a), j=AS_GRUP_SIRA.indexOf(b); return (i<0?99:i)-(j<0?99:j) || a.localeCompare(b,'tr'); }
+function _asPk(x){ return Math.round(x||0).toLocaleString('tr-TR')+' Pk'; }
+function _asDeger(x){ return _asOlcu==='pk' ? Math.round(x||0).toLocaleString('tr-TR') : Math.round(x||0).toLocaleString('tr-TR'); }
+// Depo adı → temsilci: "DEPO" atılır, Türkçe karakter/boşluk farkı yok sayılır; birebir yoksa tek harf farkı kabul (CENAP ↔ Cenab), tek aday şartıyla
+function _asDepoST(){
+  var m=Object.create(null), l=[];
+  Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(s){ var k=_bkKat(s); m[k]={st:s, gy:g}; l.push(k); }); });
+  var lev=function(a,b){ if(Math.abs(a.length-b.length)>1) return 9; var d=[]; for(var i=0;i<=a.length;i++){ d[i]=[i]; } for(var j=0;j<=b.length;j++) d[0][j]=j;
+    for(i=1;i<=a.length;i++) for(j=1;j<=b.length;j++) d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); return d[a.length][b.length]; };
+  return function(ad){
+    var k=_bkKat(ad).replace(/DEPOSU$|DEPO$/,''); if(!k) return null; if(m[k]) return m[k];
+    var aday=l.filter(function(x){ return lev(x,k)<=1; }); return aday.length===1 ? m[aday[0]] : null;
+  };
+}
+function aracExcelCoz(wb){
+  var eksikSayfa='';
+  for(var si=0; si<wb.SheetNames.length; si++){
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[si]], {header:1, defval:'', raw:true});
+    for(var h=0; h<Math.min(rows.length,20); h++){
+      var bas=rows[h].map(_bkKat), ix=function(a){ for(var j=0;j<bas.length;j++){ if(a.indexOf(bas[j])>-1) return j; } return -1; };
+      var iD=ix(['DEPOADI']), iG=ix(['URUNGRUBU']), iU=ix(['URUNADI']), iP=ix(['BAKIYEPK']), iT=ix(['TUTARPK']);
+      if(iD<0 || iG<0) continue;
+      if(iU<0 || iP<0 || iT<0){ eksikSayfa=eksikSayfa||wb.SheetNames[si]; continue; }
+      var iK=ix(['DEPOKODU']), iUK=ix(['URUNKODU']);
+      var dep=Object.create(null), sira=[], gruplar=Object.create(null);
+      for(var r=h+1; r<rows.length; r++){
+        var x=rows[r], ad=_bkTemiz(x[iD],80), g=_bkTemiz(x[iG],40);
+        if(!ad || /toplam/i.test(ad) || /toplam/i.test(g)) continue;
+        var p=_bkSayi(x[iP]), t=_bkSayi(x[iT]); if(Math.abs(p)<0.001 && Math.abs(t)<0.005) continue;
+        var kod=iK>-1?_bkTemiz(x[iK],10):'', anah=kod+'|'+ad;
+        var o=dep[anah]||(dep[anah]={d:kod, ad:ad, u:[]}); if(!dep[anah].u.length && sira.indexOf(anah)<0) sira.push(anah);
+        o.u.push({k:_bkTemiz(iUK>-1?x[iUK]:'',20), a:_bkTemiz(x[iU],100), g:g||'(Grupsuz)', p:Math.round(p*100)/100, t:Math.round(t*100)/100});
+        gruplar[g||'(Grupsuz)']=1;
+      }
+      var liste=sira.map(function(k){ return dep[k]; });
+      if(!liste.length) throw new Error('Dosyada stok satırı bulunamadı.');
+      return {depolar:liste, gruplar:Object.keys(gruplar).sort(_asGrupSirala), sayfa:wb.SheetNames[si]};
+    }
+  }
+  if(eksikSayfa) throw new Error('"'+_bkTemiz(eksikSayfa,40)+'" sayfasında "Ürün Adı", "Bakiye (PK)" ve "Tutar (PK)" sütunları bulunamadı.');
+  throw new Error('"Depo Adı" ve "Ürün Grubu" başlıkları bulunamadı. Octapull "Depo Bakiye Raporu" dosyasını yükleyin.');
+}
+function aracGrupla(coz){
+  var bul=_asDepoST(), gr=Object.create(null), merkez=[], bulunan=Object.create(null);
+  Object.keys(YO).forEach(function(g){ gr[g]=[]; });
+  coz.depolar.forEach(function(d){ var t=bul(d.ad); if(t){ gr[t.gy].push({st:t.st, d:d.d, ad:d.ad, u:d.u}); bulunan[t.st]=1; } else merkez.push({st:'', d:d.d, ad:d.ad, u:d.u}); });
+  var eksik=[]; Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(s){ if(!bulunan[s]) eksik.push(s); }); });
+  return {gruplar:gr, merkez:merkez, eksik:eksik};
+}
+function _asTop(u){ var p=0, t=0; (u||[]).forEach(function(x){ p+=x.p; t+=x.t; }); return {p:p, t:t}; }
+
+// ── Yükleme ──
+function aracYukleHtml(){
+  var bugun=(function(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); })();
+  return '<div style="font-size:15px;font-weight:700;color:#0F1923;margin-bottom:6px;">🚚 Araç Stok Yükle</div>'
+    +'<p style="font-size:12px;color:#4A5568;margin:0 0 12px;line-height:1.5;">Octapull <b>Depo Bakiye Raporu</b> dosyasını seçin (sütunlar: <b>Ürün Grubu | Depo Adı | Ürün Adı | Bakiye (PK) | Tutar (PK)</b>; özet sayfaları atlanır). Her yükleme öncekinin yerine geçer.</p>'
+    +'<label style="display:block;font-size:11px;font-weight:700;color:#4A5568;margin-bottom:4px;">Stok tarihi</label>'
+    +'<input type="date" id="asTarih" value="'+bugun+'" style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;margin-bottom:12px;box-sizing:border-box;font-family:Inter,sans-serif;">'
+    +'<div id="asDrop" onclick="document.getElementById(\'asDosya\').click()" style="border:2px dashed #CBD5E0;border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:12px;">'
+    +'<div style="font-size:28px;">🚚</div><div style="font-size:13px;font-weight:600;color:#4A5568;">Excel dosyasını seçin veya buraya sürükleyin</div><div style="font-size:11px;color:#8896A7;margin-top:3px;">.xlsx, .xls</div></div>'
+    +'<input type="file" id="asDosya" accept=".xlsx,.xls" style="display:none" onchange="aracDosyaOku(this.files[0])">'
+    +'<div id="asHata" style="display:none;background:#FEF2F2;color:#B91C1C;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;margin-bottom:10px;"></div>'
+    +'<div id="asOnizleme" style="font-size:12px;color:#4A5568;line-height:1.7;"></div>'
+    +'<button type="button" id="asYukleBtn" onclick="aracSunucuyaYaz()" style="display:none;width:100%;margin-top:10px;background:#16A34A;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;">⬆ Sunucuya Yükle</button>';
+}
+function _asSurukleBagla(){
+  var d=document.getElementById('asDrop'); if(!d) return;
+  d.addEventListener('dragover', function(e){ e.preventDefault(); d.style.borderColor='#16A34A'; d.style.background='#F0FDF4'; });
+  d.addEventListener('dragleave', function(){ d.style.borderColor='#CBD5E0'; d.style.background=''; });
+  d.addEventListener('drop', function(e){ e.preventDefault(); d.style.borderColor='#CBD5E0'; d.style.background=''; if(e.dataTransfer && e.dataTransfer.files[0]) aracDosyaOku(e.dataTransfer.files[0]); });
+}
+function _asHata(t){ var e=document.getElementById('asHata'); if(e){ e.textContent=t; e.style.display=t?'block':'none'; } }
+function aracYuklePaneliAc(){
+  var m=document.getElementById('asModal');
+  if(!m){ m=document.createElement('div'); m.id='asModal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(15,25,35,.55);z-index:9000;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 12px;';
+    m.innerHTML='<div style="background:#fff;border-radius:16px;max-width:560px;width:100%;padding:20px;position:relative;font-family:Inter,sans-serif;">'
+      +'<button type="button" onclick="document.getElementById(\'asModal\').style.display=\'none\'" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:#8896A7;">✕</button><div id="asModalIc"></div></div>';
+    document.body.appendChild(m); }
+  document.getElementById('asModalIc').innerHTML=aracYukleHtml(); _asSurukleBagla(); _asYuklenecek=null; m.style.display='flex';
+}
+function aracDosyaOku(file){
+  if(!file) return; _asHata(''); _asYuklenecek=null;
+  var on=document.getElementById('asOnizleme'), btn=document.getElementById('asYukleBtn'); if(btn) btn.style.display='none';
+  if(on) on.textContent='⏳ "'+file.name+'" okunuyor…';
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      var coz=aracExcelCoz(XLSX.read(e.target.result,{type:'array'})), g=aracGrupla(coz);
+      _asYuklenecek={coz:coz, g:g, dosya:_bkTemiz(file.name,120)};
+      var nST=0, P=0, T=0; Object.keys(g.gruplar).forEach(function(k){ g.gruplar[k].forEach(function(d){ nST++; var s=_asTop(d.u); P+=s.p; T+=s.t; }); });
+      var mz=g.merkez.map(function(d){ var s=_asTop(d.u); return _kac(d.ad)+' ('+_bkPara(s.t)+')'; });
+      on.innerHTML='<b>Önizleme</b> (sayfa: '+_kac(coz.sayfa)+')<br>🚚 '+nST+' ST aracı · Toplam <b>'+_bkPara(T)+'</b> · <b>'+_asPk(P)+'</b><br>📦 Ürün grupları: '+coz.gruplar.map(_kac).join(', ')
+        +'<br>'+Object.keys(g.gruplar).map(function(k){ return _kac(k)+': '+g.gruplar[k].length+' ST'; }).join(' · ')
+        +(mz.length?'<div style="color:#1E3A5F;margin-top:4px;">🏢 Yalnız Müdür görür: '+mz.join(', ')+'</div>':'')
+        +(g.eksik.length?'<div style="color:#B45309;margin-top:4px;">⚠️ Dosyada aracı bulunmayan temsilci: '+g.eksik.map(_kac).join(', ')+'</div>':'');
+      if(btn) btn.style.display='block';
+    }catch(err){ on.textContent=''; _asHata('⚠️ '+err.message); }
+  };
+  r.readAsArrayBuffer(file);
+}
+function aracSunucuyaYaz(){
+  if(!_asYuklenecek || !db) return;
+  var btn=document.getElementById('asYukleBtn'), tr=(document.getElementById('asTarih')||{}).value||'';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(tr)){ _asHata('Stok tarihini seçin.'); return; }
+  btn.disabled=true; btn.textContent='⏳ Yükleniyor...'; _asHata('');
+  var kim=(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', zaman=new Date().toISOString(), Y=_asYuklenecek;
+  var belge=function(dep){ return {tarih:tr, yuklendi:zaman, yukleyen:kim, dosya:Y.dosya, gruplar:Y.coz.gruplar, depolar:dep}; };
+  var isler=Object.keys(Y.g.gruplar).map(function(gy){ return db.collection('aracStok').doc(gy).set(belge(Y.g.gruplar[gy])); });
+  isler.push(db.collection('aracStok').doc('_merkez').set(belge(Y.g.merkez)));
+  Promise.all(isler).then(function(){
+    btn.textContent='✅ Yüklendi';
+    var on=document.getElementById('asOnizleme'); if(on) on.innerHTML+='<div style="color:#16A34A;font-weight:700;margin-top:6px;">✅ '+_bkTarihTr(tr)+' tarihli araç stok raporu yüklendi. GY panellerinde "🚚 Araç Stok" altında görünür.</div>';
+    _asVeri=null; if(_asAcik) aracVeriOku(); if(_dashKullanici && _dashKullanici.operator) aracSonYukleme();
+  }).catch(function(err){ btn.disabled=false; btn.textContent='🔄 Tekrar Dene'; _asHata('Yüklenemedi: '+((err&&err.message)||err)); });
+}
+function aracSonYukleme(){
+  var el=document.getElementById('opAracSon'); if(!el || !db) return;
+  Promise.all(Object.keys(YO).map(function(g){ return db.collection('aracStok').doc(g).get().catch(function(){ return null; }); })).then(function(l){
+    var son=null, n=0, t=0;
+    l.forEach(function(d){ var x=d&&d.exists?d.data():null; if(!x) return; if(!son || String(x.yuklendi)>String(son.yuklendi)) son=x; (x.depolar||[]).forEach(function(dp){ n++; t+=_asTop(dp.u).t; }); });
+    el.innerHTML=son ? ('📅 Stok tarihi: <b>'+_bkTarihTr(son.tarih)+'</b><br>⏱ Yüklendi: '+_bkZamanTr(son.yuklendi)+' · '+_kac(_bkTemiz(son.yukleyen,80))+'<br>📄 '+_kac(_bkTemiz(son.dosya,120))+' · '+n+' ST aracı · '+_bkPara(t)) : 'Henüz araç stok raporu yüklenmedi.';
+  }).catch(function(e){ el.textContent='Okunamadı: '+(e&&e.message); });
+}
+
+// ── Veri okuma ──
+function aracVeriOku(){
+  if(!db || !_dashKullanici) return;
+  _asYuk=true; _aracCiz();
+  var k=_dashKullanici, md=!k.gy, belgeler=k.gy ? [k.gy] : Object.keys(YO).concat(['_merkez']);
+  Promise.all(belgeler.map(function(b){ return db.collection('aracStok').doc(b).get().then(function(d){ return {b:b, d:(d&&d.exists)?d.data():null}; }); }))
+  .then(function(l){
+    var v={tarih:'', yuklendi:'', gruplar:[], depolar:[], merkez:[]}, gs=Object.create(null);
+    l.forEach(function(x){
+      var d=x.d; if(!d || !Array.isArray(d.depolar)) return;
+      if(String(d.yuklendi||'')>v.yuklendi){ v.yuklendi=String(d.yuklendi||''); v.tarih=String(d.tarih||''); }
+      d.depolar.forEach(function(dp){
+        if(!dp || typeof dp!=='object') return;
+        var u=(Array.isArray(dp.u)?dp.u:[]).map(function(z){ var g=_bkTemiz(z&&z.g,40)||'(Grupsuz)'; gs[g]=1; return {k:_bkTemiz(z&&z.k,20), a:_bkTemiz(z&&z.a,100), g:g, p:_bkSayi(z&&z.p), t:_bkSayi(z&&z.t)}; });
+        var o={st:_bkTemiz(dp.st,80), d:_bkTemiz(dp.d,10), ad:_bkTemiz(dp.ad,80), gy:(x.b==='_merkez'?'':x.b), u:u};
+        if(x.b==='_merkez'){ if(md) v.merkez.push(o); } else v.depolar.push(o);
+      });
+    });
+    v.gruplar=Object.keys(gs).sort(_asGrupSirala);
+    _asVeri=v; _asYuk=false; _aracCiz();
+  }).catch(function(err){ _asYuk=false; _asVeri={hata:(err&&err.message)||String(err)}; _aracCiz(); });
+}
+
+// ── Görünüm ──
+function aracGorunumToggle(ac){
+  _asAcik=(typeof ac==='boolean')?ac:!_asAcik;
+  if(_asAcik){ if(typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false); if(typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false); }
+  var alan=document.getElementById('aracAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navAracBtn');
+  if(alan) alan.style.display=_asAcik?'block':'none';
+  if(bar) bar.style.display=_asAcik?'none':'';
+  if(ic) ic.style.display=_asAcik?'none':'';
+  ['fDonem','fMusteriArama'].forEach(function(id){ var x=document.getElementById(id); if(x && x.closest('.filter-group')) x.closest('.filter-group').style.display=_asAcik?'none':''; });
+  if(btn) btn.textContent=_asAcik?'📊 Panele Dön':'🚚 Araç Stok';
+  if(_asAcik){ if(!_asVeri) aracVeriOku(); else _aracCiz(); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+document.addEventListener('change', function(e){ if(_asAcik && e.target && (e.target.id==='fGY' || e.target.id==='fST')){ _asAcikST=Object.create(null); setTimeout(_aracCiz,0); } }, true);
+function aracOlcu(o){ _asOlcu=(o==='pk')?'pk':'tl'; _aracCiz(); }
+function aracSTAcKapa(i){ var el=document.getElementById('asSt'+i); if(!el) return; var ac=el.style.display==='none'; el.style.display=ac?'':'none'; _asAcikST[el.getAttribute('data-st')]=ac; var ok=document.getElementById('asOk'+i); if(ok) ok.textContent=ac?'▾':'›'; }
+var _asAraZ=null;
+function aracAra(){ clearTimeout(_asAraZ); _asAraZ=setTimeout(function(){ _aracCiz(true); }, 200); }
+function _aracCiz(sadeceArama){
+  var alan=document.getElementById('aracAlan'); if(!alan || !_asAcik) return;
+  var md=_dashKullanici && !_dashKullanici.gy && !_dashKullanici.operator;
+  var kart=function(baslik, ic){ return '<div class="card"><div class="card-head"><div class="card-ic" style="background:#E0F2FE;">🚚</div><div class="card-title">'+baslik+'</div></div><div class="card-body">'+ic+'</div></div>'; };
+  var yukleBtn=md?'<button type="button" onclick="aracYuklePaneliAc()" style="background:#EFF6FF;color:var(--blue);border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">⬆ Araç Stok Yükle</button>':'';
+  if(_asYuk && !_asVeri){ alan.innerHTML=kart('Araç Stok Takibi','<div style="padding:16px;text-align:center;color:var(--mid);">⏳ Yükleniyor…</div>'); return; }
+  if(!_asVeri){ alan.innerHTML=''; return; }
+  if(_asVeri.hata){ alan.innerHTML=kart('Araç Stok Takibi','<div style="color:var(--red);font-size:13px;">⚠️ Araç stok raporu okunamadı: '+_kac(_asVeri.hata)+'</div>'); return; }
+  var V=_asVeri;
+  if(!V.depolar.length && !V.merkez.length){ alan.innerHTML=kart('Araç Stok Takibi','<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'+yukleBtn+'</div><div style="padding:16px;text-align:center;color:var(--mid);font-size:13px;">Henüz araç stok raporu yüklenmedi.</div>'); return; }
+  var gyF=(document.getElementById('fGY')||{}).value||'', stF=(document.getElementById('fST')||{}).value||'';
+  var q=_bkKat((document.getElementById('asAra')||{}).value||'');
+  var pk=_asOlcu==='pk', val=function(z){ return pk?z.p:z.t; }, fmt=function(x){ return pk?_asPk(x):_bkPara(x); }, kisa=function(x){ return pk?_asPk(x):_bkKisa(x); };
+  var dl=V.depolar.filter(function(d){ return (!gyF || d.gy===gyF) && (!stF || d.st===stF); });
+  // Satır özetleri
+  var oz=function(d){ var o={top:0, p:0, t:0, g:Object.create(null), cesit:0}; d.u.forEach(function(z){ var v=val(z); o.top+=v; o.p+=z.p; o.t+=z.t; o.g[z.g]=(o.g[z.g]||0)+v; if(z.p>0) o.cesit++; }); return o; };
+  dl.forEach(function(d){ d._o=oz(d); });
+  var G=V.gruplar.filter(function(g){ return dl.some(function(d){ return Math.abs(d._o.g[g]||0)>=0.5; }) || (md && !gyF && !stF && V.merkez.some(function(m){ return m.u.some(function(z){ return z.g===g && Math.abs(val(z))>=0.5; }); })); });
+  var genel={top:0, p:0, t:0, g:Object.create(null)}, urunSet=Object.create(null);
+  dl.forEach(function(d){ genel.top+=d._o.top; genel.p+=d._o.p; genel.t+=d._o.t; G.forEach(function(g){ genel.g[g]=(genel.g[g]||0)+(d._o.g[g]||0); }); d.u.forEach(function(z){ if(z.p>0) urunSet[z.k||z.a]=1; }); });
+  var h='';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+    +'<div style="font-size:12px;color:var(--mid);">📅 Stok tarihi: <b>'+_bkTarihTr(V.tarih)+'</b> · Yükleme: '+_bkZamanTr(V.yuklendi)+(gyF?' · '+_kac(gyF):'')+(stF?' · '+_kac(stF):'')+'</div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+    +'<div role="group" aria-label="Ölçü" style="display:inline-flex;background:#F1F5F9;border-radius:10px;padding:3px;">'
+    +'<button type="button" id="asOlcuTL" aria-pressed="'+(!pk)+'" onclick="aracOlcu(\'tl\')" style="border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;'+(!pk?'background:#1E3A5F;color:#fff;':'background:transparent;color:var(--mid);')+'">Stok TL</button>'
+    +'<button type="button" id="asOlcuPK" aria-pressed="'+pk+'" onclick="aracOlcu(\'pk\')" style="border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;'+(pk?'background:#1E3A5F;color:#fff;':'background:transparent;color:var(--mid);')+'">Stok Pk.</button>'
+    +'</div>'+yukleBtn+'</div></div>';
+  var kutu=function(v,l){ return '<div style="background:#EFF6FF;border-radius:10px;padding:10px;text-align:center;"><b style="display:block;font-size:17px;color:#1E3A5F;">'+v+'</b><span style="font-size:10px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">'
+    +kutu(_bkKisa(genel.t),'Araç Stoku (TL)')+kutu(_asPk(genel.p),'Araç Stoku (Pk)')+kutu(dl.length,'ST Aracı')
+    +kutu(dl.length?kisa(genel.top/dl.length):'—','Araç Başına Ortalama')+kutu(Object.keys(urunSet).length,'Ürün Çeşidi')+'</div>';
+  // Grup özeti + grafik
+  var ozet='<div>'+secHd('📦 Ürün Grubuna Göre ('+(pk?'Pk':'TL')+')')+G.map(function(g){ var v=genel.g[g]||0, pay=genel.top?Math.round(v/genel.top*1000)/10:0; return row(_kac(g), fmt(v)+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'); }).join('')+row('<b>Toplam</b>','<b>'+fmt(genel.top)+'</b>')+'</div>';
+  var stl=dl.slice().sort(function(a,b){ return b._o.top-a._o.top; }).slice(0,15), mx=Math.max.apply(null, stl.map(function(d){ return d._o.top; }).concat([1]));
+  var grf=_grfAd('🚚 Temsilci Bazında Araç Stoku — '+(pk?'Pk':'TL')+' (ilk 15)')+(stl.length?stl.map(function(d){
+    return '<div class="hbar" data-tip="'+_kac(d.st)+': '+fmt(d._o.top)+'"><span class="hbar-l">'+_kac(d.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(d._o.top/mx*100).toFixed(1)+'%;background:#2563EB;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+kisa(d._o.top)+'</span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede araç yok.</div>');
+  h+=_kartIci(ozet, grf);
+  // Ana tablo: GY → ST, sütunlar ürün grupları
+  var gyler=Object.keys(YO).filter(function(g){ return dl.some(function(d){ return d.gy===g; }); });
+  var bas='<th>Temsilci</th>'+G.map(function(g){ return '<th class="num" style="white-space:nowrap;">'+_kac(g)+'</th>'; }).join('')+'<th class="num">Toplam</th>';
+  var hucre=function(v,b){ return '<td class="num" style="white-space:nowrap;'+(b?'font-weight:800;':'')+'">'+(Math.abs(v)>=0.5?_asDeger(v):'<span style="color:var(--soft);">—</span>')+'</td>'; };
+  var urunTablo=function(d){
+    var u=d.u.slice().sort(function(a,b){ return _asGrupSirala(a.g,b.g) || val(b)-val(a); });
+    return '<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;font-size:12px;"><thead><tr><th>Ürün Kodu</th><th>Ürün Adı</th><th>Grup</th><th class="num">Stok Pk</th><th class="num">Stok TL</th></tr></thead><tbody>'
+      +u.map(function(z){ return '<tr><td style="white-space:nowrap;">'+_kac(z.k)+'</td><td>'+_kac(z.a)+'</td><td style="white-space:nowrap;">'+_kac(z.g)+'</td><td class="num"'+(pk?' style="font-weight:700;"':'')+'>'+Math.round(z.p).toLocaleString('tr-TR')+'</td><td class="num" style="white-space:nowrap;'+(!pk?'font-weight:700;':'')+'">'+_bkPara(z.t)+'</td></tr>'; }).join('')
+      +'</tbody></table></div>';
+  };
+  var tt=secHd('🧑‍💼 Grup Yöneticisi → Temsilci ('+(pk?'Stok Pk':'Stok TL')+') · satıra tıklayınca ürünler açılır')
+    +'<div style="overflow-x:auto;"><table class="tbl" id="asTablo" style="min-width:'+(260+G.length*110)+'px;"><thead><tr>'+bas+'</tr></thead><tbody>';
+  var i=0;
+  gyler.forEach(function(gy){
+    var l=dl.filter(function(d){ return d.gy===gy; }).sort(function(a,b){ return b._o.top-a._o.top; });
+    var gt=Object.create(null), gtop=0; l.forEach(function(d){ gtop+=d._o.top; G.forEach(function(g){ gt[g]=(gt[g]||0)+(d._o.g[g]||0); }); });
+    tt+='<tr data-gy-satir="1" style="background:#EEF2F7;"><td style="white-space:nowrap;font-weight:800;color:#1E3A5F;">👥 '+_kac(gy)+' <span style="font-weight:600;color:var(--soft);font-size:11px;">('+l.length+' ST)</span></td>'+G.map(function(g){ return hucre(gt[g]||0,true); }).join('')+hucre(gtop,true)+'</tr>';
+    l.forEach(function(d){
+      var acik=!!_asAcikST[d.st] || !!stF;
+      tt+='<tr data-st-satir="1" style="cursor:pointer;" onclick="aracSTAcKapa('+i+')"><td style="white-space:nowrap;padding-left:22px;"><b>'+_kac(d.st)+'</b> <span id="asOk'+i+'" style="color:var(--blue);">'+(acik?'▾':'›')+'</span><div style="font-size:10px;color:var(--soft);">'+_kac(d.ad)+(d.d?' · '+_kac(d.d):'')+' · '+d._o.cesit+' çeşit</div></td>'+G.map(function(g){ return hucre(d._o.g[g]||0); }).join('')+hucre(d._o.top,true)+'</tr>';
+      tt+='<tr id="asSt'+i+'" data-st="'+_kac(d.st)+'" style="'+(acik?'':'display:none;')+'"><td colspan="'+(G.length+2)+'" style="padding:0 0 10px;background:var(--bg);">'+urunTablo(d)+'</td></tr>';
+      i++;
+    });
+  });
+  if(gyler.length) tt+='<tr style="background:#1E3A5F;"><td style="color:#fff;font-weight:800;">Genel Toplam</td>'+G.map(function(g){ return '<td class="num" style="color:#fff;font-weight:800;white-space:nowrap;">'+_asDeger(genel.g[g]||0)+'</td>'; }).join('')+'<td class="num" style="color:#fff;font-weight:800;white-space:nowrap;">'+_asDeger(genel.top)+'</td></tr>';
+  // Merkez depo (yalnız Müdür, GY/ST filtresi yokken)
+  if(md && !gyF && !stF && V.merkez.length){
+    V.merkez.forEach(function(m){ var o=oz(m);
+      tt+='<tr data-merkez="1" style="cursor:pointer;background:#FFFBEB;" onclick="aracSTAcKapa('+i+')"><td style="white-space:nowrap;"><b>🏢 '+_kac(m.ad)+'</b> <span id="asOk'+i+'" style="color:var(--blue);">›</span><div style="font-size:10px;color:#B45309;">Yalnız Müdür görür · genel toplama dahil değil</div></td>'+G.map(function(g){ return hucre(o.g[g]||0); }).join('')+hucre(o.top,true)+'</tr>';
+      tt+='<tr id="asSt'+i+'" data-st="'+_kac('#'+m.ad)+'" style="display:none;"><td colspan="'+(G.length+2)+'" style="padding:0 0 10px;background:var(--bg);">'+urunTablo(m)+'</td></tr>';
+      i++;
+    });
+  }
+  tt+='</tbody></table></div>';
+  if(!gyler.length) tt+='<div style="font-size:12px;color:var(--mid);padding:8px 2px;">Bu filtrede araç stoku yok.</div>';
+  // Ürün arama: hangi araçta ne kadar var
+  var ara='<div style="margin:14px 0 6px;"><input type="text" id="asAra" placeholder="🔎 Ürün adı veya kodu ara (hangi araçta ne kadar var?)" oninput="aracAra()" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;box-sizing:border-box;font-family:Inter,sans-serif;"></div><div id="asAraSonuc"></div>';
+  var aramaSonuc=function(){
+    if(!q) return '';
+    var l=[]; dl.forEach(function(d){ d.u.forEach(function(z){ if(_bkKat(z.a).indexOf(q)>-1 || _bkKat(z.k).indexOf(q)>-1) l.push({st:d.st, gy:d.gy, z:z}); }); });
+    if(!l.length) return '<div style="font-size:12px;color:var(--mid);padding:6px 2px;">Eşleşen ürün yok.</div>';
+    l.sort(function(a,b){ return val(b.z)-val(a.z); });
+    var tp=0, tt2=0; l.forEach(function(x){ tp+=x.z.p; tt2+=x.z.t; });
+    return '<div style="overflow-x:auto;"><table class="tbl" id="asAraTablo" style="min-width:560px;font-size:12px;"><thead><tr><th>Temsilci</th><th>Ürün Adı</th><th>Grup</th><th class="num">Stok Pk</th><th class="num">Stok TL</th></tr></thead><tbody>'
+      +l.slice(0,150).map(function(x){ return '<tr><td style="white-space:nowrap;">'+_kac(x.st)+'</td><td>'+_kac(x.z.a)+'</td><td style="white-space:nowrap;">'+_kac(x.z.g)+'</td><td class="num">'+Math.round(x.z.p).toLocaleString('tr-TR')+'</td><td class="num" style="white-space:nowrap;">'+_bkPara(x.z.t)+'</td></tr>'; }).join('')
+      +'<tr style="font-weight:800;"><td colspan="3">Toplam ('+l.length+' satır)</td><td class="num">'+Math.round(tp).toLocaleString('tr-TR')+'</td><td class="num" style="white-space:nowrap;">'+_bkPara(tt2)+'</td></tr></tbody></table></div>';
+  };
+  if(sadeceArama && document.getElementById('asAraSonuc')){ document.getElementById('asAraSonuc').innerHTML=aramaSonuc(); return; }
+  var aEski=(document.getElementById('asAra')||{}).value||'';
+  alan.innerHTML=kart('Araç Stok Takibi', h+tt+ara);
+  var ai=document.getElementById('asAra'); if(ai && aEski){ ai.value=aEski; document.getElementById('asAraSonuc').innerHTML=aramaSonuc(); }
 }
 
 // ===== ODAK GÖREVİ — ST (Satış Temsilcisi) paneli yönetimi =====
@@ -1157,6 +1425,7 @@ function _odZamanTr(iso){ try{ var d=new Date(iso); if(isNaN(d)) return ''; retu
 function odakGorunumToggle(ac){
   _odAcik=(typeof ac==='boolean')?ac:!_odAcik;
   if(_odAcik && typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false);
+  if(_odAcik && typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false);
   var alan=document.getElementById('odakAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navOdakBtn');
   if(alan) alan.style.display=_odAcik?'block':'none';
   if(bar) bar.style.display=_odAcik?'none':'';
@@ -2339,7 +2608,7 @@ function dashOturumGoster(k){
   if(k.operator){   // OPERATÖR: yalnız bakiye raporu yükleme ekranı (rapor/görev verisine erişimi yok)
     var _po=document.getElementById('navPanelAd'); if(_po) _po.textContent='Operatör Paneli';
     try{ document.title='Kayıkçı Operatör Paneli'; }catch(e){}
-    ['navTaniBtn','navBakiyeBtn','navOdakBtn'].forEach(function(id){ var x=document.getElementById(id); if(x) x.style.display='none'; });
+    ['navTaniBtn','navBakiyeBtn','navOdakBtn','navAracBtn'].forEach(function(id){ var x=document.getElementById(id); if(x) x.style.display='none'; });
     document.getElementById('dashGirisEkrani').style.display='none';
     document.getElementById('dashAnaPanel').style.display='block';
     var _nk=document.getElementById('navKullanici'), _nb=document.getElementById('navCikisBtn');
