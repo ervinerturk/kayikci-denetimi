@@ -1954,6 +1954,14 @@ function _guncelleIc(){
   k2+=row('Toplam SKU Önyüz', topSKU);
   k2+=row('Ortalama SKU', N>0?avgC+' çeşit/nokta':'—');
 
+  k2+=secHd('🚫 Stok Out');
+  k2+=row('Stok Out Nokta', soN+' nokta', soN>0?'r':'g');
+  if(soN>0){
+    var _soUrun=Object.create(null);
+    done.filter(function(n){return n.so==='Var';}).forEach(function(n){if(n.soUrunler)n.soUrunler.forEach(function(u){_soUrun[u]=(_soUrun[u]||0)+1;});});
+    Object.keys(_soUrun).sort(function(a,b){return _soUrun[b]-_soUrun[a];}).slice(0,3).forEach(function(u){k2+=row('→ '+u,_soUrun[u]+' noktada','r');});
+  }
+
   k2+=secHd('🌿 Tazelik & SKT');
   var eskiGunler=done.filter(function(n){return parseInt(n.eskiGun)>0;}).map(function(n){return parseInt(n.eskiGun);});
   var yeniGunler=done.filter(function(n){return parseInt(n.yeniGun)>0;}).map(function(n){return parseInt(n.yeniGun);});
@@ -1962,14 +1970,6 @@ function _guncelleIc(){
   k2+=row('En Yeni Ürün Ort.', ortYeni>0?ortYeni+' gün':'—');
   k2+=row('En Eski Ürün Ort.', ortEski>0?ortEski+' gün':'—', ortEski>30?'r':ortEski>15?'o':'g');
   k2+=row('SKT Risk Nokta', sktN+' nokta', sktN>0?'r':'g');
-
-  k2+=secHd('🚫 Stok Out');
-  k2+=row('Stok Out Nokta', soN+' nokta', soN>0?'r':'g');
-  if(soN>0){
-    var _soUrun=Object.create(null);
-    done.filter(function(n){return n.so==='Var';}).forEach(function(n){if(n.soUrunler)n.soUrunler.forEach(function(u){_soUrun[u]=(_soUrun[u]||0)+1;});});
-    Object.keys(_soUrun).sort(function(a,b){return _soUrun[b]-_soUrun[a];}).slice(0,3).forEach(function(u){k2+=row('→ '+u,_soUrun[u]+' noktada','r');});
-  }
 
   // ── Ziyaret süresi (formda "Müşteriye Girdim" → kayıt = çıkış) ──
   var _zSure=[]; var _zKir=Object.create(null);
