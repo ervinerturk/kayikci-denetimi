@@ -1351,7 +1351,9 @@ function _aracCiz(sadeceArama){
     +kutu(_bkKisa(genel.t),'Araç Stoku (TL)')+kutu(_asPk(genel.p),'Araç Stoku (Pk)')+kutu(dl.length,'ST Aracı')
     +kutu(dl.length?kisa(genel.top/dl.length):'—','Araç Başına Ortalama')+kutu(Object.keys(urunSet).length,'Ürün Çeşidi')+'</div>';
   // Grup özeti + grafik
-  var ozet='<div>'+secHd('📦 Ürün Grubuna Göre ('+(pk?'Pk':'TL')+')')+G.map(function(g){ var v=genel.g[g]||0, pay=genel.top?Math.round(v/genel.top*1000)/10:0; return row(_kac(g), fmt(v)+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'); }).join('')+row('<b>Toplam</b>','<b>'+fmt(genel.top)+'</b>')+'</div>';
+  var grCes=Object.create(null); dl.forEach(function(d){ d.u.forEach(function(z){ if(z.p>0) (grCes[z.g]||(grCes[z.g]=Object.create(null)))[z.k||z.a]=1; }); });
+  var cesN=function(g){ return grCes[g]?Object.keys(grCes[g]).length:0; };
+  var ozet='<div>'+secHd('📦 Ürün Grubuna Göre ('+(pk?'Pk':'TL')+')')+G.map(function(g){ var v=genel.g[g]||0, pay=genel.top?Math.round(v/genel.top*1000)/10:0; return row(_kac(g), fmt(v)+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+' · Çeşit: '+cesN(g)+'</span>'); }).join('')+row('<b>Toplam</b>','<b>'+fmt(genel.top)+'</b> <span style="font-size:10px;color:var(--soft);font-weight:700;">Toplam çeşit: '+Object.keys(urunSet).length+'</span>')+'</div>';
   var stl=dl.slice().sort(function(a,b){ return b._o.top-a._o.top; }).slice(0,15), mx=Math.max.apply(null, stl.map(function(d){ return d._o.top; }).concat([1]));
   var grf=_grfAd('🚚 Temsilci Bazında Araç Stoku — '+(pk?'Pk':'TL')+' (ilk 15)')+(stl.length?stl.map(function(d){
     return '<div class="hbar" data-tip="'+_kac(d.st)+': '+fmt(d._o.top)+'"><span class="hbar-l">'+_kac(d.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(d._o.top/mx*100).toFixed(1)+'%;background:#2563EB;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+kisa(d._o.top)+'</span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede araç yok.</div>');
