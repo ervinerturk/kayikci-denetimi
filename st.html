@@ -260,8 +260,8 @@ function aracCiz(sadeceListe){
   var V=A_VERI, P=A_OLCU==='pk', val=function(z){ return P?z.p:z.t; }, f=P?pk:tl;
   var ara=document.getElementById('aAra'), q=ara?ara.value:'';
   var qn=q.toLocaleUpperCase('tr-TR').trim();
-  var tp=0, tt=0, ces=0, gs={};
-  V.u.forEach(function(z){ tp+=z.p; tt+=z.t; if(z.p>0) ces++; gs[z.g]=(gs[z.g]||0)+val(z); });
+  var tp=0, tt=0, ces=0, gs={}, gc={};
+  V.u.forEach(function(z){ tp+=z.p; tt+=z.t; if(z.p>0){ ces++; gc[z.g]=(gc[z.g]||0)+1; } gs[z.g]=(gs[z.g]||0)+val(z); });
   var sira=V.gruplar.filter(function(g){ return gs[g]!=null; }).concat(Object.keys(gs).filter(function(g){ return V.gruplar.indexOf(g)<0; }));
   var liste=function(){
     var l=V.u.filter(function(z){ return !qn || z.a.toLocaleUpperCase('tr-TR').indexOf(qn)>-1 || z.k.indexOf(qn)>-1; });
@@ -278,7 +278,7 @@ function aracCiz(sadeceListe){
   el.innerHTML='<div class="bilgi">📅 Stok tarihi: <b>'+esc(tarih)+'</b>'+(V.depo?' · '+esc(V.depo):'')+' · <a href="javascript:aracYenile()" style="color:var(--lac);font-weight:700;">↻ Yenile</a></div>'
     +'<div class="aolcu" role="group" aria-label="Ölçü"><button type="button" id="aOlcuTL" class="'+(P?'':'on')+'" aria-pressed="'+(!P)+'" onclick="aracOlcu(\'tl\')">Stok TL</button><button type="button" id="aOlcuPK" class="'+(P?'on':'')+'" aria-pressed="'+P+'" onclick="aracOlcu(\'pk\')">Stok Pk.</button></div>'
     +'<div class="akutu"><div><b id="aTopTL">'+tl(tt)+'</b><span>Araç Stoku (TL)</span></div><div><b id="aTopPK">'+pk(tp)+'</b><span>Araç Stoku (Pk)</span></div><div><b>'+ces+'</b><span>Ürün Çeşidi</span></div></div>'
-    +'<div class="akart">'+sira.map(function(g){ var pay=(P?tp:tt)?Math.round(gs[g]/(P?tp:tt)*1000)/10:0; return '<div class="asat"><div class="n"><b>'+esc(g)+'</b></div><div class="v">'+f(gs[g])+'<small>%'+pay.toLocaleString('tr-TR')+'</small></div></div>'; }).join('')+'</div>'
+    +'<div class="akart">'+sira.map(function(g){ var pay=(P?tp:tt)?Math.round(gs[g]/(P?tp:tt)*1000)/10:0; return '<div class="asat"><div class="n"><b>'+esc(g)+'</b></div><div class="v">'+f(gs[g])+'<small>%'+pay.toLocaleString('tr-TR')+' · Çeşit-'+(gc[g]||0)+'</small></div></div>'; }).join('')+'</div>'
     +'<input id="aAra" type="search" placeholder="🔎 Ürün adı veya kodu" value="'+esc(q)+'" oninput="aracCiz(true)" style="width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin-bottom:10px;background:#fff;">'
     +'<div id="aListe">'+liste()+'</div>';
 }
