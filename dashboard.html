@@ -1257,9 +1257,15 @@ function aracSunucuyaYaz(){
   var belge=function(dep){ return {tarih:tr, yuklendi:zaman, yukleyen:kim, dosya:Y.dosya, gruplar:Y.coz.gruplar, depolar:dep}; };
   var isler=Object.keys(Y.g.gruplar).map(function(gy){ return db.collection('aracStok').doc(gy).set(belge(Y.g.gruplar[gy])); });
   isler.push(db.collection('aracStok').doc('_merkez').set(belge(Y.g.merkez)));
+  // ST paneli: her temsilciye yalnız kendi aracı (aracStokST/{ST}); dosyada aracı olmayan ST'nin belgesi boşalır
+  Object.keys(YO).forEach(function(gy){ (YO[gy]||[]).forEach(function(st){
+    var dl=(Y.g.gruplar[gy]||[]).filter(function(d){ return d.st===st; }), u=[];
+    dl.forEach(function(d){ u=u.concat(d.u); });
+    isler.push(db.collection('aracStokST').doc(_bkKat(st)).set({st:st, gy:gy, tarih:tr, yuklendi:zaman, dosya:Y.dosya, depo:dl.map(function(d){ return d.ad; }).join(', '), gruplar:Y.coz.gruplar, u:u}));
+  }); });
   Promise.all(isler).then(function(){
     btn.textContent='✅ Yüklendi';
-    var on=document.getElementById('asOnizleme'); if(on) on.innerHTML+='<div style="color:#16A34A;font-weight:700;margin-top:6px;">✅ '+_bkTarihTr(tr)+' tarihli araç stok raporu yüklendi. GY panellerinde "🚚 Araç Stok" altında görünür.</div>';
+    var on=document.getElementById('asOnizleme'); if(on) on.innerHTML+='<div style="color:#16A34A;font-weight:700;margin-top:6px;">✅ '+_bkTarihTr(tr)+' tarihli araç stok raporu yüklendi. GY panellerinde "🚚 Araç Stok" altında, her ST\'ye kendi panelinde "🚚 Aracım" sekmesinde görünür.</div>';
     _asVeri=null; if(_asAcik) aracVeriOku(); if(_dashKullanici && _dashKullanici.operator) aracSonYukleme();
   }).catch(function(err){ btn.disabled=false; btn.textContent='🔄 Tekrar Dene'; _asHata('Yüklenemedi: '+((err&&err.message)||err)); });
 }

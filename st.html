@@ -34,6 +34,26 @@
 html,body{background:var(--bg);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--dark);-webkit-text-size-adjust:100%;}
 button,input,select{font-family:inherit;}
 .gizli{display:none!important;}
+#aracim{display:none;}
+.wrap.arac-mod #aracim{display:block;}
+.wrap.arac-mod #gBilgi,.wrap.arac-mod #kontrol,.wrap.arac-mod #ozet,.wrap.arac-mod #liste{display:none!important;}
+.sekme.arac{border-color:#93C5FD;color:#1D4ED8;}
+.sekme.arac.on{background:#1D4ED8;border-color:#1D4ED8;color:#fff;}
+.akutu{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 10px;}
+.akutu div{background:#fff;border-radius:12px;padding:10px 6px;text-align:center;box-shadow:0 1px 3px rgba(15,25,35,.06);}
+.akutu b{display:block;font-size:16px;color:var(--lac);}
+.akutu span{font-size:10px;color:var(--mid);font-weight:600;}
+.aolcu{display:inline-flex;background:#E2E8F0;border-radius:10px;padding:3px;}
+.aolcu button{border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;background:transparent;color:var(--mid);}
+.aolcu button.on{background:var(--lac);color:#fff;}
+.akart{background:#fff;border-radius:12px;padding:4px 12px;margin-bottom:10px;box-shadow:0 1px 3px rgba(15,25,35,.06);}
+.agrup{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:800;color:var(--lac);text-transform:uppercase;letter-spacing:.3px;padding:10px 0 6px;border-bottom:1.5px solid var(--border);}
+.asat{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #F1F5F9;font-size:13px;}
+.asat:last-child{border-bottom:none;}
+.asat .n{flex:1;min-width:0;}
+.asat .n small{display:block;font-size:10px;color:var(--soft);}
+.asat .v{text-align:right;white-space:nowrap;font-weight:800;color:var(--dark);}
+.asat .v small{display:block;font-size:10px;font-weight:600;color:var(--soft);}
 /* Giriş */
 #giris{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:linear-gradient(160deg,#1E3A5F,#0F1923);}
 .gk{background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:360px;box-shadow:0 20px 50px rgba(0,0,0,.3);}
@@ -125,6 +145,7 @@ button,input,select{font-family:inherit;}
   <div id="senk">☁ Tüm kayıtlar iletildi</div>
   <div class="wrap">
     <div id="sekmeler" class="sekmeler"></div>
+    <div id="aracim"></div>
     <div id="gBilgi" class="bilgi"></div>
     <div id="kontrol" class="kont gizli">
       <select id="fGun" onchange="ciz()"></select>
@@ -206,6 +227,62 @@ if(auth) auth.onAuthStateChanged(function(u){
   });
 });
 
+// ── Sekmeler: görevler + "🚚 Aracım" (her ST yalnız kendi araç stoğunu görür — sunucu kuralıyla) ──
+var ARAC=false, A_VERI=null, A_OLCU='tl', A_YUK=false;
+function sekmeleriCiz(){
+  document.getElementById('sekmeler').innerHTML=GOREVLER.map(function(g){ return '<button type="button" class="sekme'+(!ARAC&&g.id===GSEC?' on':'')+'" onclick="gorevSec(\''+esc(g.id)+'\')">🎯 '+esc(g.ad)+'</button>'; }).join('')
+    +'<button type="button" id="aracSekme" class="sekme arac'+(ARAC?' on':'')+'" onclick="aracAc()">🚚 Aracım</button>';
+}
+function aracAc(){
+  ARAC=true; document.querySelector('.wrap').classList.add('arac-mod'); sekmeleriCiz();
+  if(!A_VERI && !A_YUK) aracOku(); else aracCiz();
+  window.scrollTo(0,0);
+}
+function aracOku(){
+  A_YUK=true; aracCiz();
+  db.collection('aracStokST').where('st','==',BEN.st).get().then(function(s){
+    var v=null; s.docs.forEach(function(d){ var x=d.data()||{}; if(!v || String(x.yuklendi||'')>String(v.yuklendi||'')) v=x; });
+    A_VERI=v ? {tarih:temiz(v.tarih,10), yuklendi:String(v.yuklendi||''), depo:temiz(v.depo,120), gruplar:(Array.isArray(v.gruplar)?v.gruplar:[]).map(function(g){ return temiz(g,40); }),
+      u:(Array.isArray(v.u)?v.u:[]).map(function(z){ return {k:temiz(z&&z.k,20), a:temiz(z&&z.a,100), g:temiz(z&&z.g,40)||'(Grupsuz)', p:Number(z&&z.p)||0, t:Number(z&&z.t)||0}; })} : {bos:true};
+    A_YUK=false; aracCiz();
+  }).catch(function(err){ A_YUK=false; A_VERI={hata:(err&&err.message)||String(err)}; aracCiz(); });
+}
+function aracOlcu(o){ A_OLCU=(o==='pk')?'pk':'tl'; aracCiz(); }
+function aracYenile(){ A_VERI=null; aracOku(); }
+function tl(x){ return Math.round(x||0).toLocaleString('tr-TR')+' ₺'; }
+function pk(x){ return Math.round(x||0).toLocaleString('tr-TR')+' Pk'; }
+function aracCiz(sadeceListe){
+  var el=document.getElementById('aracim'); if(!el || !ARAC) return;
+  if(A_YUK && !A_VERI){ el.innerHTML='<div class="bos">⏳ Araç stoğunuz yükleniyor…</div>'; return; }
+  if(!A_VERI) return;
+  if(A_VERI.hata){ el.innerHTML='<div class="bos">⚠️ Araç stoğu okunamadı: '+esc(A_VERI.hata)+'</div>'; return; }
+  if(A_VERI.bos){ el.innerHTML='<div class="bos">Henüz araç stok raporu yüklenmedi.<br><small>Operatör yükleyince burada görünür.</small></div>'; return; }
+  var V=A_VERI, P=A_OLCU==='pk', val=function(z){ return P?z.p:z.t; }, f=P?pk:tl;
+  var ara=document.getElementById('aAra'), q=ara?ara.value:'';
+  var qn=q.toLocaleUpperCase('tr-TR').trim();
+  var tp=0, tt=0, ces=0, gs={};
+  V.u.forEach(function(z){ tp+=z.p; tt+=z.t; if(z.p>0) ces++; gs[z.g]=(gs[z.g]||0)+val(z); });
+  var sira=V.gruplar.filter(function(g){ return gs[g]!=null; }).concat(Object.keys(gs).filter(function(g){ return V.gruplar.indexOf(g)<0; }));
+  var liste=function(){
+    var l=V.u.filter(function(z){ return !qn || z.a.toLocaleUpperCase('tr-TR').indexOf(qn)>-1 || z.k.indexOf(qn)>-1; });
+    if(!l.length) return '<div class="bos">'+(V.u.length?'Eşleşen ürün yok.':'Aracınızda stok görünmüyor.')+'</div>';
+    return sira.map(function(g){
+      var gl=l.filter(function(z){ return z.g===g; }).sort(function(a,b){ return val(b)-val(a); }); if(!gl.length) return '';
+      var gt=0; gl.forEach(function(z){ gt+=val(z); });
+      return '<div class="akart"><div class="agrup"><span>'+esc(g)+' · '+gl.length+' ürün</span><span>'+f(gt)+'</span></div>'
+        +gl.map(function(z){ return '<div class="asat"><div class="n">'+esc(z.a)+'<small>'+esc(z.k)+'</small></div><div class="v">'+(P?pk(z.p):tl(z.t))+'<small>'+(P?tl(z.t):pk(z.p))+'</small></div></div>'; }).join('')+'</div>';
+    }).join('');
+  };
+  if(sadeceListe && document.getElementById('aListe')){ document.getElementById('aListe').innerHTML=liste(); return; }
+  var tarih=V.tarih ? V.tarih.split('-').reverse().join('.') : '—';
+  el.innerHTML='<div class="bilgi">📅 Stok tarihi: <b>'+esc(tarih)+'</b>'+(V.depo?' · '+esc(V.depo):'')+' · <a href="javascript:aracYenile()" style="color:var(--lac);font-weight:700;">↻ Yenile</a></div>'
+    +'<div class="aolcu" role="group" aria-label="Ölçü"><button type="button" id="aOlcuTL" class="'+(P?'':'on')+'" aria-pressed="'+(!P)+'" onclick="aracOlcu(\'tl\')">Stok TL</button><button type="button" id="aOlcuPK" class="'+(P?'on':'')+'" aria-pressed="'+P+'" onclick="aracOlcu(\'pk\')">Stok Pk.</button></div>'
+    +'<div class="akutu"><div><b id="aTopTL">'+tl(tt)+'</b><span>Araç Stoku (TL)</span></div><div><b id="aTopPK">'+pk(tp)+'</b><span>Araç Stoku (Pk)</span></div><div><b>'+ces+'</b><span>Ürün Çeşidi</span></div></div>'
+    +'<div class="akart">'+sira.map(function(g){ var pay=(P?tp:tt)?Math.round(gs[g]/(P?tp:tt)*1000)/10:0; return '<div class="asat"><div class="n"><b>'+esc(g)+'</b></div><div class="v">'+f(gs[g])+'<small>%'+pay.toLocaleString('tr-TR')+'</small></div></div>'; }).join('')+'</div>'
+    +'<input id="aAra" type="search" placeholder="🔎 Ürün adı veya kodu" value="'+esc(q)+'" oninput="aracCiz(true)" style="width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin-bottom:10px;background:#fff;">'
+    +'<div id="aListe">'+liste()+'</div>';
+}
+
 // ── Görevler ──
 function gorevleriOku(){
   document.getElementById('liste').innerHTML='<div class="bos">⏳ Görevler yükleniyor…</div>';
@@ -213,7 +290,7 @@ function gorevleriOku(){
     GOREVLER=s.docs.map(function(d){ var v=d.data()||{}; return {id:d.id, ad:temiz(v.ad,60), donem:temiz(v.donem,40), bitis:temiz(v.bitis,10), olusturma:String(v.olusturma||''),
       urunler:(Array.isArray(v.urunler)?v.urunler:[]).slice(0,40).map(function(u){ return {k:temiz(u&&u.k,30), a:temiz(u&&u.a,80)}; })}; })
       .sort(function(a,b){ return a.olusturma<b.olusturma?1:-1; });
-    if(!GOREVLER.length){ document.getElementById('sekmeler').innerHTML=''; document.getElementById('gBilgi').textContent='';
+    if(!GOREVLER.length){ sekmeleriCiz(); document.getElementById('gBilgi').textContent='';
       document.getElementById('kontrol').classList.add('gizli'); document.getElementById('ozet').classList.add('gizli');
       document.getElementById('liste').innerHTML='<div class="bos">Şu an aktif bir odak görevi yok. 👍</div>'; return; }
     if(!GOREVLER.some(function(g){ return g.id===GSEC; })) GSEC=GOREVLER[0].id;
@@ -223,7 +300,7 @@ function gorevleriOku(){
 function gorevSec(id){
   GSEC=id; LISTE=null; GIR={}; HATA={};
   if(DINLE){ try{ DINLE(); }catch(e){} DINLE=null; }
-  document.getElementById('sekmeler').innerHTML=GOREVLER.map(function(g){ return '<button type="button" class="sekme'+(g.id===GSEC?' on':'')+'" onclick="gorevSec(\''+esc(g.id)+'\')">🎯 '+esc(g.ad)+'</button>'; }).join('');
+  ARAC=false; document.querySelector('.wrap').classList.remove('arac-mod'); sekmeleriCiz();
   var G=gorev();
   document.getElementById('gBilgi').innerHTML=(G.donem?'Satış dönemi: <b>'+esc(G.donem)+'</b> · ':'')+G.urunler.length+' ürün'+(G.bitis?' · Bitiş: '+esc(G.bitis.split('-').reverse().join('.')):'')
     +'<br><span class="renk" style="background:var(--firsat);">Kırmızı</span> = fırsat (ürün yok) · <span class="renk" style="background:var(--satis);">Yeşil</span> = satış var · <span class="renk" style="background:var(--az);">Sarı</span> = az satış (1-2 PAK). Ürün verdiğiniz kırmızı kutuya <b>miktarı (PAK)</b> yazın.';
