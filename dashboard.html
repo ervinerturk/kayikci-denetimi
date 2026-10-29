@@ -141,6 +141,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
   .filter-row{grid-template-columns:1fr;}
   .filter-baslik{display:block;}
 }
+/* Orta genişlikte (dizüstü/tablet) düğmeler sığmazsa alt satıra geçsin; sığdığında görünüm aynı kalır */
+.nav{height:auto;min-height:52px;flex-wrap:wrap;padding:6px 20px;}
+.nav>div:last-child{flex-wrap:wrap;justify-content:flex-end;row-gap:6px;}
 /* Telefonda üst menü taşmasın (tarih gizlenir, düğmeler alt satıra geçebilir) */
 @media(max-width:600px){
   .nav{height:auto;min-height:52px;flex-wrap:wrap;gap:6px;padding:8px 12px;}
@@ -204,6 +207,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
     <button id="navOdakBtn" onclick="odakGorunumToggle()" style="background:#16A34A;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">🎯 Odak Görevi</button>
     <button id="navAracBtn" onclick="aracGorunumToggle()" style="background:#2563EB;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">🚚 Araç Stok</button>
     <button id="navBakiyeBtn" onclick="bakiyeGorunumToggle()" style="background:#F59E0B;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">💰 Bakiye Raporu</button>
+    <button id="navTakipBtn" onclick="takipGorunumToggle()" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">👁 Rapor Takibi</button>
     <button id="navTaniBtn" onclick="taniGoster()" style="background:rgba(255,200,0,.25);color:#FFD700;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">🔍 Tanı</button>
     <div class="nav-date" id="navDate"></div>
     <a id="navFormBtn" href="index.html" style="display:none;background:#16A34A;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none;font-family:Inter,sans-serif;white-space:nowrap;">📝 Saha Formuna Dön</a>
@@ -262,6 +266,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 
   <!-- ARAÇ STOK (nav'daki "🚚 Araç Stok" ile açılır; Merkez Depo yalnız Müdür) -->
   <div id="aracAlan" style="display:none;"></div>
+
+  <!-- RAPOR TAKİBİ (nav'daki "👁 Rapor Takibi" ile açılır; Müdür: GY + ST, GY: kendi ST'leri) -->
+  <div id="takipAlan" style="display:none;"></div>
 
   <!-- ÖZET BAR -->
   <div class="ozet-bar">
@@ -1039,6 +1046,7 @@ function bakiyeGorunumToggle(ac){
   _bkAcik=(typeof ac==='boolean')?ac:!_bkAcik;
   if(_bkAcik && typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false);
   if(_bkAcik && typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false);
+  if(_bkAcik && typeof _tkAcik!=='undefined' && _tkAcik) takipGorunumToggle(false);
   var alan=document.getElementById('bakiyeAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navBakiyeBtn');
   if(alan) alan.style.display=_bkAcik?'block':'none';
   if(bar) bar.style.display=_bkAcik?'none':'';
@@ -1046,7 +1054,7 @@ function bakiyeGorunumToggle(ac){
   var dg=document.getElementById('fDonem'); if(dg && dg.closest('.filter-group')) dg.closest('.filter-group').style.display=_bkAcik?'none':'';
   var mg=document.getElementById('fMusteriArama'); if(mg && mg.closest('.filter-group')) mg.closest('.filter-group').style.display=_bkAcik?'none':'';
   if(btn) btn.textContent=_bkAcik?'📊 Panele Dön':'💰 Bakiye Raporu';
-  if(_bkAcik){ if(!_bkVeri) bakiyeVeriOku(); else _bakiyeCiz(); window.scrollTo({top:0,behavior:'smooth'}); }
+  if(_bkAcik){ raporGoruntule('bakiye'); if(!_bkVeri) bakiyeVeriOku(); else _bakiyeCiz(); window.scrollTo({top:0,behavior:'smooth'}); }
 }
 function bakiyeTemsilciAcKapa(i){ var el=document.getElementById('bkSt'+i); if(!el) return; var ac=el.style.display==='none'; el.style.display=ac?'':'none'; _bkAcikST[el.getAttribute('data-st')]=ac; }
 function bakiyeAra(){ _bakiyeCiz(true); }
@@ -1304,14 +1312,14 @@ function aracVeriOku(){
 // ── Görünüm ──
 function aracGorunumToggle(ac){
   _asAcik=(typeof ac==='boolean')?ac:!_asAcik;
-  if(_asAcik){ if(typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false); if(typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false); }
+  if(_asAcik){ if(typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false); if(typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false); if(typeof _tkAcik!=='undefined' && _tkAcik) takipGorunumToggle(false); }
   var alan=document.getElementById('aracAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navAracBtn');
   if(alan) alan.style.display=_asAcik?'block':'none';
   if(bar) bar.style.display=_asAcik?'none':'';
   if(ic) ic.style.display=_asAcik?'none':'';
   ['fDonem','fMusteriArama'].forEach(function(id){ var x=document.getElementById(id); if(x && x.closest('.filter-group')) x.closest('.filter-group').style.display=_asAcik?'none':''; });
   if(btn) btn.textContent=_asAcik?'📊 Panele Dön':'🚚 Araç Stok';
-  if(_asAcik){ if(!_asVeri) aracVeriOku(); else _aracCiz(); window.scrollTo({top:0,behavior:'smooth'}); }
+  if(_asAcik){ raporGoruntule('arac'); if(!_asVeri) aracVeriOku(); else _aracCiz(); window.scrollTo({top:0,behavior:'smooth'}); }
 }
 document.addEventListener('change', function(e){ if(_asAcik && e.target && (e.target.id==='fGY' || e.target.id==='fST')){ _asAcikST=Object.create(null); setTimeout(_aracCiz,0); } }, true);
 function aracOlcu(o){ _asOlcu=(o==='pk')?'pk':'tl'; _aracCiz(); }
@@ -1411,6 +1419,81 @@ function _aracCiz(sadeceArama){
   var ai=document.getElementById('asAra'); if(ai && aEski){ ai.value=aEski; document.getElementById('asAraSonuc').innerHTML=aramaSonuc(); }
 }
 
+// ===== RAPOR TAKİBİ — açılış sayaçları =====
+// GY: GY panelinde açtığı alanlar → goruntuleme/{GY}__{alan}__{YYYYMMDD}. ST: ST Panelinde açtığı alanlar → stGoruntuleme/{STkodu}__{alan}__{YYYYMMDD}.
+// Her açılış +1 (kural: yalnız kendi adına, yalnız +1; silinemez). Müdür: GY + ST takibi. GY: yalnız kendi ST'leri.
+var TK_RAPOR=[['panel','📊 Panel'],['bakiye','💰 Bakiye Raporu'],['arac','🚚 Araç Stok'],['odak','🎯 Odak Görevi']];
+var TK_ST=[['panel','📱 ST Paneli'],['odak','🎯 Odak Görevi'],['arac','🚚 Aracım']];
+var _tkAcik=false, _tkVeri=null, _tkDonem='ay', _tkSekme='gy';
+function raporGoruntule(r){
+  try{
+    var k=_dashKullanici; if(!db || !k || !k.gy || k.operator) return;
+    var gun=_odBugun(), ref=db.collection('goruntuleme').doc(k.gy+'__'+r+'__'+gun);
+    ref.get().then(function(d){ var n=(d && d.exists && Number((d.data()||{}).n))||0; return ref.set({gy:k.gy, rapor:r, gun:gun, n:n+1, son:new Date().toISOString()}); }).catch(function(){});
+  }catch(e){}
+}
+function takipGorunumToggle(ac){
+  _tkAcik=(typeof ac==='boolean')?ac:!_tkAcik;
+  if(_tkAcik){ if(typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false); if(typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false); if(typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false); }
+  var alan=document.getElementById('takipAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navTakipBtn');
+  if(alan) alan.style.display=_tkAcik?'block':'none';
+  if(bar) bar.style.display=_tkAcik?'none':'';
+  if(ic) ic.style.display=_tkAcik?'none':'';
+  ['fDonem','fMusteriArama'].forEach(function(id){ var x=document.getElementById(id); if(x && x.closest('.filter-group')) x.closest('.filter-group').style.display=_tkAcik?'none':''; });
+  if(btn) btn.textContent=_tkAcik?'📊 Panele Dön':'👁 Rapor Takibi';
+  if(_tkAcik){ takipOku(); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+function takipOku(){
+  _tkVeri=null; _takipCiz(); var k=_dashKullanici; if(!db || !k) return;
+  var oku=function(q){ return q.get().then(function(s){ return s.docs.map(function(d){ var v=d.data()||{}; return {gy:_bkTemiz(v.gy,60), st:_bkTemiz(v.st,80), r:_bkTemiz(v.rapor,10), gun:_bkTemiz(v.gun,8), n:Math.max(0,Math.floor(Number(v.n)||0)), son:_bkTemiz(v.son,30)}; }); }); };
+  var isler=k.gy ? [Promise.resolve([]), oku(db.collection('stGoruntuleme').where('gy','==',k.gy))]
+                 : [oku(db.collection('goruntuleme')), oku(db.collection('stGoruntuleme'))];
+  Promise.all(isler).then(function(l){ _tkVeri={gy:l[0], st:l[1]}; _takipCiz(); })
+    .catch(function(err){ _tkVeri={hata:(err&&err.message)||String(err)}; _takipCiz(); });
+}
+function takipDonem(d){ _tkDonem=d; _takipCiz(); }
+function takipSekme(s){ _tkSekme=(s==='st')?'st':'gy'; _takipCiz(); }
+document.addEventListener('change', function(e){ if(_tkAcik && e.target && (e.target.id==='fGY' || e.target.id==='fST')) setTimeout(_takipCiz,0); }, true);
+function _takipCiz(){
+  var alan=document.getElementById('takipAlan'); if(!alan || !_tkAcik) return;
+  var k=_dashKullanici||{}, md=!k.gy, sek=md?_tkSekme:'st';
+  var kart=function(ic){ return '<div class="card"><div class="card-head"><div class="card-ic" style="background:#EDE9FE;">👁</div><div class="card-title">Rapor Takibi — '+(sek==='st'?'ST Paneli Açılışları':'GY Paneli Açılışları')+'</div></div><div class="card-body">'+ic+'</div></div>'; };
+  if(!_tkVeri){ alan.innerHTML=kart('<div style="padding:16px;text-align:center;color:var(--mid);">⏳ Yükleniyor…</div>'); return; }
+  if(_tkVeri.hata){ alan.innerHTML=kart('<div style="color:var(--red);font-size:13px;">⚠️ Okunamadı: '+_kac(_tkVeri.hata)+'</div>'); return; }
+  var d=new Date(), ymd=function(x){ return x.getFullYear()+String(x.getMonth()+1).padStart(2,'0')+String(x.getDate()).padStart(2,'0'); };
+  var bas={gun:ymd(d), hafta:ymd(new Date(d.getFullYear(),d.getMonth(),d.getDate()-((d.getDay()+6)%7))), ay:ymd(new Date(d.getFullYear(),d.getMonth(),1)), tumu:'00000000'}[_tkDonem]||'00000000';
+  var gyF=(document.getElementById('fGY')||{}).value||'', stF=(document.getElementById('fST')||{}).value||'';
+  var kol=sek==='st'?TK_ST:TK_RAPOR, veri=sek==='st'?_tkVeri.st:_tkVeri.gy;
+  // Satırlar: GY sekmesi → GY'ler; ST sekmesi → GY başlığı altında ST'ler (sıfırlar da görünür)
+  var satirlar=[];
+  Object.keys(YO).filter(function(g){ return (!gyF || g===gyF) && (!k.gy || g===k.gy); }).forEach(function(g){
+    if(sek==='gy'){ satirlar.push({ad:g, anah:g}); return; }
+    satirlar.push({baslik:g});
+    (YO[g]||[]).filter(function(s){ return !stF || s===stF; }).forEach(function(s){ satirlar.push({ad:s, anah:s, gy:g}); });
+  });
+  var T=Object.create(null);
+  satirlar.forEach(function(x){ if(x.baslik) return; T[x.anah]={son:'', r:Object.create(null)}; kol.forEach(function(c){ T[x.anah].r[c[0]]={n:0, gun:Object.create(null)}; }); });
+  veri.forEach(function(x){ var a=sek==='st'?x.st:x.gy, o=T[a]; if(!o || !o.r[x.r] || x.gun<bas) return; o.r[x.r].n+=x.n; o.r[x.r].gun[x.gun]=1; if(x.son>o.son) o.son=x.son; });
+  var grp=function(id,sec,fn,l){ return '<div role="group" aria-label="'+id+'" style="display:inline-flex;background:#F1F5F9;border-radius:10px;padding:3px;">'+l.map(function(x){ var ac=x[0]===sec; return '<button type="button" id="'+id+'_'+x[0]+'" aria-pressed="'+ac+'" onclick="'+fn+'(\''+x[0]+'\')" style="border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;'+(ac?'background:#1E3A5F;color:#fff;':'background:transparent;color:var(--mid);')+'">'+x[1]+'</button>'; }).join('')+'</div>'; };
+  var h='<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+    +(md?grp('tkS',sek,'takipSekme',[['gy','👥 GY Takibi'],['st','🧑‍💼 ST Takibi']]):'<div style="font-size:12px;color:var(--mid);">Ekibinizdeki ST\'lerin ST Panelinde neye kaç kez baktığı.</div>')
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'+grp('tkD',_tkDonem,'takipDonem',[['gun','Bugün'],['hafta','Bu Hafta'],['ay','Bu Ay'],['tumu','Tümü']])
+    +'<button type="button" onclick="takipOku()" style="background:#EFF6FF;color:var(--blue);border:none;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;">↻ Yenile</button></div></div>'
+    +'<div style="font-size:11px;color:var(--mid);margin-bottom:8px;">Hücre: <b>açılış sayısı</b> <span style="color:var(--soft);">(kaç farklı gün)</span></div>';
+  var top=Object.create(null); kol.forEach(function(c){ top[c[0]]=0; });
+  h+='<div style="overflow-x:auto;"><table class="tbl" id="tkTablo" style="min-width:'+(sek==='st'?560:640)+'px;"><thead><tr><th>'+(sek==='st'?'Satış Temsilcisi':'Grup Yöneticisi')+'</th>'+kol.map(function(c){ return '<th class="num">'+c[1]+'</th>'; }).join('')+'<th>Son Giriş</th></tr></thead><tbody>'
+    +satirlar.map(function(x){
+      if(x.baslik) return '<tr data-gy-baslik="1" style="background:#EEF2F7;"><td colspan="'+(kol.length+2)+'" style="font-weight:800;color:#1E3A5F;">👥 '+_kac(x.baslik)+'</td></tr>';
+      var o=T[x.anah];
+      return '<tr data-satir="'+_kac(x.anah)+'"><td style="white-space:nowrap;font-weight:700;'+(sek==='st'?'padding-left:22px;':'')+'">'+_kac(x.ad)+'</td>'+kol.map(function(c){ var z=o.r[c[0]], gs=Object.keys(z.gun).length; top[c[0]]+=z.n;
+        return '<td class="num" data-r="'+c[0]+'" style="white-space:nowrap;">'+(z.n?'<b>'+z.n+'</b> <span style="font-size:11px;color:var(--soft);">('+gs+' gün)</span>':'<b style="color:var(--red);">0</b>')+'</td>'; }).join('')
+        +'<td style="white-space:nowrap;font-size:12px;">'+(o.son?_kac(_bkZamanTr(o.son)):'<span style="color:var(--red);">—</span>')+'</td></tr>'; }).join('')
+    +'<tr style="background:#F1F5F9;font-weight:800;"><td>Toplam</td>'+kol.map(function(c){ return '<td class="num">'+top[c[0]]+'</td>'; }).join('')+'<td></td></tr>'
+    +'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--soft);margin-top:8px;">Sayaç ekranın açıldığını gösterir, ne kadar incelendiğini ölçmez. Kırmızı 0 = seçili dönemde hiç açılmadı. Kayıtlar 29.10.2026 itibarıyla tutulur.</div>';
+  alan.innerHTML=kart(h);
+}
+
 // ===== ODAK GÖREVİ — ST (Satış Temsilcisi) paneli yönetimi =====
 // Müdür: Octapull "Ürün Detay Satış Raporu" ham dosyasından görev tanımlar (ürünleri seçer), ST hesaplarını eşler.
 // Müdür + GY: ST'lerin st.html'den girdiği miktarları canlı izler (GY yalnız kendi ekibi — sunucu kuralıyla).
@@ -1436,13 +1519,14 @@ function odakGorunumToggle(ac){
   _odAcik=(typeof ac==='boolean')?ac:!_odAcik;
   if(_odAcik && typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false);
   if(_odAcik && typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false);
+  if(_odAcik && typeof _tkAcik!=='undefined' && _tkAcik) takipGorunumToggle(false);
   var alan=document.getElementById('odakAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navOdakBtn');
   if(alan) alan.style.display=_odAcik?'block':'none';
   if(bar) bar.style.display=_odAcik?'none':'';
   if(ic) ic.style.display=_odAcik?'none':'';
   ['fDonem','fMusteriArama'].forEach(function(id){ var x=document.getElementById(id); if(x && x.closest('.filter-group')) x.closest('.filter-group').style.display=_odAcik?'none':''; });
   if(btn) btn.textContent=_odAcik?'📊 Panele Dön':'🎯 Odak Görevi';
-  if(_odAcik){ if(!_odGorevler) odakGorevleriOku(); else _odakCiz(); window.scrollTo({top:0,behavior:'smooth'}); }
+  if(_odAcik){ raporGoruntule('odak'); if(!_odGorevler) odakGorevleriOku(); else _odakCiz(); window.scrollTo({top:0,behavior:'smooth'}); }
 }
 document.addEventListener('change', function(e){ if(_odAcik && e.target && (e.target.id==='fGY' || e.target.id==='fST')) setTimeout(_odakCiz,0); }, true);
 
@@ -2622,7 +2706,7 @@ function dashOturumGoster(k){
   if(k.operator){   // OPERATÖR: yalnız bakiye raporu yükleme ekranı (rapor/görev verisine erişimi yok)
     var _po=document.getElementById('navPanelAd'); if(_po) _po.textContent='Operatör Paneli';
     try{ document.title='Kayıkçı Operatör Paneli'; }catch(e){}
-    ['navTaniBtn','navBakiyeBtn','navOdakBtn','navAracBtn'].forEach(function(id){ var x=document.getElementById(id); if(x) x.style.display='none'; });
+    ['navTaniBtn','navBakiyeBtn','navOdakBtn','navAracBtn','navTakipBtn'].forEach(function(id){ var x=document.getElementById(id); if(x) x.style.display='none'; });
     document.getElementById('dashGirisEkrani').style.display='none';
     document.getElementById('dashAnaPanel').style.display='block';
     var _nk=document.getElementById('navKullanici'), _nb=document.getElementById('navCikisBtn');
@@ -2659,6 +2743,7 @@ function dashOturumGoster(k){
     }
     gyDegisti();
     guncelle();
+    if(k.gy) raporGoruntule('panel');   // Rapor Takibi sayacı (yalnız GY)
     raporDinleyiciBaslat();
     gorevDinleyiciBaslat();
     if(!k.gy && !k.operator) musteriAdlariniYayinla();   // yalnız Satış Müdürü

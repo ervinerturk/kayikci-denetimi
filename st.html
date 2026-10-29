@@ -217,6 +217,7 @@ if(auth) auth.onAuthStateChanged(function(u){
     document.getElementById('uAd').textContent=BEN.st;
     document.getElementById('uGy').textContent='ST '+BEN.k+' · '+BEN.gy;
     document.getElementById('giris').classList.add('gizli'); document.getElementById('ana').classList.remove('gizli');
+    stGoruntule('panel');
     gorevleriOku();
   }).catch(function(err){
     var m=(err&&err.message)||String(err);
@@ -227,6 +228,14 @@ if(auth) auth.onAuthStateChanged(function(u){
   });
 });
 
+// ── Açılış sayacı (GY ve Müdür "Rapor Takibi"nde görür): stGoruntuleme/{STkodu}__{alan}__{YYYYMMDD}, her açılış +1 ──
+function stGoruntule(r){
+  try{
+    if(!db || !BEN || !BEN.k) return;
+    var gun=bugun(), ref=db.collection('stGoruntuleme').doc(BEN.k+'__'+r+'__'+gun);
+    ref.get().then(function(d){ var n=(d && d.exists && Number((d.data()||{}).n))||0; return ref.set({st:BEN.st, gy:BEN.gy, rapor:r, gun:gun, n:n+1, son:new Date().toISOString()}); }).catch(function(){});
+  }catch(e){}
+}
 // ── Sekmeler: görevler + "🚚 Aracım" (her ST yalnız kendi araç stoğunu görür — sunucu kuralıyla) ──
 var ARAC=false, A_VERI=null, A_OLCU='tl', A_YUK=false;
 function sekmeleriCiz(){
@@ -234,7 +243,7 @@ function sekmeleriCiz(){
     +'<button type="button" id="aracSekme" class="sekme arac'+(ARAC?' on':'')+'" onclick="aracAc()">🚚 Aracım</button>';
 }
 function aracAc(){
-  ARAC=true; document.querySelector('.wrap').classList.add('arac-mod'); sekmeleriCiz();
+  ARAC=true; document.querySelector('.wrap').classList.add('arac-mod'); sekmeleriCiz(); stGoruntule('arac');
   if(!A_VERI && !A_YUK) aracOku(); else aracCiz();
   window.scrollTo(0,0);
 }
@@ -300,7 +309,7 @@ function gorevleriOku(){
 function gorevSec(id){
   GSEC=id; LISTE=null; GIR={}; HATA={};
   if(DINLE){ try{ DINLE(); }catch(e){} DINLE=null; }
-  ARAC=false; document.querySelector('.wrap').classList.remove('arac-mod'); sekmeleriCiz();
+  ARAC=false; document.querySelector('.wrap').classList.remove('arac-mod'); sekmeleriCiz(); stGoruntule('odak');
   var G=gorev();
   document.getElementById('gBilgi').innerHTML=(G.donem?'Satış dönemi: <b>'+esc(G.donem)+'</b> · ':'')+G.urunler.length+' ürün'+(G.bitis?' · Bitiş: '+esc(G.bitis.split('-').reverse().join('.')):'')
     +'<br><span class="renk" style="background:var(--firsat);">Kırmızı</span> = fırsat (ürün yok) · <span class="renk" style="background:var(--satis);">Yeşil</span> = satış var · <span class="renk" style="background:var(--az);">Sarı</span> = az satış (1-2 PAK). Ürün verdiğiniz kırmızı kutuya <b>miktarı (PAK)</b> yazın.';
