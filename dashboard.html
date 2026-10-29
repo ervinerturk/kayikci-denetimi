@@ -1086,8 +1086,8 @@ function _bakiyeCiz(sadeceArama){
   if(!gy && _dashKullanici && !_dashKullanici.gy){
     var G=Object.create(null); tl.forEach(function(o){ var x=G[o.gy]||(G[o.gy]={gy:o.gy,s:0,m:0,t:0,u:0}); x.s++; x.m+=o.m; x.t+=o.t; x.u+=o.u; });
     var gl=Object.keys(G).map(function(k){ return G[k]; }).sort(function(a,b){ return b.u-a.u; });
-    h+=secHd('👥 Grup Yöneticisi Bazında')+'<div style="overflow-x:auto;"><table class="tbl" style="min-width:520px;"><thead><tr><th>Grup Yöneticisi</th><th class="num">21+ Gün</th><th class="num">Toplam</th><th class="num">21+ %</th><th class="num">Temsilci</th><th class="num">Müşteri</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
-    gl.forEach(function(x){ var p=x.t>0?Math.round(x.u/x.t*100):0; h+='<tr><td style="white-space:nowrap;">'+_kac(x.gy)+'</td><td class="num" style="color:'+(x.u>0.5?'var(--red)':'inherit')+';font-weight:700;white-space:nowrap;">'+_bkPara(x.u)+'</td><td class="num" style="font-weight:700;white-space:nowrap;">'+_bkPara(x.t)+'</td><td class="num">%'+p+'</td><td class="num">'+x.s+'</td><td class="num">'+x.m+'</td><td class="num" style="white-space:nowrap;">'+_bkPara(x.t-x.u)+'</td></tr>'; });
+    h+=secHd('👥 Grup Yöneticisi Bazında')+'<div style="overflow-x:auto;"><table class="tbl" style="min-width:520px;"><thead><tr><th>Grup Yöneticisi</th><th class="num">Temsilci</th><th class="num">Müşteri</th><th class="num">Toplam</th><th class="num">21+ Gün</th><th class="num">21+ %</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
+    gl.forEach(function(x){ var p=x.t>0?Math.round(x.u/x.t*100):0; h+='<tr><td style="white-space:nowrap;">'+_kac(x.gy)+'</td><td class="num">'+x.s+'</td><td class="num">'+x.m+'</td><td class="num" style="font-weight:700;white-space:nowrap;">'+_bkPara(x.t)+'</td><td class="num" style="color:'+(x.u>0.5?'var(--red)':'inherit')+';font-weight:700;white-space:nowrap;">'+_bkPara(x.u)+'</td><td class="num">%'+p+'</td><td class="num" style="white-space:nowrap;">'+_bkPara(x.t-x.u)+'</td></tr>'; });
     h+='</tbody></table></div>';
   }
   // Grafik: temsilci bazında 21+ gün
@@ -1097,7 +1097,7 @@ function _bakiyeCiz(sadeceArama){
     }).join(''):'<div class="grf-bos">21 günü geçen bakiye yok. 👍</div>');
   // Temsilci tablosu (satıra tıkla → müşteriler)
   var tt=secHd('🧑‍💼 Temsilci Bazında (satıra tıklayınca müşteriler açılır)')
-    +'<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;"><thead><tr><th>Temsilci</th><th class="num">21+ Gün</th><th class="num">Toplam</th><th class="num">21+ %</th><th class="num">Müşteri</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
+    +'<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;"><thead><tr><th>Temsilci</th><th class="num">Müşteri</th><th class="num">Toplam</th><th class="num">21+ Gün</th><th class="num">21+ %</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
   var KD=_bkDoluKovalar(sat, K);   // boş gün aralığı sütunları gizli
   var kovaBas='<th>Cari Kodu</th><th>Cari Adı</th><th>Grup</th>'+KD.map(function(i){ var k=K[i]; return '<th class="num" style="white-space:nowrap;'+(_bkKovaBas(k)>=21?'color:var(--red);':'')+'">'+_kac(_bkKovaAd(k))+'</th>'; }).join('')+'<th class="num">Güncel Bakiye</th>';
   var musSatir=function(s){
@@ -1107,7 +1107,7 @@ function _bakiyeCiz(sadeceArama){
   };
   tl.forEach(function(o,i){
     var p=o.t>0?Math.round(o.u/o.t*100):0, acik=!!_bkAcikST[o.st] || !!st;
-    tt+='<tr style="cursor:pointer;" onclick="bakiyeTemsilciAcKapa('+i+')"><td><b style="white-space:nowrap;">'+_kac(o.st)+'</b>'+(!gy&&_dashKullanici&&!_dashKullanici.gy?'<div style="font-size:10px;color:var(--soft);">'+_kac(o.gy)+'</div>':'')+'</td><td class="num" style="color:'+(o.u>0.5?'var(--red)':'inherit')+';font-weight:700;white-space:nowrap;">'+_bkPara(o.u)+'</td><td class="num" style="font-weight:700;white-space:nowrap;">'+_bkPara(o.t)+'</td><td class="num">%'+p+'</td><td class="num">'+o.m+'</td><td class="num" style="white-space:nowrap;">'+_bkPara(o.t-o.u)+' <span style="color:var(--blue);">'+(acik?'▾':'›')+'</span></td></tr>';
+    tt+='<tr style="cursor:pointer;" onclick="bakiyeTemsilciAcKapa('+i+')"><td><b style="white-space:nowrap;">'+_kac(o.st)+'</b>'+(!gy&&_dashKullanici&&!_dashKullanici.gy?'<div style="font-size:10px;color:var(--soft);">'+_kac(o.gy)+'</div>':'')+'</td><td class="num">'+o.m+'</td><td class="num" style="font-weight:700;white-space:nowrap;">'+_bkPara(o.t)+'</td><td class="num" style="color:'+(o.u>0.5?'var(--red)':'inherit')+';font-weight:700;white-space:nowrap;">'+_bkPara(o.u)+'</td><td class="num">%'+p+'</td><td class="num" style="white-space:nowrap;">'+_bkPara(o.t-o.u)+' <span style="color:var(--blue);">'+(acik?'▾':'›')+'</span></td></tr>';
     tt+='<tr id="bkSt'+i+'" data-st="'+_kac(o.st)+'" style="'+(acik?'':'display:none;')+'"><td colspan="6" style="padding:0 0 10px;background:var(--bg);"><div style="overflow-x:auto;"><table class="tbl" style="min-width:760px;font-size:12px;"><thead><tr>'+kovaBas+'</tr></thead><tbody>'
       +o.l.slice().sort(function(a,b){ return ust(b)-ust(a) || b.t-a.t; }).map(musSatir).join('')+'</tbody></table></div></td></tr>';
   });
