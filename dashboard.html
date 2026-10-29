@@ -1419,6 +1419,30 @@ function _aracCiz(sadeceArama){
   var ai=document.getElementById('asAra'); if(ai && aEski){ ai.value=aEski; document.getElementById('asAraSonuc').innerHTML=aramaSonuc(); }
 }
 
+// ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
+var SURUM='2026-10-29b';
+(function(){
+  var son=0;
+  function bant(){
+    if(document.getElementById('surumBant')) return;
+    var b=document.createElement('div'); b.id='surumBant';
+    b.style.cssText='position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1E3A5F;color:#fff;border-radius:12px;padding:10px 14px;font:700 13px Inter,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:92vw;';
+    b.innerHTML='🔄 Yeni sürüm hazır <button type="button" onclick="location.reload()" style="background:#16A34A;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;">Yenile</button>';
+    document.body.appendChild(b);
+  }
+  function guvenli(){ try{ if(_dashKullanici && _dashKullanici.operator) return false; return !['rutModal','asModal','bkModal','odModal','raporDetayModal'].some(function(id){ var x=document.getElementById(id); return x && getComputedStyle(x).display!=='none'; }); }catch(e){ return false; } }
+  function kontrol(){
+    if(Date.now()-son<60000) return; son=Date.now();
+    fetch(location.pathname+'?surum='+Date.now(),{cache:'no-store'}).then(function(r){ return r.ok?r.text():''; }).then(function(t){
+      var m=t.match(/var SURUM='([^']+)'/); if(!m || m[1]===SURUM) return;
+      if(guvenli()) location.reload(); else bant();
+    }).catch(function(){});
+  }
+  window.surumKontrol=function(){ son=0; kontrol(); };
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') kontrol(); });
+  setInterval(kontrol, 10*60*1000);
+})();
+
 // ===== RAPOR TAKİBİ — açılış sayaçları =====
 // GY: GY panelinde açtığı alanlar → goruntuleme/{GY}__{alan}__{YYYYMMDD}. ST: ST Panelinde açtığı alanlar → stGoruntuleme/{STkodu}__{alan}__{YYYYMMDD}.
 // Her açılış +1 (kural: yalnız kendi adına, yalnız +1; silinemez). Müdür: GY + ST takibi. GY: yalnız kendi ST'leri.
@@ -1429,7 +1453,9 @@ function raporGoruntule(r){
   try{
     var k=_dashKullanici; if(!db || !k || !k.gy || k.operator) return;
     var gun=_odBugun(), ref=db.collection('goruntuleme').doc(k.gy+'__'+r+'__'+gun);
-    ref.get().then(function(d){ var n=(d && d.exists && Number((d.data()||{}).n))||0; return ref.set({gy:k.gy, rapor:r, gun:gun, n:n+1, son:new Date().toISOString()}); }).catch(function(){});
+    ref.get().then(function(d){ var n=(d && d.exists && Number((d.data()||{}).n))||0; return ref.set({gy:k.gy, rapor:r, gun:gun, n:n+1, son:new Date().toISOString()}); })
+      .then(function(){ window.SAYAC={ok:true, r:r, z:new Date().toISOString()}; })
+      .catch(function(e){ window.SAYAC={ok:false, r:r, hata:(e&&e.message)||String(e)}; try{ console.warn('Sayaç kaydedilemedi:', e); }catch(x){} });
   }catch(e){}
 }
 function takipGorunumToggle(ac){
@@ -1468,8 +1494,9 @@ function _takipCiz(){
   var satirlar=[];
   Object.keys(YO).filter(function(g){ return (!gyF || g===gyF) && (!k.gy || g===k.gy); }).forEach(function(g){
     if(sek==='gy'){ satirlar.push({ad:g, anah:g}); return; }
+    var sl=(YO[g]||[]).filter(function(s){ return !stF || s===stF; }); if(!sl.length) return;
     satirlar.push({baslik:g});
-    (YO[g]||[]).filter(function(s){ return !stF || s===stF; }).forEach(function(s){ satirlar.push({ad:s, anah:s, gy:g}); });
+    sl.forEach(function(s){ satirlar.push({ad:s, anah:s, gy:g}); });
   });
   var T=Object.create(null);
   satirlar.forEach(function(x){ if(x.baslik) return; T[x.anah]={son:'', r:Object.create(null)}; kol.forEach(function(c){ T[x.anah].r[c[0]]={n:0, gun:Object.create(null)}; }); });
@@ -1490,6 +1517,7 @@ function _takipCiz(){
         +'<td style="white-space:nowrap;font-size:12px;">'+(o.son?_kac(_bkZamanTr(o.son)):'<span style="color:var(--red);">—</span>')+'</td></tr>'; }).join('')
     +'<tr style="background:#F1F5F9;font-weight:800;"><td>Toplam</td>'+kol.map(function(c){ return '<td class="num">'+top[c[0]]+'</td>'; }).join('')+'<td></td></tr>'
     +'</tbody></table></div>'
+    +(k.gy?'<div id="tkDurum" style="font-size:11px;margin-top:8px;color:'+(window.SAYAC&&!window.SAYAC.ok?'var(--red)':'var(--green)')+';">'+(window.SAYAC?(window.SAYAC.ok?'✅ Bu cihazdan sayaç kaydı çalışıyor (son: '+_kac(_bkZamanTr(window.SAYAC.z))+')':'⚠️ Bu cihazdan sayaç kaydedilemedi: '+_kac(window.SAYAC.hata)):'')+'</div>':'')
     +'<div style="font-size:11px;color:var(--soft);margin-top:8px;">Sayaç ekranın açıldığını gösterir, ne kadar incelendiğini ölçmez. Kırmızı 0 = seçili dönemde hiç açılmadı. Kayıtlar 29.10.2026 itibarıyla tutulur.</div>';
   alan.innerHTML=kart(h);
 }

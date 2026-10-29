@@ -167,6 +167,30 @@ var AZ=2;   // 1-2 PAK satış: dolu ama "az" (sarı)
 var GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
+// ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
+var SURUM='2026-10-29b';
+(function(){
+  var son=0;
+  function bant(){
+    if(document.getElementById('surumBant')) return;
+    var b=document.createElement('div'); b.id='surumBant';
+    b.style.cssText='position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:99999;background:#1E3A5F;color:#fff;border-radius:12px;padding:10px 14px;font:700 13px Inter,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;max-width:92vw;';
+    b.innerHTML='🔄 Yeni sürüm hazır <button type="button" onclick="location.reload()" style="background:#16A34A;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;">Yenile</button>';
+    document.body.appendChild(b);
+  }
+  function guvenli(){ try{ var ae=document.activeElement; if(ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName)) return false; return !Object.keys(BEKLEYEN).some(function(k){ return BEKLEYEN[k]>0; }); }catch(e){ return false; } }
+  function kontrol(){
+    if(Date.now()-son<60000) return; son=Date.now();
+    fetch(location.pathname+'?surum='+Date.now(),{cache:'no-store'}).then(function(r){ return r.ok?r.text():''; }).then(function(t){
+      var m=t.match(/var SURUM='([^']+)'/); if(!m || m[1]===SURUM) return;
+      if(guvenli()) location.reload(); else bant();
+    }).catch(function(){});
+  }
+  window.surumKontrol=function(){ son=0; kontrol(); };
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') kontrol(); });
+  setInterval(kontrol, 10*60*1000);
+})();
+
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function temiz(s,n){ return String(s==null?'':s).replace(/[<>"`\\]/g,'').replace(/\s+/g,' ').trim().slice(0,n||120); }
 function bugun(){ var d=new Date(); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
@@ -233,7 +257,9 @@ function stGoruntule(r){
   try{
     if(!db || !BEN || !BEN.k) return;
     var gun=bugun(), ref=db.collection('stGoruntuleme').doc(BEN.k+'__'+r+'__'+gun);
-    ref.get().then(function(d){ var n=(d && d.exists && Number((d.data()||{}).n))||0; return ref.set({st:BEN.st, gy:BEN.gy, rapor:r, gun:gun, n:n+1, son:new Date().toISOString()}); }).catch(function(){});
+    ref.get().then(function(d){ var n=(d && d.exists && Number((d.data()||{}).n))||0; return ref.set({st:BEN.st, gy:BEN.gy, rapor:r, gun:gun, n:n+1, son:new Date().toISOString()}); })
+      .then(function(){ window.SAYAC={ok:true, r:r, z:new Date().toISOString()}; })
+      .catch(function(e){ window.SAYAC={ok:false, r:r, hata:(e&&e.message)||String(e)}; try{ console.warn('Sayaç kaydedilemedi:', e); }catch(x){} });
   }catch(e){}
 }
 // ── Sekmeler: görevler + "🚚 Aracım" (her ST yalnız kendi araç stoğunu görür — sunucu kuralıyla) ──
