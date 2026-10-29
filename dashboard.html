@@ -2112,7 +2112,7 @@ function _guncelleIc(){
   var _stantYok=Math.max(0,N-stantN-reyonN);
   var g3=_grfAd('🪧 Stant Dağılımı')+_grfYigin([{ad:'Stantlı',deger:stantN,renk:GRF_MAVI},{ad:'Müşteri reyonu',deger:reyonN,renk:GRF_TURUNCU},{ad:'Stant yok',deger:_stantYok,renk:GRF_GRI}],'nokta');
   g3+=_grfAd('📍 Stant Konumu')+_grfBar(_sayilariSirala(sknSay), GRF_MAVI, 'nokta');
-  _html+='<div class="card"><div class="card-head"><div class="card-ic">🪧</div><div class="card-title">Stant & Gereksiz Stok</div></div><div class="card-body">'+_kartIci(k3,g3)+'</div></div>';
+  var _kartStant='<div class="card"><div class="card-head"><div class="card-ic">🪧</div><div class="card-title">Stant & Gereksiz Stok</div></div><div class="card-body">'+_kartIci(k3,g3)+'</div></div>';
 
   // ── KART 4: TADIMCA ──
   var k4='';
@@ -2163,6 +2163,7 @@ function _guncelleIc(){
   var g4=_grfAd('🟡 Tadımca Bulunurluk')+_grfYigin([{ad:'Tadımca var',deger:tadN,renk:GRF_MAVI},{ad:'Tadımca yok',deger:tadYok,renk:GRF_GRI}],'nokta');
   g4+=_grfAd('⏳ En Eski Üretim — Ort. Gün (ilk 8)')+_grfBar(uSirali.slice(0,8).map(function(u){ return {ad:u, deger:Math.round(uMap[u].toplam/uMap[u].adet)}; }), GRF_TURUNCU, 'gün');
   _html+='<div class="card"><div class="card-head"><div class="card-ic">🟡</div><div class="card-title">Tadımca Bulunurluk</div></div><div class="card-body">'+_kartIci(k4,g4)+'</div></div>';
+  _html+=_kartStant;   // Stant & Gereksiz Stok kartı, Tadımca Bulunurluk'un altında
 
   // ── KART 5: NOKTA DEĞERLENDİRMESİ ──
   var k5='';
