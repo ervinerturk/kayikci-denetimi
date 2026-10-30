@@ -1420,7 +1420,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-29b';
+var SURUM='2026-10-30a';
 (function(){
   var son=0;
   function bant(){
@@ -1453,7 +1453,8 @@ function raporGoruntule(r){
   try{
     var k=_dashKullanici; if(!db || !k || !k.gy || k.operator) return;
     var gun=_odBugun(), ref=db.collection('goruntuleme').doc(k.gy+'__'+r+'__'+gun);
-    ref.get().then(function(d){ var n=(d && d.exists && Number((d.data()||{}).n))||0; return ref.set({gy:k.gy, rapor:r, gun:gun, n:n+1, son:new Date().toISOString()}); })
+    // Sunucuda +1 (okuma gerekmez; bağlantı kopuksa bekler, gelince gider; aynı anda iki açılış da sayılır)
+    ref.set({gy:k.gy, rapor:r, gun:gun, n:firebase.firestore.FieldValue.increment(1), son:new Date().toISOString()}, {merge:true})
       .then(function(){ window.SAYAC={ok:true, r:r, z:new Date().toISOString()}; })
       .catch(function(e){ window.SAYAC={ok:false, r:r, hata:(e&&e.message)||String(e)}; try{ console.warn('Sayaç kaydedilemedi:', e); }catch(x){} });
   }catch(e){}

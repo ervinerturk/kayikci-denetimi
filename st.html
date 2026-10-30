@@ -157,6 +157,7 @@ button,input,select{font-family:inherit;}
     </div>
     <div id="ozet" class="ozet gizli"></div>
     <div id="liste"></div>
+    <div id="altBilgi" style="text-align:center;font-size:10px;color:var(--soft);margin-top:18px;"></div>
   </div>
 </div>
 <div id="tost"></div>
@@ -168,7 +169,7 @@ var GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Paz
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-29b';
+var SURUM='2026-10-30a';
 (function(){
   var son=0;
   function bant(){
@@ -241,7 +242,7 @@ if(auth) auth.onAuthStateChanged(function(u){
     document.getElementById('uAd').textContent=BEN.st;
     document.getElementById('uGy').textContent='ST '+BEN.k+' · '+BEN.gy;
     document.getElementById('giris').classList.add('gizli'); document.getElementById('ana').classList.remove('gizli');
-    stGoruntule('panel');
+    stGoruntule('panel'); surumSatiri();
     gorevleriOku();
   }).catch(function(err){
     var m=(err&&err.message)||String(err);
@@ -252,14 +253,16 @@ if(auth) auth.onAuthStateChanged(function(u){
   });
 });
 
+function surumSatiri(){ var e=document.getElementById('altBilgi'); if(!e) return; var S=window.SAYAC; e.textContent='Sürüm '+SURUM+(BEN&&BEN.k?' · ST '+BEN.k:'')+(S?(S.ok?' · Sayaç ✓':' · Sayaç ✗ '+String(S.hata||'').slice(0,80)):''); }
 // ── Açılış sayacı (GY ve Müdür "Rapor Takibi"nde görür): stGoruntuleme/{STkodu}__{alan}__{YYYYMMDD}, her açılış +1 ──
 function stGoruntule(r){
   try{
     if(!db || !BEN || !BEN.k) return;
     var gun=bugun(), ref=db.collection('stGoruntuleme').doc(BEN.k+'__'+r+'__'+gun);
-    ref.get().then(function(d){ var n=(d && d.exists && Number((d.data()||{}).n))||0; return ref.set({st:BEN.st, gy:BEN.gy, rapor:r, gun:gun, n:n+1, son:new Date().toISOString()}); })
-      .then(function(){ window.SAYAC={ok:true, r:r, z:new Date().toISOString()}; })
-      .catch(function(e){ window.SAYAC={ok:false, r:r, hata:(e&&e.message)||String(e)}; try{ console.warn('Sayaç kaydedilemedi:', e); }catch(x){} });
+    // Sunucuda +1 (okuma gerekmez; çekim yokken telefonda bekler, bağlantı gelince gider; aynı anda iki açılış da sayılır)
+    ref.set({st:BEN.st, gy:BEN.gy, rapor:r, gun:gun, n:firebase.firestore.FieldValue.increment(1), son:new Date().toISOString()}, {merge:true})
+      .then(function(){ window.SAYAC={ok:true, r:r, z:new Date().toISOString()}; surumSatiri(); })
+      .catch(function(e){ window.SAYAC={ok:false, r:r, hata:(e&&e.message)||String(e)}; surumSatiri(); try{ console.warn('Sayaç kaydedilemedi:', e); }catch(x){} });
   }catch(e){}
 }
 // ── Sekmeler: görevler + "🚚 Aracım" (her ST yalnız kendi araç stoğunu görür — sunucu kuralıyla) ──
