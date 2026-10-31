@@ -36,6 +36,13 @@ button,input,select{font-family:inherit;}
 .gizli{display:none!important;}
 #aracim{display:none;}
 .wrap.arac-mod #aracim{display:block;}
+#cirom{display:none;}
+.wrap.ciro-mod #cirom{display:block;}
+.wrap.ciro-mod #gBilgi,.wrap.ciro-mod #kontrol,.wrap.ciro-mod #ozet,.wrap.ciro-mod #liste{display:none!important;}
+.sekme.ciro{border-color:#5EEAD4;color:#0F766E;}
+.sekme.ciro.on{background:#0D9488;border-color:#0D9488;color:#fff;}
+.cgrup{cursor:pointer;}
+.cgrup .ok{color:#0D9488;font-weight:800;margin-left:4px;}
 .wrap.arac-mod #gBilgi,.wrap.arac-mod #kontrol,.wrap.arac-mod #ozet,.wrap.arac-mod #liste{display:none!important;}
 .sekme.arac{border-color:#93C5FD;color:#1D4ED8;}
 .sekme.arac.on{background:#1D4ED8;border-color:#1D4ED8;color:#fff;}
@@ -146,6 +153,7 @@ button,input,select{font-family:inherit;}
   <div class="wrap">
     <div id="sekmeler" class="sekmeler"></div>
     <div id="aracim"></div>
+    <div id="cirom"></div>
     <div id="gBilgi" class="bilgi"></div>
     <div id="kontrol" class="kont gizli">
       <select id="fGun" onchange="ciz()"></select>
@@ -169,7 +177,7 @@ var GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Paz
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-30a';
+var SURUM='2026-10-31a';
 (function(){
   var son=0;
   function bant(){
@@ -268,11 +276,56 @@ function stGoruntule(r){
 // ── Sekmeler: görevler + "🚚 Aracım" (her ST yalnız kendi araç stoğunu görür — sunucu kuralıyla) ──
 var ARAC=false, A_VERI=null, A_OLCU='tl', A_YUK=false;
 function sekmeleriCiz(){
-  document.getElementById('sekmeler').innerHTML=GOREVLER.map(function(g){ return '<button type="button" class="sekme'+(!ARAC&&g.id===GSEC?' on':'')+'" onclick="gorevSec(\''+esc(g.id)+'\')">🎯 '+esc(g.ad)+'</button>'; }).join('')
-    +'<button type="button" id="aracSekme" class="sekme arac'+(ARAC?' on':'')+'" onclick="aracAc()">🚚 Aracım</button>';
+  document.getElementById('sekmeler').innerHTML=GOREVLER.map(function(g){ return '<button type="button" class="sekme'+(!ARAC&&!CIRO&&g.id===GSEC?' on':'')+'" onclick="gorevSec(\''+esc(g.id)+'\')">🎯 '+esc(g.ad)+'</button>'; }).join('')
+    +'<button type="button" id="aracSekme" class="sekme arac'+(ARAC?' on':'')+'" onclick="aracAc()">🚚 Aracım</button>'
+    +'<button type="button" id="ciroSekme" class="sekme ciro'+(CIRO?' on':'')+'" onclick="ciroAc()">📈 Cirom</button>';
+}
+// ── 📈 Cirom: yalnız kendi brüt cirosu (ciroST, sunucu kuralı) — ürün grubu, ürün ve müşteri; en yüksek ciro üstte ──
+var CIRO=false, C_VERI=null, C_YUK=false, C_ACIK={};
+function ciroAc(){
+  CIRO=true; ARAC=false; var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.add('ciro-mod'); sekmeleriCiz(); stGoruntule('ciro');
+  if(!C_VERI && !C_YUK) ciroOku(); else ciroCiz();
+  window.scrollTo(0,0);
+}
+function ciroOku(){
+  C_YUK=true; ciroCiz();
+  db.collection('ciroST').where('st','==',BEN.st).get().then(function(s){
+    var v=null; s.docs.forEach(function(d){ var x=d.data()||{}; if(!v || String(x.yuklendi||'')>String(v.yuklendi||'')) v=x; });
+    var n=function(x){ var k=Number(x); return isFinite(k)?k:0; };
+    C_VERI=v ? {bas:temiz(v.bas,10), bit:temiz(v.bit,10), t:n(v.t), m:Math.round(n(v.m)), ces:Math.round(n(v.ces)),
+      g:(Array.isArray(v.g)?v.g:[]).map(function(q){ return {g:temiz(q&&q.g,40)||'(Grupsuz)', t:n(q&&q.t), c:Math.round(n(q&&q.c))}; }).sort(function(a,b){ return b.t-a.t; }),
+      u:(Array.isArray(v.u)?v.u:[]).map(function(z){ return {k:temiz(z&&z.k,20), a:temiz(z&&z.a,100), g:temiz(z&&z.g,40), t:n(z&&z.t), p:Math.round(n(z&&z.p))}; }).sort(function(a,b){ return b.t-a.t; }),
+      c:(Array.isArray(v.c)?v.c:[]).map(function(z){ return {k:temiz(z&&z.k,20), a:temiz(z&&z.a,100), t:n(z&&z.t)}; }).sort(function(a,b){ return b.t-a.t; })} : {bos:true};
+    C_YUK=false; ciroCiz();
+  }).catch(function(err){ C_YUK=false; C_VERI={hata:(err&&err.message)||String(err)}; ciroCiz(); });
+}
+function ciroYenile(){ C_VERI=null; ciroOku(); }
+function ciroGrup(i){ C_ACIK[i]=!C_ACIK[i]; ciroCiz(); }
+function ciroCiz(sadeceMusteri){
+  var el=document.getElementById('cirom'); if(!el || !CIRO) return;
+  if(C_YUK && !C_VERI){ el.innerHTML='<div class="bos">⏳ Ciro bilginiz yükleniyor…</div>'; return; }
+  if(!C_VERI) return;
+  if(C_VERI.hata){ el.innerHTML='<div class="bos">⚠️ Ciro okunamadı: '+esc(C_VERI.hata)+'</div>'; return; }
+  if(C_VERI.bos){ el.innerHTML='<div class="bos">Henüz ciro raporu yüklenmedi.<br><small>Haftalık olarak yüklenir.</small></div>'; return; }
+  var V=C_VERI, tr=function(d){ return d?d.split('-').reverse().join('.'):'—'; };
+  var ara=document.getElementById('cAra'), q=ara?ara.value:'', qn=q.toLocaleUpperCase('tr-TR').trim();
+  var musteri=function(){
+    var l=V.c.filter(function(z){ return !qn || z.a.toLocaleUpperCase('tr-TR').indexOf(qn)>-1 || z.k.indexOf(qn)>-1; });
+    if(!l.length) return '<div class="bos">'+(V.c.length?'Eşleşen müşteri yok.':'Bu dönemde satış görünmüyor.')+'</div>';
+    return '<div class="akart">'+l.map(function(z){ return '<div class="asat"><div class="n">'+esc(z.a)+'<small>'+esc(z.k)+'</small></div><div class="v">'+tl(z.t)+'</div></div>'; }).join('')+'</div>';
+  };
+  if(sadeceMusteri && document.getElementById('cListe')){ document.getElementById('cListe').innerHTML=musteri(); return; }
+  el.innerHTML='<div class="bilgi">📅 Dönem: <b>'+esc(tr(V.bas))+' – '+esc(tr(V.bit))+'</b> · Brüt ciro (KDV hariç) · <a href="javascript:ciroYenile()" style="color:var(--lac);font-weight:700;">↻ Yenile</a></div>'
+    +'<div class="akutu"><div><b id="cTop">'+tl(V.t)+'</b><span>Brüt Ciro</span></div><div><b id="cSyms">'+V.m+'</b><span>SYMS (müşteri)</span></div><div><b>'+V.ces+'</b><span>Ürün Çeşidi</span></div></div>'
+    +'<div class="akart">'+V.g.map(function(g,i){ var pay=V.t?Math.round(g.t/V.t*1000)/10:0, ac=!!C_ACIK[i];
+        return '<div class="asat cgrup" data-grup="'+esc(g.g)+'" onclick="ciroGrup('+i+')"><div class="n"><b>'+esc(g.g)+'</b><span class="ok">'+(ac?'▾':'›')+'</span></div><div class="v">'+tl(g.t)+'<small>%'+pay.toLocaleString('tr-TR')+' · Çeşit-'+g.c+'</small></div></div>'
+          +(ac?'<div style="background:#F8FAFC;border-radius:8px;padding:0 10px;margin:2px 0 6px;">'+V.u.filter(function(z){ return z.g===g.g; }).map(function(z){ return '<div class="asat" data-urun="1"><div class="n">'+esc(z.a)+'<small>'+esc(z.k)+'</small></div><div class="v">'+tl(z.t)+'<small>'+pk(z.p)+'</small></div></div>'; }).join('')+'</div>':''); }).join('')+'</div>'
+    +'<div class="agrup" style="margin-top:6px;"><span>🏪 Müşteriler · '+V.c.length+'</span><span>en yüksek ciro üstte</span></div>'
+    +'<input id="cAra" type="search" placeholder="🔎 Müşteri adı veya cari kodu" value="'+esc(q)+'" oninput="ciroCiz(true)" style="width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin:8px 0 10px;background:#fff;">'
+    +'<div id="cListe">'+musteri()+'</div>';
 }
 function aracAc(){
-  ARAC=true; document.querySelector('.wrap').classList.add('arac-mod'); sekmeleriCiz(); stGoruntule('arac');
+  ARAC=true; CIRO=false; document.querySelector('.wrap').classList.remove('ciro-mod'); document.querySelector('.wrap').classList.add('arac-mod'); sekmeleriCiz(); stGoruntule('arac');
   if(!A_VERI && !A_YUK) aracOku(); else aracCiz();
   window.scrollTo(0,0);
 }
@@ -338,7 +391,7 @@ function gorevleriOku(){
 function gorevSec(id){
   GSEC=id; LISTE=null; GIR={}; HATA={};
   if(DINLE){ try{ DINLE(); }catch(e){} DINLE=null; }
-  ARAC=false; document.querySelector('.wrap').classList.remove('arac-mod'); sekmeleriCiz(); stGoruntule('odak');
+  ARAC=false; CIRO=false; document.querySelector('.wrap').classList.remove('arac-mod'); document.querySelector('.wrap').classList.remove('ciro-mod'); sekmeleriCiz(); stGoruntule('odak');
   var G=gorev();
   document.getElementById('gBilgi').innerHTML=(G.donem?'Satış dönemi: <b>'+esc(G.donem)+'</b> · ':'')+G.urunler.length+' ürün'+(G.bitis?' · Bitiş: '+esc(G.bitis.split('-').reverse().join('.')):'')
     +'<br><span class="renk" style="background:var(--firsat);">Kırmızı</span> = fırsat (ürün yok) · <span class="renk" style="background:var(--satis);">Yeşil</span> = satış var · <span class="renk" style="background:var(--az);">Sarı</span> = az satış (1-2 PAK). Ürün verdiğiniz kırmızı kutuya <b>miktarı (PAK)</b> yazın.';
