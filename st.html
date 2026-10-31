@@ -139,6 +139,14 @@ button,input,select{font-family:inherit;}
     <button id="gBtn" type="button" onclick="girisYap()">Giriş</button>
     <div id="gHata"></div>
     <div class="gnot">Şifrenizi unuttuysanız Grup Yöneticinize başvurun.<br>Giriş bu telefonda açık kalır.</div>
+    <div style="text-align:center;margin-top:10px;"><a href="javascript:yonFormu()" id="yonLink" style="font-size:11px;color:var(--soft);">Yönetici önizleme girişi</a></div>
+    <div id="yonForm" class="gizli" style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px;">
+      <label for="yEmail">Yönetici e-posta</label>
+      <input id="yEmail" type="email" autocomplete="username" placeholder="ad.soyad@kayikci.com.tr">
+      <label for="yPin">Şifre</label>
+      <input id="yPin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button id="yBtn" type="button" onclick="yonGiris()" style="background:#1E3A5F;">Önizleme Girişi</button>
+    </div>
   </div>
 </div>
 
@@ -149,6 +157,7 @@ button,input,select{font-family:inherit;}
     <div class="ad"><b id="uAd"></b><span id="uGy"></span></div>
     <button type="button" onclick="cikisYap()">Çıkış</button>
   </div>
+  <div id="onizBar" class="gizli" style="background:#FEF3C7;color:#78350F;padding:8px 14px;font-size:12px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">👁 Yönetici önizlemesi (salt okunur) <select id="onzSec" onchange="onizlemeSec(this.value)" style="flex:1;min-width:180px;padding:7px 8px;border-radius:8px;border:1.5px solid #FCD34D;font-size:13px;font-weight:700;background:#fff;"></select></div>
   <div id="senk">☁ Tüm kayıtlar iletildi</div>
   <div class="wrap">
     <div id="sekmeler" class="sekmeler"></div>
@@ -174,10 +183,11 @@ button,input,select{font-family:inherit;}
 var ST_ALAN='st.kayikci.com.tr';
 var AZ=2;   // 1-2 PAK satış: dolu ama "az" (sarı)
 var GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
+var ONIZLEME=false, ONZ_LISTE=[], MUDUR_EPOSTA='ervin.erturk@kayikci.com.tr';
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-31a';
+var SURUM='2026-10-31b';
 (function(){
   var son=0;
   function bant(){
@@ -240,6 +250,7 @@ function cikisYap(){
 if(auth) auth.onAuthStateChanged(function(u){
   if(!u || !u.email){ document.getElementById('giris').classList.remove('gizli'); document.getElementById('ana').classList.add('gizli'); return; }
   var e=u.email.toLowerCase();
+  if(e===MUDUR_EPOSTA){ onizlemeBaslat(e); return; }
   if(!new RegExp('^st[0-9]{2,4}@'+ST_ALAN.replace(/\./g,'\\.')+'$').test(e)){
     gHata('Bu cihazda yönetici hesabı açık ('+e+'). ST paneli için önce o hesaptan çıkış yapın.'); return;
   }
@@ -261,11 +272,46 @@ if(auth) auth.onAuthStateChanged(function(u){
   });
 });
 
-function surumSatiri(){ var e=document.getElementById('altBilgi'); if(!e) return; var S=window.SAYAC; e.textContent='Sürüm '+SURUM+(BEN&&BEN.k?' · ST '+BEN.k:'')+(S?(S.ok?' · Sayaç ✓':' · Sayaç ✗ '+String(S.hata||'').slice(0,80)):''); }
+function surumSatiri(){ var e=document.getElementById('altBilgi'); if(!e) return; var S=window.SAYAC; e.textContent='Sürüm '+SURUM+(ONIZLEME?' · Yönetici önizlemesi':'')+(BEN&&BEN.k?' · ST '+BEN.k:'')+(S?(S.ok?' · Sayaç ✓':' · Sayaç ✗ '+String(S.hata||'').slice(0,80)):''); }
+// ── Yönetici önizlemesi: Müdür kendi e-postasıyla girer, ST seçer, o ST'nin ekranını salt okunur görür (yazma ve sayaç yok) ──
+function yonFormu(){ document.getElementById('yonForm').classList.toggle('gizli'); }
+function yonGiris(){
+  var e=(document.getElementById('yEmail').value||'').trim().toLowerCase(), pin=String(document.getElementById('yPin').value||'');
+  gHata(''); if(!e || !pin){ gHata('E-posta ve şifreyi yazın.'); return; }
+  if(!auth){ gHata('Sunucuya bağlanılamadı.'); return; }
+  var b=document.getElementById('yBtn'); b.disabled=true; b.textContent='Giriş yapılıyor…';
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(function(){ return auth.signInWithEmailAndPassword(e, pin); })
+    .catch(function(){ gHata('E-posta veya şifre hatalı.'); document.getElementById('yPin').value=''; })
+    .then(function(){ b.disabled=false; b.textContent='Önizleme Girişi'; });
+}
+function onizlemeBaslat(e){
+  ONIZLEME=true;
+  db.collection('stHesaplar').get().then(function(s){
+    ONZ_LISTE=s.docs.map(function(d){ var v=d.data()||{}; return {email:d.id, st:temiz(v.st,80), gy:temiz(v.gy,60), k:temiz(v.k,6)}; })
+      .filter(function(x){ return x.st; }).sort(function(a,b){ return a.gy.localeCompare(b.gy,'tr') || a.st.localeCompare(b.st,'tr'); });
+    if(!ONZ_LISTE.length){ gHata('Tanımlı ST hesabı yok.'); return; }
+    var sel=document.getElementById('onzSec'), son='';
+    sel.innerHTML=ONZ_LISTE.map(function(x){ var o=''; if(x.gy!==son){ o=(son?'</optgroup>':'')+'<optgroup label="'+esc(x.gy)+'">'; son=x.gy; } return o+'<option value="'+esc(x.email)+'">'+esc(x.st)+' (ST '+esc(x.k)+')</option>'; }).join('')+'</optgroup>';
+    document.getElementById('onizBar').classList.remove('gizli');
+    document.getElementById('giris').classList.add('gizli'); document.getElementById('ana').classList.remove('gizli');
+    onizlemeSec(ONZ_LISTE[0].email);
+  }).catch(function(err){ gHata('ST listesi okunamadı: '+((err&&err.message)||err)); });
+}
+function onizlemeSec(email){
+  var x=ONZ_LISTE.filter(function(y){ return y.email===email; })[0]; if(!x) return;
+  if(DINLE){ try{ DINLE(); }catch(e){} DINLE=null; }
+  BEN={email:x.email, st:x.st, gy:x.gy, k:x.k};
+  GSEC=''; LISTE=null; GIR={}; HATA={}; A_VERI=null; A_YUK=false; C_VERI=null; C_YUK=false; C_ACIK={}; ARAC=false; CIRO=false;
+  var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.remove('ciro-mod');
+  document.getElementById('onzSec').value=email;
+  document.getElementById('uAd').textContent='👁 '+BEN.st;
+  document.getElementById('uGy').textContent='ST '+BEN.k+' · '+BEN.gy+' · Önizleme';
+  surumSatiri(); gorevleriOku();
+}
 // ── Açılış sayacı (GY ve Müdür "Rapor Takibi"nde görür): stGoruntuleme/{STkodu}__{alan}__{YYYYMMDD}, her açılış +1 ──
 function stGoruntule(r){
   try{
-    if(!db || !BEN || !BEN.k) return;
+    if(ONIZLEME || !db || !BEN || !BEN.k) return;
     var gun=bugun(), ref=db.collection('stGoruntuleme').doc(BEN.k+'__'+r+'__'+gun);
     // Sunucuda +1 (okuma gerekmez; çekim yokken telefonda bekler, bağlantı gelince gider; aynı anda iki açılış da sayılır)
     ref.set({st:BEN.st, gy:BEN.gy, rapor:r, gun:gun, n:firebase.firestore.FieldValue.increment(1), son:new Date().toISOString()}, {merge:true})
@@ -427,6 +473,7 @@ function girisleri(c){
   return o;
 }
 function duzenlenebilir(o){
+  if(ONIZLEME) return false;
   if(!o.bugun) return true;
   if(o.bugun.yazan && o.bugun.yazan!==BEN.email) return false;      // yönetici düzeltmesi
   var k=ms(o.bugun.kilit); return !k || Date.now()<k;
@@ -467,7 +514,7 @@ function ciz(){
       +'<div class="izgara">'+hucre+'</div>'
       +(HATA[r.c]?'<div class="khata">'+esc(HATA[r.c])+'</div>':'')
       +'<div class="kayak"><span class="ces">Çeşit '+ces+'/'+U.length+'</span>'
-      +(!duz?'<span class="ces">🔒 Kilitli</span>':tm?'<button type="button" class="tbtn geri" onclick="tamamla(\''+esc(r.c)+'\',false)">✅ Tamamlandı '+esc(saat)+' · Geri al</button>':'<button type="button" class="tbtn" onclick="tamamla(\''+esc(r.c)+'\',true)">✓ Ziyareti Tamamla</button>')
+      +(!duz?'<span class="ces">'+(ONIZLEME?'👁 Önizleme':'🔒 Kilitli')+'</span>':tm?'<button type="button" class="tbtn geri" onclick="tamamla(\''+esc(r.c)+'\',false)">✅ Tamamlandı '+esc(saat)+' · Geri al</button>':'<button type="button" class="tbtn" onclick="tamamla(\''+esc(r.c)+'\',true)">✓ Ziyareti Tamamla</button>')
       +'</div></div>';
   }).join('');
   if(odakId){ var el=document.getElementById(odakId); if(el && !el.disabled){ el.value=odakDeger; el.focus(); } }
@@ -476,6 +523,7 @@ function ciz(){
 
 // ── Kayıt ──
 function kaydet(c, u, tamam){
+  if(ONIZLEME){ tost('👁 Önizleme modunda kayıt yapılmaz.'); ciz(); return; }
   var G=gorev(), o=girisleri(c), bg=bugun();
   if(!duzenlenebilir(o)){ tost('🔒 Bu kayıt kilitli.'); ciz(); return; }
   var id=G.id+'__'+BEN.k+'__'+c+'__'+bg;
