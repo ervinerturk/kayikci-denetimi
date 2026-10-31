@@ -1426,7 +1426,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-31d';
+var SURUM='2026-10-31e';
 (function(){
   var son=0;
   function bant(){
@@ -1479,8 +1479,8 @@ function ciroExcelCoz(wb){
       var iP=ix(['PLASIYER','SATISTEMSILCISI','TEMSILCI']), iG=ix(['URUNKATEGORI','URUNGRUBU']), iB=ix(['BRUTFIYAT','BRUTTUTAR','BRUT']);
       if(iP<0 || iG<0) continue;
       if(iB<0) throw new Error('"'+_bkTemiz(wb.SheetNames[si],40)+'" sayfasında "Brüt Fiyat" sütunu bulunamadı.');
-      var iT=ix(['TARIH','FATURATARIHI','BELGETARIHI','EVRAKTARIHI']), iC=ix(['CARIKODU']), iA=ix(['CARIUNVANI','CARIADI']), iUK=ix(['URUNKOD','URUNKODU']), iU=ix(['URUN','URUNADI']), iQ=ix(['MIKTARPAK','MIKTAR']);
-      var K={p:[],g:[],u:[],ua:[],ug:[],c:[],ca:[]}, X={p:Object.create(null),g:Object.create(null),u:Object.create(null),c:Object.create(null)};
+      var iT=ix(['TARIH','FATURATARIHI','BELGETARIHI','EVRAKTARIHI']), iC=ix(['CARIKODU']), iA=ix(['CARIUNVANI','CARIADI']), iUK=ix(['URUNKOD','URUNKODU']), iU=ix(['URUN','URUNADI']), iQ=ix(['MIKTARPAK','MIKTAR']), iK=ix(['BAYIKATEGORI','MUSTERIGRUBU','CARIGRUBU','CARIKATEGORI']);
+      var K={p:[],g:[],u:[],ua:[],ug:[],c:[],ca:[],k:[]}, X={p:Object.create(null),g:Object.create(null),u:Object.create(null),c:Object.create(null),k:Object.create(null)};
       var id=function(t,k){ var x=X[t][k]; if(x===undefined){ x=X[t][k]=K[t].length; K[t].push(k); } return x; };
       var R=[], tmin='', tmax='';
       for(var r=h+1; r<rows.length; r++){
@@ -1492,7 +1492,7 @@ function ciroExcelCoz(wb){
         var ui=X.u[ukey]; if(ui===undefined){ ui=id('u',ukey); K.ua[ui]=ua||uk; K.ug[ui]=g; }
         var ck=_bkTemiz(iC>-1?x[iC]:'',20), ca=_bkTemiz(iA>-1?x[iA]:'',100), ckey=ck||ca;
         var ci=X.c[ckey]; if(ci===undefined){ ci=id('c',ckey); K.ca[ci]=ca||ck; }
-        R.push([id('p',pl), t, id('g',g), ui, ci, b, iQ>-1?_bkSayi(x[iQ]):0]);
+        R.push([id('p',pl), t, id('g',g), ui, ci, b, iQ>-1?_bkSayi(x[iQ]):0, id('k',(iK>-1?_bkTemiz(x[iK],40):'')||'(Belirsiz)')]);
       }
       if(!R.length) throw new Error('Dosyada satış satırı bulunamadı.');
       return {K:K, R:R, tmin:tmin, tmax:tmax, tarihli:iT>-1, sayfa:wb.SheetNames[si]};
@@ -1506,10 +1506,11 @@ function ciroHesapla(coz, bas, bit){
   coz.R.forEach(function(x){
     if(coz.tarihli && (x[1]<bas || x[1]>bit)) return;
     var pl=K.p[x[0]], tm=bul(pl), anah=tm?tm.st:('#'+pl);
-    var o=S[anah]||(S[anah]={st:tm?tm.st:pl, gy:tm?tm.gy:'', merkez:!tm, t:0, g:Object.create(null), u:Object.create(null), c:Object.create(null), d:Object.create(null), cu:Object.create(null)});
+    var o=S[anah]||(S[anah]={st:tm?tm.st:pl, gy:tm?tm.gy:'', merkez:!tm, t:0, g:Object.create(null), u:Object.create(null), c:Object.create(null), d:Object.create(null), cu:Object.create(null), k:Object.create(null)});
     var gn=K.g[x[2]]; o.t+=x[5]; o.g[gn]=(o.g[gn]||0)+x[5];
     var u=o.u[x[3]]||(o.u[x[3]]={t:0,p:0}); u.t+=x[5]; u.p+=x[6];
     o.c[x[4]]=(o.c[x[4]]||0)+x[5];
+    o.k[x[7]]=(o.k[x[7]]||0)+x[5];   // müşteri grubu (Bayi Kategori)
     var cm=o.cu[x[4]]||(o.cu[x[4]]=Object.create(null)), cq=cm[x[3]]||(cm[x[3]]=[0,0]); cq[0]+=x[5]; cq[1]+=x[6];   // müşteri × ürün (TL, PAK)
     if(x[1]){ var gd=o.d[x[1]]||(o.d[x[1]]=Object.create(null)), gg=gd[gn]||(gd[gn]=[0,0]); gg[0]+=x[5]; gg[1]+=x[6]; }   // günlük döküm (TL, PAK)
   });
@@ -1519,6 +1520,7 @@ function ciroHesapla(coz, bas, bit){
     var us=Object.keys(o.u).sort(function(a,b){ return o.u[b].t-o.u[a].t; }), usx=Object.create(null); us.forEach(function(ui,i){ usx[ui]=i; });
     return {st:o.st, gy:o.gy, merkez:o.merkez, t:r2(o.t), m:Object.keys(o.c).length, ces:Object.keys(o.u).length,
       g:Object.keys(o.g).map(function(g){ return {g:g, t:r2(o.g[g]), c:gc[g]||0}; }).sort(function(a,b){ return b.t-a.t; }),
+      k:Object.keys(o.k).map(function(ki){ return {k:K.k[ki], t:r2(o.k[ki])}; }).sort(function(a,b){ return b.t-a.t; }),
       u:us.map(function(ui){ return {k:K.u[ui]===K.ua[ui]?'':K.u[ui], a:K.ua[ui], g:K.ug[ui], t:r2(o.u[ui].t), p:Math.round(o.u[ui].p)}; }),
       c:Object.keys(o.c).map(function(ci){ return {k:K.c[ci]===K.ca[ci]?'':K.c[ci], a:K.ca[ci], t:r2(o.c[ci]), u:Object.keys(o.cu[ci]).map(function(ui){ return {i:usx[ui], t:r2(o.cu[ci][ui][0]), p:Math.round(o.cu[ci][ui][1])}; }).sort(function(a,b){ return b.t-a.t; })}; }).sort(function(a,b){ return b.t-a.t; }),
       d:Object.keys(o.d).sort().map(function(t){ return {t:t, g:Object.keys(o.d[t]).map(function(g){ return {g:g, t:r2(o.d[t][g][0]), p:Math.round(o.d[t][g][1])}; })}; })};
@@ -1594,7 +1596,7 @@ function ciroSunucuyaYaz(){
   var Y=_crYukle; if(!Y || !Y.H || !db) return;
   var btn=document.getElementById('crYukleBtn'); btn.disabled=true; btn.textContent='⏳ Yükleniyor...'; _crHata('');
   var kim=(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', zaman=new Date().toISOString(), H=Y.H;
-  var ozet=function(o){ return {st:o.st, t:o.t, m:o.m, ces:o.ces, g:o.g}; };
+  var ozet=function(o){ return {st:o.st, t:o.t, m:o.m, ces:o.ces, g:o.g, k:o.k||[]}; };
   var ust={bas:Y.bas, bit:Y.bit, yuklendi:zaman, yukleyen:kim, dosya:Y.dosya};
   var isler=Object.keys(YO).map(function(gy){ return db.collection('ciro').doc(gy).set(Object.assign({}, ust, {st:(H.gruplar[gy]||[]).map(ozet)})); });
   isler.push(db.collection('ciro').doc('_merkez').set(Object.assign({}, ust, {st:H.merkez.map(ozet)})));
@@ -1629,7 +1631,8 @@ function ciroVeriOku(){
       if(String(d.yuklendi||'')>v.yuklendi){ v.yuklendi=String(d.yuklendi||''); v.bas=_bkTemiz(d.bas,10); v.bit=_bkTemiz(d.bit,10); }
       d.st.forEach(function(o){ if(!o || typeof o!=='object') return;
         var z={st:_bkTemiz(o.st,80), gy:(x.b==='_merkez'?'':x.b), t:_bkSayi(o.t), m:Math.round(_bkSayi(o.m)), ces:Math.round(_bkSayi(o.ces)),
-          g:(Array.isArray(o.g)?o.g:[]).map(function(q){ return {g:_bkTemiz(q&&q.g,40)||'(Grupsuz)', t:_bkSayi(q&&q.t), c:Math.round(_bkSayi(q&&q.c))}; })};
+          g:(Array.isArray(o.g)?o.g:[]).map(function(q){ return {g:_bkTemiz(q&&q.g,40)||'(Grupsuz)', t:_bkSayi(q&&q.t), c:Math.round(_bkSayi(q&&q.c))}; }),
+          k:(Array.isArray(o.k)?o.k:[]).map(function(q){ return {k:_bkTemiz(q&&q.k,40)||'(Belirsiz)', t:_bkSayi(q&&q.t)}; })};
         if(x.b==='_merkez'){ if(md) v.merkez.push(z); } else v.st.push(z); }); });
     _crVeri=v; _crYuk=false; _ciroCiz();
   }).catch(function(err){ _crYuk=false; _crVeri={hata:(err&&err.message)||String(err)}; _ciroCiz(); });
@@ -1673,15 +1676,21 @@ function _ciroCiz(){
   var GT=ozGrup(dl), top=0; Object.keys(GT).forEach(function(g){ top+=GT[g]; });
   var G=Object.keys(GT).filter(function(g){ return Math.abs(GT[g])>=0.5; }).sort(function(a,b){ return GT[b]-GT[a]; });   // en yüksek ciro solda/üstte
   var mus=0; dl.forEach(function(o){ mus+=o.m; });
+  var KT={t:Object.create(null), l:[]}; dl.forEach(function(o){ (o.k||[]).forEach(function(q){ KT.t[q.k]=(KT.t[q.k]||0)+q.t; }); });
+  KT.l=Object.keys(KT.t).filter(function(k){ return Math.abs(KT.t[k])>=0.5; }).sort(function(a,b){ return KT.t[b]-KT.t[a]; });   // müşteri grubu: en yüksek ciro üstte
   var h='<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;">'
     +'<div style="font-size:12px;color:var(--mid);">📅 Dönem: <b>'+(V.bas?_bkTarihTr(V.bas)+' – '+_bkTarihTr(V.bit):'—')+'</b> · Yükleme: '+_bkZamanTr(V.yuklendi)+(gyF?' · '+_kac(gyF):'')+(stF?' · '+_kac(stF):'')+'</div>'+yukleBtn+'</div>';
   var kutu=function(v,l){ return '<div style="background:#F0FDFA;border-radius:10px;padding:10px;text-align:center;"><b style="display:block;font-size:17px;color:#0F766E;">'+v+'</b><span style="font-size:10px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">'
     +kutu(_bkKisa(top),'Brüt Ciro')+kutu(dl.length,'Satış Temsilcisi')+kutu(dl.length?_bkKisa(top/dl.length):'—','ST Başına Ortalama')+kutu(mus.toLocaleString('tr-TR'),'SYMS (müşteri)')+'</div>';
   var ozet='<div>'+secHd('📦 Ürün Grubuna Göre (en yüksek ciro üstte)')+G.map(function(g){ var pay=top?Math.round(GT[g]/top*1000)/10:0;
-      return row(_kac(g), _bkPara(GT[g])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'); }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>')+'</div>';
-  var stl=dl.slice().sort(function(a,b){ return b.t-a.t; }).slice(0,15), mx=Math.max.apply(null, stl.map(function(o){ return o.t; }).concat([1]));
-  var grf=_grfAd('📈 Temsilci Bazında Brüt Ciro (ilk 15)')+(stl.length?stl.map(function(o){
+      return row(_kac(g), _bkPara(GT[g])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'); }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>')
+    +(KT.l.length?'<div id="crMusGrup" style="margin-top:14px;">'+secHd('🏪 Müşteri Grubuna Göre (en yüksek ciro üstte)')+KT.l.map(function(k){ var pay=top?Math.round(KT.t[k]/top*1000)/10:0;
+      return '<div data-mgrup="'+_kac(k)+'">'+row(_kac(k), _bkPara(KT.t[k])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>')+'</div>'; }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>')+'</div>'
+      :'<div style="margin-top:12px;font-size:11px;color:var(--soft);">🏪 Müşteri grubu kırılımı için ciro dosyasını yeniden yükleyin.</div>')+'</div>';
+  var nST=Math.max(15, Math.round((G.length+KT.l.length+3)*1.28));   // sol sütun uzadıkça grafikte daha çok ST
+  var stl=dl.slice().sort(function(a,b){ return b.t-a.t; }).slice(0,nST), mx=Math.max.apply(null, stl.map(function(o){ return o.t; }).concat([1]));
+  var grf=_grfAd('📈 Temsilci Bazında Brüt Ciro (ilk '+stl.length+')')+(stl.length?stl.map(function(o){
     return '<div class="hbar" data-tip="'+_kac(o.st)+': '+_bkPara(o.t)+'"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.t/mx*100).toFixed(1)+'%;background:#0D9488;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+_bkKisa(o.t)+'</span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede satış yok.</div>');
   h+=_kartIci(ozet, grf);
   // GY → ST tablosu (GY ve ST'ler ciroya göre büyükten küçüğe; sütunlar ürün grupları, en yüksek solda)
