@@ -1426,7 +1426,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-31a';
+var SURUM='2026-10-31d';
 (function(){
   var son=0;
   function bant(){
@@ -1506,18 +1506,22 @@ function ciroHesapla(coz, bas, bit){
   coz.R.forEach(function(x){
     if(coz.tarihli && (x[1]<bas || x[1]>bit)) return;
     var pl=K.p[x[0]], tm=bul(pl), anah=tm?tm.st:('#'+pl);
-    var o=S[anah]||(S[anah]={st:tm?tm.st:pl, gy:tm?tm.gy:'', merkez:!tm, t:0, g:Object.create(null), u:Object.create(null), c:Object.create(null)});
+    var o=S[anah]||(S[anah]={st:tm?tm.st:pl, gy:tm?tm.gy:'', merkez:!tm, t:0, g:Object.create(null), u:Object.create(null), c:Object.create(null), d:Object.create(null), cu:Object.create(null)});
     var gn=K.g[x[2]]; o.t+=x[5]; o.g[gn]=(o.g[gn]||0)+x[5];
     var u=o.u[x[3]]||(o.u[x[3]]={t:0,p:0}); u.t+=x[5]; u.p+=x[6];
     o.c[x[4]]=(o.c[x[4]]||0)+x[5];
+    var cm=o.cu[x[4]]||(o.cu[x[4]]=Object.create(null)), cq=cm[x[3]]||(cm[x[3]]=[0,0]); cq[0]+=x[5]; cq[1]+=x[6];   // müşteri × ürün (TL, PAK)
+    if(x[1]){ var gd=o.d[x[1]]||(o.d[x[1]]=Object.create(null)), gg=gd[gn]||(gd[gn]=[0,0]); gg[0]+=x[5]; gg[1]+=x[6]; }   // günlük döküm (TL, PAK)
   });
   var r2=function(v){ return Math.round(v*100)/100; };
   var liste=Object.keys(S).map(function(k){ var o=S[k];
     var gc=Object.create(null); Object.keys(o.u).forEach(function(ui){ var g=K.ug[ui]; gc[g]=(gc[g]||0)+1; });
+    var us=Object.keys(o.u).sort(function(a,b){ return o.u[b].t-o.u[a].t; }), usx=Object.create(null); us.forEach(function(ui,i){ usx[ui]=i; });
     return {st:o.st, gy:o.gy, merkez:o.merkez, t:r2(o.t), m:Object.keys(o.c).length, ces:Object.keys(o.u).length,
       g:Object.keys(o.g).map(function(g){ return {g:g, t:r2(o.g[g]), c:gc[g]||0}; }).sort(function(a,b){ return b.t-a.t; }),
-      u:Object.keys(o.u).map(function(ui){ return {k:K.u[ui]===K.ua[ui]?'':K.u[ui], a:K.ua[ui], g:K.ug[ui], t:r2(o.u[ui].t), p:Math.round(o.u[ui].p)}; }).sort(function(a,b){ return b.t-a.t; }),
-      c:Object.keys(o.c).map(function(ci){ return {k:K.c[ci]===K.ca[ci]?'':K.c[ci], a:K.ca[ci], t:r2(o.c[ci])}; }).sort(function(a,b){ return b.t-a.t; })};
+      u:us.map(function(ui){ return {k:K.u[ui]===K.ua[ui]?'':K.u[ui], a:K.ua[ui], g:K.ug[ui], t:r2(o.u[ui].t), p:Math.round(o.u[ui].p)}; }),
+      c:Object.keys(o.c).map(function(ci){ return {k:K.c[ci]===K.ca[ci]?'':K.c[ci], a:K.ca[ci], t:r2(o.c[ci]), u:Object.keys(o.cu[ci]).map(function(ui){ return {i:usx[ui], t:r2(o.cu[ci][ui][0]), p:Math.round(o.cu[ci][ui][1])}; }).sort(function(a,b){ return b.t-a.t; })}; }).sort(function(a,b){ return b.t-a.t; }),
+      d:Object.keys(o.d).sort().map(function(t){ return {t:t, g:Object.keys(o.d[t]).map(function(g){ return {g:g, t:r2(o.d[t][g][0]), p:Math.round(o.d[t][g][1])}; })}; })};
   });
   var gr=Object.create(null); Object.keys(YO).forEach(function(g){ gr[g]=[]; });
   var merkez=[], eksik=[], var_=Object.create(null);
@@ -1596,8 +1600,8 @@ function ciroSunucuyaYaz(){
   isler.push(db.collection('ciro').doc('_merkez').set(Object.assign({}, ust, {st:H.merkez.map(ozet)})));
   // ST detayları: her temsilci (dönemde satışı olmayan da) yeniden yazılır
   var stm=Object.create(null); H.liste.forEach(function(o){ if(!o.merkez) stm[o.st]=o; });
-  Object.keys(YO).forEach(function(gy){ (YO[gy]||[]).forEach(function(st){ var o=stm[st]||{t:0,m:0,ces:0,g:[],u:[],c:[]};
-    isler.push(db.collection('ciroST').doc(_bkKat(st)).set(Object.assign({}, ust, {st:st, gy:gy, t:o.t, m:o.m, ces:o.ces, g:o.g, u:o.u, c:o.c}))); }); });
+  Object.keys(YO).forEach(function(gy){ (YO[gy]||[]).forEach(function(st){ var o=stm[st]||{t:0,m:0,ces:0,g:[],u:[],c:[],d:[]};
+    isler.push(db.collection('ciroST').doc(_bkKat(st)).set(Object.assign({}, ust, {st:st, gy:gy, t:o.t, m:o.m, ces:o.ces, g:o.g, u:o.u, c:o.c, d:o.d}))); }); });
   H.merkez.forEach(function(o){ isler.push(db.collection('ciroST').doc('_M_'+_bkKat(o.st)).set(Object.assign({}, ust, {st:o.st, gy:'', t:o.t, m:o.m, ces:o.ces, g:o.g, u:o.u, c:o.c}))); });
   Promise.all(isler).then(function(){
     btn.textContent='✅ Yüklendi';

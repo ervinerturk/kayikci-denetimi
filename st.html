@@ -187,7 +187,7 @@ var ONIZLEME=false, ONZ_LISTE=[], MUDUR_EPOSTA='ervin.erturk@kayikci.com.tr';
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-31b';
+var SURUM='2026-10-31d';
 (function(){
   var son=0;
   function bant(){
@@ -301,7 +301,7 @@ function onizlemeSec(email){
   var x=ONZ_LISTE.filter(function(y){ return y.email===email; })[0]; if(!x) return;
   if(DINLE){ try{ DINLE(); }catch(e){} DINLE=null; }
   BEN={email:x.email, st:x.st, gy:x.gy, k:x.k};
-  GSEC=''; LISTE=null; GIR={}; HATA={}; A_VERI=null; A_YUK=false; C_VERI=null; C_YUK=false; C_ACIK={}; ARAC=false; CIRO=false;
+  GSEC=''; LISTE=null; GIR={}; HATA={}; A_VERI=null; A_YUK=false; C_VERI=null; C_YUK=false; C_ACIK={}; C_MACIK={}; C_GUNLUK=false; ARAC=false; CIRO=false;
   var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.remove('ciro-mod');
   document.getElementById('onzSec').value=email;
   document.getElementById('uAd').textContent='👁 '+BEN.st;
@@ -327,7 +327,7 @@ function sekmeleriCiz(){
     +'<button type="button" id="ciroSekme" class="sekme ciro'+(CIRO?' on':'')+'" onclick="ciroAc()">📈 Cirom</button>';
 }
 // ── 📈 Cirom: yalnız kendi brüt cirosu (ciroST, sunucu kuralı) — ürün grubu, ürün ve müşteri; en yüksek ciro üstte ──
-var CIRO=false, C_VERI=null, C_YUK=false, C_ACIK={};
+var CIRO=false, C_VERI=null, C_YUK=false, C_ACIK={}, C_GUNLUK=false, C_OLCU='tl', C_MACIK={};
 function ciroAc(){
   CIRO=true; ARAC=false; var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.add('ciro-mod'); sekmeleriCiz(); stGoruntule('ciro');
   if(!C_VERI && !C_YUK) ciroOku(); else ciroCiz();
@@ -338,15 +338,37 @@ function ciroOku(){
   db.collection('ciroST').where('st','==',BEN.st).get().then(function(s){
     var v=null; s.docs.forEach(function(d){ var x=d.data()||{}; if(!v || String(x.yuklendi||'')>String(v.yuklendi||'')) v=x; });
     var n=function(x){ var k=Number(x); return isFinite(k)?k:0; };
+    var hu=(v&&Array.isArray(v.u))?v.u:[];   // müşteri ürünleri bu listenin sırasına (i) bağlı
     C_VERI=v ? {bas:temiz(v.bas,10), bit:temiz(v.bit,10), t:n(v.t), m:Math.round(n(v.m)), ces:Math.round(n(v.ces)),
       g:(Array.isArray(v.g)?v.g:[]).map(function(q){ return {g:temiz(q&&q.g,40)||'(Grupsuz)', t:n(q&&q.t), c:Math.round(n(q&&q.c))}; }).sort(function(a,b){ return b.t-a.t; }),
       u:(Array.isArray(v.u)?v.u:[]).map(function(z){ return {k:temiz(z&&z.k,20), a:temiz(z&&z.a,100), g:temiz(z&&z.g,40), t:n(z&&z.t), p:Math.round(n(z&&z.p))}; }).sort(function(a,b){ return b.t-a.t; }),
-      c:(Array.isArray(v.c)?v.c:[]).map(function(z){ return {k:temiz(z&&z.k,20), a:temiz(z&&z.a,100), t:n(z&&z.t)}; }).sort(function(a,b){ return b.t-a.t; })} : {bos:true};
+      c:(Array.isArray(v.c)?v.c:[]).map(function(z){ return {k:temiz(z&&z.k,20), a:temiz(z&&z.a,100), t:n(z&&z.t),
+        u:(Array.isArray(z&&z.u)?z.u:[]).map(function(q){ var r=hu[Math.round(n(q&&q.i))]||{}; return {a:temiz(r.a,100)||'—', k:temiz(r.k,20), t:n(q&&q.t), p:Math.round(n(q&&q.p))}; }).sort(function(a,b){ return b.t-a.t; })}; }).sort(function(a,b){ return b.t-a.t; }),
+      d:(Array.isArray(v.d)?v.d:[]).map(function(x){ var g={}; (Array.isArray(x&&x.g)?x.g:[]).forEach(function(q){ if(q&&q.g) g[temiz(q.g,40)]=[n(q.t),n(q.p)]; }); return {t:temiz(x&&x.t,10), g:g}; }).filter(function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x.t); }).sort(function(a,b){ return a.t<b.t?-1:1; })} : {bos:true};
     C_YUK=false; ciroCiz();
   }).catch(function(err){ C_YUK=false; C_VERI={hata:(err&&err.message)||String(err)}; ciroCiz(); });
 }
 function ciroYenile(){ C_VERI=null; ciroOku(); }
 function ciroGrup(i){ C_ACIK[i]=!C_ACIK[i]; ciroCiz(); }
+function ciroMusteri(i){ C_MACIK[i]=!C_MACIK[i]; ciroCiz(true); }
+function ciroGunluk(){ C_GUNLUK=!C_GUNLUK; ciroCiz(); }
+function ciroOlcu(o){ C_OLCU=(o==='pk')?'pk':'tl'; ciroCiz(); }
+// Günlük döküm: satırlar tarih (eskiden yeniye), sütunlar ürün grupları (en yüksek ciro solda) + Genel Toplam; TL / Paket
+function ciroGunlukHtml(V){
+  if(!V.d.length) return '<div class="bos">Günlük döküm bu dosyada yok.</div>';
+  var P=C_OLCU==='pk', ix=P?1:0, G=V.g.map(function(g){ return g.g; }), top={}, gen=0;
+  var f=function(x){ return x? (P? Math.round(x).toLocaleString('tr-TR') : Math.round(x).toLocaleString('tr-TR')) : ''; };
+  var tr=function(d){ return d.slice(8,10)+'.'+d.slice(5,7); };
+  var th='style="padding:7px 6px;font-size:10px;font-weight:800;color:var(--mid);text-align:right;white-space:nowrap;background:#F1F5F9;position:sticky;top:0;"';
+  var h='<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin:2px 0 8px;"><div class="aolcu" role="group" aria-label="Ölçü"><button type="button" id="cOlcuTL" class="'+(P?'':'on')+'" aria-pressed="'+(!P)+'" onclick="ciroOlcu(\'tl\')">TL</button><button type="button" id="cOlcuPK" class="'+(P?'on':'')+'" aria-pressed="'+P+'" onclick="ciroOlcu(\'pk\')">Paket</button></div><span style="font-size:10px;color:var(--soft);">'+(P?'Paket (PAK)':'Brüt TL')+'</span></div>'
+    +'<div style="overflow:auto;max-height:70vh;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(15,25,35,.06);"><table id="cGunTablo" style="border-collapse:collapse;width:100%;font-size:11px;font-variant-numeric:tabular-nums;"><thead><tr><th '+th.replace('text-align:right','text-align:left')+'>Tarih</th>'
+    +G.map(function(g){ return '<th '+th+'>'+esc(g)+'</th>'; }).join('')+'<th '+th+'>Toplam</th></tr></thead><tbody>';
+  V.d.forEach(function(x){ var sat=0;
+    h+='<tr><td style="padding:6px;white-space:nowrap;font-weight:700;border-top:1px solid #F1F5F9;">'+esc(tr(x.t))+'</td>'+G.map(function(g){ var v=x.g[g]?x.g[g][ix]:0; sat+=v; top[g]=(top[g]||0)+v; return '<td style="padding:6px;text-align:right;white-space:nowrap;border-top:1px solid #F1F5F9;">'+f(v)+'</td>'; }).join('')
+      +'<td style="padding:6px;text-align:right;white-space:nowrap;font-weight:800;border-top:1px solid #F1F5F9;">'+f(sat)+'</td></tr>'; gen+=sat; });
+  h+='<tr style="background:#0F766E;color:#fff;font-weight:800;"><td style="padding:7px 6px;">Toplam</td>'+G.map(function(g){ return '<td style="padding:7px 6px;text-align:right;white-space:nowrap;">'+f(top[g]||0)+'</td>'; }).join('')+'<td style="padding:7px 6px;text-align:right;white-space:nowrap;">'+f(gen)+'</td></tr></tbody></table></div>';
+  return h;
+}
 function ciroCiz(sadeceMusteri){
   var el=document.getElementById('cirom'); if(!el || !CIRO) return;
   if(C_YUK && !C_VERI){ el.innerHTML='<div class="bos">⏳ Ciro bilginiz yükleniyor…</div>'; return; }
@@ -356,9 +378,11 @@ function ciroCiz(sadeceMusteri){
   var V=C_VERI, tr=function(d){ return d?d.split('-').reverse().join('.'):'—'; };
   var ara=document.getElementById('cAra'), q=ara?ara.value:'', qn=q.toLocaleUpperCase('tr-TR').trim();
   var musteri=function(){
-    var l=V.c.filter(function(z){ return !qn || z.a.toLocaleUpperCase('tr-TR').indexOf(qn)>-1 || z.k.indexOf(qn)>-1; });
+    var l=V.c.map(function(z,i){ z.i=i; return z; }).filter(function(z){ return !qn || z.a.toLocaleUpperCase('tr-TR').indexOf(qn)>-1 || z.k.indexOf(qn)>-1; });
     if(!l.length) return '<div class="bos">'+(V.c.length?'Eşleşen müşteri yok.':'Bu dönemde satış görünmüyor.')+'</div>';
-    return '<div class="akart">'+l.map(function(z){ return '<div class="asat"><div class="n">'+esc(z.a)+'<small>'+esc(z.k)+'</small></div><div class="v">'+tl(z.t)+'</div></div>'; }).join('')+'</div>';
+    return '<div class="akart">'+l.map(function(z){ var ac=!!C_MACIK[z.i], tp=0; z.u.forEach(function(q){ tp+=q.p; });
+      return '<div class="asat cmus" data-musteri="'+z.i+'" onclick="ciroMusteri('+z.i+')" style="cursor:pointer;"><div class="n">'+esc(z.a)+'<small>'+esc(z.k)+(z.u.length?' · '+z.u.length+' çeşit':'')+'</small></div><div class="v">'+tl(z.t)+(ac?' ▾':' ›')+(z.u.length?'<small>'+pk(tp)+'</small>':'')+'</div></div>'
+        +(ac?'<div class="cmdetay" style="background:#F8FAFC;border-radius:8px;padding:0 10px;margin:2px 0 6px;">'+(z.u.length? z.u.map(function(q){ return '<div class="asat" data-murun="1"><div class="n">'+esc(q.a)+'<small>'+esc(q.k)+'</small></div><div class="v">'+tl(q.t)+'<small>'+pk(q.p)+'</small></div></div>'; }).join('') : '<div class="bos" style="padding:10px;">Ürün detayı için ciro dosyası yeniden yüklenmeli.</div>')+'</div>':''); }).join('')+'</div>';
   };
   if(sadeceMusteri && document.getElementById('cListe')){ document.getElementById('cListe').innerHTML=musteri(); return; }
   el.innerHTML='<div class="bilgi">📅 Dönem: <b>'+esc(tr(V.bas))+' – '+esc(tr(V.bit))+'</b> · Brüt ciro (KDV hariç) · <a href="javascript:ciroYenile()" style="color:var(--lac);font-weight:700;">↻ Yenile</a></div>'
@@ -366,6 +390,8 @@ function ciroCiz(sadeceMusteri){
     +'<div class="akart">'+V.g.map(function(g,i){ var pay=V.t?Math.round(g.t/V.t*1000)/10:0, ac=!!C_ACIK[i];
         return '<div class="asat cgrup" data-grup="'+esc(g.g)+'" onclick="ciroGrup('+i+')"><div class="n"><b>'+esc(g.g)+'</b><span class="ok">'+(ac?'▾':'›')+'</span></div><div class="v">'+tl(g.t)+'<small>%'+pay.toLocaleString('tr-TR')+' · Çeşit-'+g.c+'</small></div></div>'
           +(ac?'<div style="background:#F8FAFC;border-radius:8px;padding:0 10px;margin:2px 0 6px;">'+V.u.filter(function(z){ return z.g===g.g; }).map(function(z){ return '<div class="asat" data-urun="1"><div class="n">'+esc(z.a)+'<small>'+esc(z.k)+'</small></div><div class="v">'+tl(z.t)+'<small>'+pk(z.p)+'</small></div></div>'; }).join('')+'</div>':''); }).join('')+'</div>'
+    +'<button type="button" id="cGunBtn" onclick="ciroGunluk()" style="width:100%;margin:4px 0 10px;padding:11px;border-radius:10px;border:1.5px solid #5EEAD4;background:'+(C_GUNLUK?'#0D9488;color:#fff':'#F0FDFA;color:#0F766E')+';font-size:13px;font-weight:800;">📅 Günlük Döküm '+(C_GUNLUK?'▾':'›')+'</button>'
+    +(C_GUNLUK?ciroGunlukHtml(V):'')
     +'<div class="agrup" style="margin-top:6px;"><span>🏪 Müşteriler · '+V.c.length+'</span><span>en yüksek ciro üstte</span></div>'
     +'<input id="cAra" type="search" placeholder="🔎 Müşteri adı veya cari kodu" value="'+esc(q)+'" oninput="ciroCiz(true)" style="width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;margin:8px 0 10px;background:#fff;">'
     +'<div id="cListe">'+musteri()+'</div>';
