@@ -95,6 +95,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 .tbl tr:last-child td{border-bottom:none;}
 .tbl tr:hover td{background:var(--bg);}
 .tbl .num{font-weight:700;text-align:right;}
+#crTablo th,#crTablo td{padding:7px 6px;}
+#crTablo thead tr,#crTablo tbody tr{background:#fff;}
+#crTablo thead th:first-child,#crTablo tr>td:first-child:not([colspan]){position:sticky;left:0;z-index:1;background:inherit;box-shadow:1px 0 0 var(--border);}   /* yana kayarken temsilci adı sabit */
+#crTablo th.num{white-space:normal!important;line-height:1.2;}
+#crTablo .cr-detay .tbl td{white-space:nowrap;}
+#crTablo .cr-detay .tbl td:first-child{white-space:normal;overflow-wrap:anywhere;}
 
 .empty{text-align:center;padding:40px 20px;color:var(--soft);}
 .alert{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:500;margin-bottom:8px;}
@@ -1426,7 +1432,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-31e';
+var SURUM='2026-10-31h';
 (function(){
   var son=0;
   function bant(){
@@ -1660,6 +1666,9 @@ function ciroGorunumToggle(ac){
 }
 document.addEventListener('change', function(e){ if(_crAcik && e.target && (e.target.id==='fGY' || e.target.id==='fST')){ _crAcikST=Object.create(null); setTimeout(_ciroCiz,0); } }, true);
 function ciroSTAcKapa(st, merkez){ var a=(merkez?'#':'')+st; _crAcikST[a]=!_crAcikST[a]; if(_crAcikST[a]) ciroDetayOku(st, merkez); _ciroCiz(); }
+// ST detayı tablo yana kaysa da görünen alana sığar (PC + telefon)
+function _crDetayGenislik(){ var k=document.getElementById('crTabloKutu'); if(!k) return; var w=k.clientWidth; Array.prototype.forEach.call(document.querySelectorAll('#crTablo .cr-detay'), function(d){ d.style.width=w+'px'; }); }
+window.addEventListener('resize', function(){ if(typeof _crAcik!=='undefined' && _crAcik) _crDetayGenislik(); });
 function _ciroCiz(){
   var alan=document.getElementById('ciroAlan'); if(!alan || !_crAcik) return;
   var md=_dashKullanici && !_dashKullanici.gy && !_dashKullanici.operator;
@@ -1689,9 +1698,9 @@ function _ciroCiz(){
       return '<div data-mgrup="'+_kac(k)+'">'+row(_kac(k), _bkPara(KT.t[k])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>')+'</div>'; }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>')+'</div>'
       :'<div style="margin-top:12px;font-size:11px;color:var(--soft);">🏪 Müşteri grubu kırılımı için ciro dosyasını yeniden yükleyin.</div>')+'</div>';
   var nST=Math.max(15, Math.round((G.length+KT.l.length+3)*1.28));   // sol sütun uzadıkça grafikte daha çok ST
-  var stl=dl.slice().sort(function(a,b){ return b.t-a.t; }).slice(0,nST), mx=Math.max.apply(null, stl.map(function(o){ return o.t; }).concat([1]));
-  var grf=_grfAd('📈 Temsilci Bazında Brüt Ciro (ilk '+stl.length+')')+(stl.length?stl.map(function(o){
-    return '<div class="hbar" data-tip="'+_kac(o.st)+': '+_bkPara(o.t)+'"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.t/mx*100).toFixed(1)+'%;background:#0D9488;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+_bkKisa(o.t)+'</span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede satış yok.</div>');
+  var stl=dl.slice().sort(function(a,b){ return b.t-a.t; }), mx=Math.max.apply(null, stl.map(function(o){ return o.t; }).concat([1]));   // tüm ST'ler; kutu nST satır yüksekliğinde, kalanı kaydırılır
+  var grf=_grfAd('📈 Temsilci Bazında Brüt Ciro ('+stl.length+' ST'+(stl.length>nST?' · kaydırın ↕':'')+')')+'<div id="crStGrf" style="max-height:'+(nST*25)+'px;overflow-y:auto;padding-right:6px;">'+(stl.length?stl.map(function(o){
+    return '<div class="hbar" data-tip="'+_kac(o.st)+': '+_bkPara(o.t)+'"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.t/mx*100).toFixed(1)+'%;background:#0D9488;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+_bkKisa(o.t)+'</span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede satış yok.</div>')+'</div>';
   h+=_kartIci(ozet, grf);
   // GY → ST tablosu (GY ve ST'ler ciroya göre büyükten küçüğe; sütunlar ürün grupları, en yüksek solda)
   var gyT=Object.create(null); dl.forEach(function(o){ gyT[o.gy]=(gyT[o.gy]||0)+o.t; });
@@ -1702,17 +1711,17 @@ function _ciroCiz(){
     var id=merkez?('_M_'+_bkKat(o.st)):_bkKat(o.st), D=_crDetay[id];
     if(!D || D.yuk) return '<div style="padding:10px;color:var(--mid);font-size:12px;">⏳ Detay yükleniyor…</div>';
     if(D.hata) return '<div style="padding:10px;color:var(--red);font-size:12px;">⚠️ '+_kac(D.hata)+'</div>';
-    var ut='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;padding:8px;">'
-      +'<div>'+secHd('📦 Ürünler (en yüksek ciro üstte)')+'<div style="max-height:360px;overflow:auto;"><table class="tbl" style="font-size:12px;"><thead><tr><th>Ürün</th><th>Grup</th><th class="num">PAK</th><th class="num">Ciro</th></tr></thead><tbody>'
+    var ut='<div class="cr-detay" style="position:sticky;left:0;box-sizing:border-box;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px;padding:8px;">'
+      +'<div style="min-width:0;">'+secHd('📦 Ürünler (en yüksek ciro üstte)')+'<div style="max-height:360px;overflow:auto;"><table class="tbl" style="font-size:12px;"><thead><tr><th>Ürün</th><th>Grup</th><th class="num">PAK</th><th class="num">Ciro</th></tr></thead><tbody>'
       +D.u.slice().sort(function(a,b){ return b.t-a.t; }).map(function(z){ return '<tr><td>'+_kac(z.a)+'</td><td style="white-space:nowrap;font-size:11px;">'+_kac(z.g)+'</td><td class="num">'+z.p.toLocaleString('tr-TR')+'</td><td class="num" style="white-space:nowrap;font-weight:700;">'+_bkPara(z.t)+'</td></tr>'; }).join('')
       +'</tbody></table></div></div>'
-      +'<div>'+secHd('🏪 Müşteriler (en yüksek ciro üstte) · '+D.c.length)+'<div style="max-height:360px;overflow:auto;"><table class="tbl" style="font-size:12px;"><thead><tr><th>Müşteri</th><th class="num">Ciro</th></tr></thead><tbody>'
+      +'<div style="min-width:0;">'+secHd('🏪 Müşteriler (en yüksek ciro üstte) · '+D.c.length)+'<div style="max-height:360px;overflow:auto;"><table class="tbl" style="font-size:12px;"><thead><tr><th>Müşteri</th><th class="num">Ciro</th></tr></thead><tbody>'
       +D.c.map(function(z){ return '<tr><td>'+_kac(z.a)+(z.k?' <span style="font-size:10px;color:var(--soft);">'+_kac(z.k)+'</span>':'')+'</td><td class="num" style="white-space:nowrap;font-weight:700;">'+_bkPara(z.t)+'</td></tr>'; }).join('')
       +'</tbody></table></div></div></div>';
     return ut;
   };
   var tt=secHd('🧑‍💼 Grup Yöneticisi → Temsilci (Brüt Ciro ₺) · satıra tıklayınca ürün ve müşteri detayı')
-    +'<div style="overflow-x:auto;"><table class="tbl" id="crTablo" style="min-width:'+(380+G.length*115)+'px;"><thead><tr><th>Temsilci</th>'+G.map(function(g){ return '<th class="num" style="white-space:nowrap;">'+_kac(g)+'</th>'; }).join('')+'<th class="num">Toplam</th><th class="num">SYMS</th></tr></thead><tbody>';
+    +'<div id="crTabloKutu" style="overflow-x:auto;"><table class="tbl" id="crTablo" style="min-width:'+(250+G.length*88)+'px;"><thead><tr><th>Temsilci</th>'+G.map(function(g){ return '<th class="num" style="white-space:nowrap;">'+_kac(g)+'</th>'; }).join('')+'<th class="num">Toplam</th><th class="num">SYMS</th></tr></thead><tbody>';
   gyler.forEach(function(gy){
     var l=dl.filter(function(o){ return o.gy===gy; }).sort(function(a,b){ return b.t-a.t; }), gm=0; l.forEach(function(o){ gm+=o.m; });
     tt+='<tr data-gy-satir="'+_kac(gy)+'" style="background:#EEF2F7;"><td style="white-space:nowrap;font-weight:800;color:#1E3A5F;">👥 '+_kac(gy)+' <span style="font-weight:600;color:var(--soft);font-size:11px;">('+l.length+' ST)</span></td>'
@@ -1727,13 +1736,14 @@ function _ciroCiz(){
   if(gyler.length) tt+='<tr style="background:#0F766E;"><td style="color:#fff;font-weight:800;">Genel Toplam</td>'+G.map(function(g){ return '<td class="num" style="color:#fff;font-weight:800;white-space:nowrap;">'+Math.round(GT[g]).toLocaleString('tr-TR')+'</td>'; }).join('')+'<td class="num" style="color:#fff;font-weight:800;white-space:nowrap;">'+Math.round(top).toLocaleString('tr-TR')+'</td><td class="num" style="color:#fff;font-weight:800;">'+mus.toLocaleString('tr-TR')+'</td></tr>';
   if(md && !gyF && !stF) V.merkez.forEach(function(o){
     var acik=!!_crAcikST['#'+o.st]; if(acik) ciroDetayOku(o.st, true);
-    tt+='<tr data-merkez="'+_kac(o.st)+'" style="cursor:pointer;background:#FFFBEB;" onclick="ciroSTAcKapa(this.getAttribute(\'data-merkez\'),true)"><td style="white-space:nowrap;"><b>🏢 '+_kac(o.st)+'</b> <span style="color:var(--blue);">'+(acik?'▾':'›')+'</span><div style="font-size:10px;color:#B45309;">Yalnız Müdür görür · genel toplama dahil değil</div></td>'
+    tt+='<tr data-merkez="'+_kac(o.st)+'" style="cursor:pointer;background:#FFFBEB;" onclick="ciroSTAcKapa(this.getAttribute(\'data-merkez\'),true)"><td style="white-space:nowrap;"><b>🏢 '+_kac(o.st)+'</b> <span style="color:var(--blue);">'+(acik?'▾':'›')+'</span><div style="font-size:10px;color:#B45309;white-space:normal;max-width:170px;">Yalnız Müdür görür · genel toplama dahil değil</div></td>'
       +G.map(function(g){ return hucre(gv(o,g)); }).join('')+hucre(o.t,true)+'<td class="num">'+o.m+'</td></tr>';
     if(acik) tt+='<tr><td colspan="'+(G.length+3)+'" style="padding:0 0 10px;background:var(--bg);">'+detay(o,true)+'</td></tr>';
   });
   tt+='</tbody></table></div>';
   if(!gyler.length) tt+='<div style="font-size:12px;color:var(--mid);padding:8px 2px;">Bu filtrede satış yok.</div>';
   alan.innerHTML=kart(h+tt+'<div style="font-size:11px;color:var(--soft);margin-top:8px;">Ciro = Brüt Fiyat (iskonto öncesi, KDV hariç), fatura + irsaliye. SYMS = satış yapılan müşteri sayısı.</div>');
+  _crDetayGenislik();
 }
 
 // ===== RAPOR TAKİBİ — açılış sayaçları =====
