@@ -214,6 +214,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
     <button id="navAracBtn" onclick="aracGorunumToggle()" style="background:#2563EB;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">🚚 Araç Stok</button>
     <button id="navBakiyeBtn" onclick="bakiyeGorunumToggle()" style="background:#F59E0B;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">💰 Bakiye Raporu</button>
     <button id="navCiroBtn" onclick="ciroGorunumToggle()" style="background:#0D9488;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">📈 Ciro</button>
+    <button id="navIzinBtn" onclick="izinGorunumToggle()" style="background:#B45309;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">🏖 İzin Takip</button>
     <button id="navTakipBtn" onclick="takipGorunumToggle()" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap;">👁 Rapor Takibi</button>
     <button id="navTaniBtn" onclick="taniGoster()" style="background:rgba(255,200,0,.25);color:#FFD700;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">🔍 Tanı</button>
     <div class="nav-date" id="navDate"></div>
@@ -279,6 +280,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 
   <!-- CİRO (nav'daki "📈 Ciro" ile açılır; GY yalnız kendi ekibi) -->
   <div id="ciroAlan" style="display:none;"></div>
+
+  <!-- İZİN TAKİP (nav'daki "🏖 İzin Takip"; Müdür + Operatör tümü, GY yalnız kendi ekibi) -->
+  <div id="izinAlan" style="display:none;grid-column:1 / -1;"></div>
 
   <!-- ÖZET BAR -->
   <div class="ozet-bar">
@@ -1054,6 +1058,7 @@ function bakiyeVeriOku(){
 // ── Görünüm ──
 function bakiyeGorunumToggle(ac){
   _bkAcik=(typeof ac==='boolean')?ac:!_bkAcik;
+  if(_bkAcik && typeof _izAcik!=='undefined' && _izAcik) izinGorunumToggle(false);
   if(_bkAcik && typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false);
   if(_bkAcik && typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false);
   if(_bkAcik && typeof _tkAcik!=='undefined' && _tkAcik) takipGorunumToggle(false);
@@ -1324,6 +1329,7 @@ function aracVeriOku(){
 // ── Görünüm ──
 function aracGorunumToggle(ac){
   _asAcik=(typeof ac==='boolean')?ac:!_asAcik;
+  if(_asAcik && typeof _izAcik!=='undefined' && _izAcik) izinGorunumToggle(false);
   if(_asAcik){ if(typeof _crAcik!=='undefined' && _crAcik) ciroGorunumToggle(false); if(typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false); if(typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false); if(typeof _tkAcik!=='undefined' && _tkAcik) takipGorunumToggle(false); }
   var alan=document.getElementById('aracAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navAracBtn');
   if(alan) alan.style.display=_asAcik?'block':'none';
@@ -1432,7 +1438,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-31h';
+var SURUM='2026-11-01a';
 (function(){
   var son=0;
   function bant(){
@@ -1442,7 +1448,7 @@ var SURUM='2026-10-31h';
     b.innerHTML='🔄 Yeni sürüm hazır <button type="button" onclick="location.reload()" style="background:#16A34A;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-weight:800;cursor:pointer;">Yenile</button>';
     document.body.appendChild(b);
   }
-  function guvenli(){ try{ if(_dashKullanici && _dashKullanici.operator) return false; return !['rutModal','asModal','bkModal','odModal','raporDetayModal','crModal'].some(function(id){ var x=document.getElementById(id); return x && getComputedStyle(x).display!=='none'; }); }catch(e){ return false; } }
+  function guvenli(){ try{ if(_dashKullanici && _dashKullanici.operator) return false; return !['rutModal','asModal','bkModal','odModal','raporDetayModal','crModal','izModal'].some(function(id){ var x=document.getElementById(id); return x && getComputedStyle(x).display!=='none'; }); }catch(e){ return false; } }
   function kontrol(){
     if(Date.now()-son<60000) return; son=Date.now();
     fetch(location.pathname+'?surum='+Date.now(),{cache:'no-store'}).then(function(r){ return r.ok?r.text():''; }).then(function(t){
@@ -1655,6 +1661,7 @@ function ciroDetayOku(st, merkez){
 // ── Görünüm ──
 function ciroGorunumToggle(ac){
   _crAcik=(typeof ac==='boolean')?ac:!_crAcik;
+  if(_crAcik && typeof _izAcik!=='undefined' && _izAcik) izinGorunumToggle(false);
   if(_crAcik){ if(typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false); if(typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false); if(typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false); if(typeof _tkAcik!=='undefined' && _tkAcik) takipGorunumToggle(false); }
   var alan=document.getElementById('ciroAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navCiroBtn');
   if(alan) alan.style.display=_crAcik?'block':'none';
@@ -1746,6 +1753,381 @@ function _ciroCiz(){
   _crDetayGenislik();
 }
 
+// ===== PERSONEL İZİN TAKİP =====
+// Müdür + Operatör: tüm personel, giriş/düzeltme/iptal, Excel içe/dışa aktarım. GY: yalnız kendi ekibi (salt okunur; sunucu kuralı).
+// Dönem takvim yılı (Excel'deki gibi): Toplam = önceki yıl devri + yıllık hak; Kalan = Toplam − (Excel'e işlenmiş kullanım + paneldeki yıllık izinler).
+// Cumartesi iş günü; Pazar, dini bayramlar ve resmi tatiller (çalışılsa da) yıllık izinden düşülmez (md.56); arife tam iş günü. TC kimlik no hiçbir zaman okunmaz/saklanmaz.
+// Firestore: izinPersonel/{_bkKat(ad)}  ·  izinKayit/{otomatik}  (silme yok: durum 'iptal')
+var _izAcik=false, _izP=null, _izK=null, _izYuk=false, _izHata='', _izAcikP=Object.create(null), _izAy='', _izAra='', _izGY='', _izGorev='', _izAktar=null;
+var IZ_TUR={yillik:['Yıllık izin','#3B82F6','#EFF6FF','#1D4ED8'], mazeret:['Mazeret izni','#8B5CF6','#F5F3FF','#6D28D9'], rapor:['Sağlık raporu','#EF4444','#FEF2F2','#B91C1C'], ucretsiz:['Ücretsiz izin','#94A3B8','#F1F5F9','#475569'], idari:['İdari izin','#14B8A6','#F0FDFA','#0F766E']};
+var IZ_MAZERET=[['evlilik','Evlilik (3 gün)',3],['olum','Ölüm (3 gün)',3],['babalik','Babalık (5 gün)',5],['diger','Diğer mazeret',0]];
+// Resmi tatiller — md.56: izin süresine rastlayan genel tatil günleri yıllık izinden düşülmez.
+// 'd' = dini bayram (iş yerinde çalışılmıyor), 'r' = resmi/ulusal tatil (iş yerinde çalışılıyor, mesai ücreti). Arifeler tam iş günü (Müdür kararı 01.11.2026).
+var IZ_TATIL={'2026-01-01':'r','2026-03-20':'d','2026-03-21':'d','2026-03-22':'d','2026-04-23':'r','2026-05-01':'r','2026-05-19':'r','2026-05-27':'d','2026-05-28':'d','2026-05-29':'d','2026-05-30':'d','2026-07-15':'r','2026-08-30':'r','2026-10-29':'r',
+  '2027-01-01':'r','2027-03-09':'d','2027-03-10':'d','2027-03-11':'d','2027-04-23':'r','2027-05-01':'r','2027-05-16':'d','2027-05-17':'d','2027-05-18':'d','2027-05-19':'d','2027-07-15':'r','2027-08-30':'r','2027-10-29':'r'};
+var IZ_AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+var IZ_GUNLER=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+function _izD(s){ var p=String(s).split('-'); return new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); }
+function _izS(d){ return d.toISOString().slice(0,10); }
+function _izEkle(s,n){ var d=_izD(s); d.setUTCDate(d.getUTCDate()+n); return _izS(d); }
+function _izBugun(){ var d=new Date(); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function _izTr(s){ return s?s.slice(8,10)+'.'+s.slice(5,7)+'.'+s.slice(0,4):'—'; }
+function _izKisa(s){ return s?s.slice(8,10)+'.'+s.slice(5,7):'—'; }
+function _izGunDegeri(s){ return (_izD(s).getUTCDay()===0 || IZ_TATIL[s]) ? 0 : 1; }   // yıllık izinden düşen gün: Pazar, dini bayram ve resmi tatil 0
+function _izCalisma(s){ return _izD(s).getUTCDay()!==0 && IZ_TATIL[s]!=='d'; }   // iş yerinde çalışılan gün (resmi tatilde çalışılıyor)
+function _izGunHesap(bas, bit, yarim){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(bas||'') || !/^\d{4}-\d{2}-\d{2}$/.test(bit||'') || bit<bas) return 0;
+  var t=0, s=bas, n=0; while(s<=bit && n<400){ t+=_izGunDegeri(s); s=_izEkle(s,1); n++; }
+  if(yarim && bas===bit) t=Math.min(t,0.5);
+  return Math.round(t*2)/2;
+}
+function _izDonus(bit){ var s=_izEkle(bit,1), n=0; while(n<30 && !_izCalisma(s)){ s=_izEkle(s,1); n++; } return s; }
+function _izKidem(giris, ref){   // tam yıl + ay
+  if(!giris) return {y:0,m:0};
+  var g=_izD(giris), r=_izD(ref||_izBugun()), y=r.getUTCFullYear()-g.getUTCFullYear(), m=r.getUTCMonth()-g.getUTCMonth();
+  if(r.getUTCDate()<g.getUTCDate()) m--; if(m<0){ y--; m+=12; } return {y:Math.max(0,y), m:Math.max(0,m)};
+}
+function _izYasal(y){ return y<1?0:(y<=5?14:(y<15?20:26)); }   // 4857 s. İş K. md.53 (iş günü)
+function _izSayi(x){ var n=Number(String(x==null?'':x).replace(',','.')); return isFinite(n)?Math.round(n*2)/2:0; }
+function _izGunYaz(x){ return (Math.round(x*2)/2).toLocaleString('tr-TR'); }
+function _izRol(){ var k=_dashKullanici||{}; return {md:!k.gy && !k.operator, op:!!k.operator, gy:k.gy||'', yaz:!k.gy}; }
+
+// ── Ad eşleştirme: panel adı (ST → kendi GY'si; GY; Müdür) — birebir, yoksa ≤2 harf farkı (tek aday) ──
+function _izEsleyici(){
+  var m=Object.create(null), l=[];
+  Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(s){ var k=_bkKat(s); m[k]={ad:s, gorev:'ST', gy:g}; l.push(k); }); var kg=_bkKat(g); m[kg]={ad:g, gorev:'GY', gy:''}; l.push(kg); });
+  m[_bkKat('ERVİN ERTÜRK')]={ad:'ERVİN ERTÜRK', gorev:'Satış Müdürü', gy:''}; l.push(_bkKat('ERVİN ERTÜRK'));
+  var lev=function(a,b){ if(Math.abs(a.length-b.length)>2) return 9; var d=[], i, j; for(i=0;i<=a.length;i++) d[i]=[i]; for(j=0;j<=b.length;j++) d[0][j]=j;
+    for(i=1;i<=a.length;i++) for(j=1;j<=b.length;j++) d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); return d[a.length][b.length]; };
+  var gyBul=function(x){ var k=_bkKat(x); if(!k) return ''; var g=Object.keys(YO).filter(function(G){ var kg=_bkKat(G); return kg===k || lev(kg,k)<=2 || kg.indexOf(k)===0 || k.indexOf(kg)===0 || (kg.slice(0,4)===k.slice(0,4) && kg.slice(-5)===k.slice(-5)); }); return g.length===1?g[0]:''; };
+  return function(ad, gyx){
+    var k=_bkKat(ad); if(!k) return null; var r=m[k];
+    if(!r){ var a=l.filter(function(x){ return lev(x,k)<=2; }); if(a.length===1) r=m[a[0]]; }
+    if(r) return {ad:r.ad, gorev:r.gorev, gy:r.gy, eslesti:true, fark:_bkKat(r.ad)!==k};
+    return {ad:_bkTemiz(ad,80), gorev:'Yedek Temsilci', gy:gyBul(gyx), eslesti:false, fark:false};
+  };
+}
+// ── Excel (mevcut izin takip dosyası): en güncel yıl sayfası; TC sütunu okunmaz ──
+function izinExcelCoz(wb){
+  var aday=wb.SheetNames.map(function(n){ var y=/((?:19|20)\d\d)/.exec(n); return {n:n, y:y?+y[1]:0}; }).sort(function(a,b){ return b.y-a.y; });
+  for(var si=0; si<aday.length; si++){
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[aday[si].n], {header:1, defval:'', raw:true});
+    for(var h=0; h<Math.min(rows.length,8); h++){
+      var bas=(rows[h]||[]).map(_bkKat), ix=function(f){ for(var j=0;j<bas.length;j++){ if(f(bas[j])) return j; } return -1; };
+      var iAd=ix(function(x){ return x==='ADI' || x==='ADISOYADI' || x==='PERSONEL'; }), iKal=ix(function(x){ return x==='KALANIZIN'; });
+      if(iAd<0 || iKal<0) continue;
+      var iGy=ix(function(x){ return x==='GRUPYONETICISI' || x==='BOLUM'; }), iGir=ix(function(x){ return /^GIRIS/.test(x); }), iDev=ix(function(x){ return /DEVIR$/.test(x); }),
+          iHak=ix(function(x){ return /^\d{4}IZIN$/.test(x); }), iKul=ix(function(x){ return x==='KULLANILANIZIN'; }), iAc=ix(function(x){ return x==='ACIKLAMA'; });
+      if(iGir<0 || iHak<0 || iKul<0) throw new Error('"'+_bkTemiz(aday[si].n,40)+'" sayfasında "Giriş Trh", "<yıl> İZİN" veya "KULLANILAN İZİN" sütunu bulunamadı.');
+      var yil=+(/(\d{4})/.exec(bas[iHak])||[0,aday[si].y])[1], l=[];
+      for(var r=h+1; r<rows.length; r++){
+        var x=rows[r]||[], ad=_bkTemiz(x[iAd],80); if(!ad || /TOPLAM/i.test(ad)) continue;
+        var g=_crTarih(x[iGir]);
+        l.push({gyx:iGy>-1?_bkTemiz(x[iGy],60):'', ad:ad, giris:g||'', devir:iDev>-1?_izSayi(x[iDev]):0, hak:_izSayi(x[iHak]), kul:_izSayi(x[iKul]), not0:iAc>-1?_bkTemiz(x[iAc],600):''});
+      }
+      if(!l.length) throw new Error('Dosyada personel satırı bulunamadı.');
+      return {sayfa:aday[si].n, yil:yil, satir:l};
+    }
+  }
+  throw new Error('İzin sayfası bulunamadı ("ADI" ve "KALAN İZİN" başlıkları). Mevcut izin takip Excel dosyanızı seçin.');
+}
+function izinDosyaOku(f){
+  if(!f) return; _izAktar={yuk:true, dosya:_bkTemiz(f.name,120)}; _izinModalCiz();
+  if(typeof XLSX==='undefined' || !XLSX.read){ _izAktar={hata:'Excel okuyucu yüklenemedi. Sayfayı yenileyin.'}; _izinModalCiz(); return; }
+  var rd=new FileReader();
+  rd.onload=function(e){
+    try{
+      var coz=izinExcelCoz(XLSX.read(e.target.result,{type:'array'})), es=_izEsleyici(), gor=Object.create(null), liste=[];
+      coz.satir.forEach(function(s){ var m=es(s.ad, s.gyx); if(!m) return; var id=_bkKat(m.ad); if(gor[id]) return; gor[id]=1;
+        var ky=_izKidem(s.giris, coz.yil+'-12-31').y, ys=_izYasal(_izKidem(s.giris).y);
+        var es0=(_izP||[]).filter(function(p){ return p.id===id && p.hakManuel && p.yil===coz.yil; })[0], koru=!!(es0 && es0.hak!==s.hak);
+        liste.push({id:id, ad:m.ad, excelAd:s.ad, gorev:m.gorev, gy:m.gy, gyx:s.gyx, eslesti:m.eslesti, fark:m.fark, giris:s.giris, yil:coz.yil, devir:s.devir, hak:koru?es0.hak:s.hak, hakExcel:s.hak, koru:koru, kul0:s.kul, not0:s.not0, yasal:ys}); });
+      var pasif=(_izP||[]).filter(function(p){ return p.aktif && !gor[p.id]; });
+      _izAktar={dosya:_bkTemiz(f.name,120), sayfa:coz.sayfa, yil:coz.yil, liste:liste, pasif:pasif};
+    }catch(err){ _izAktar={hata:(err&&err.message)||String(err)}; }
+    _izinModalCiz();
+  };
+  rd.onerror=function(){ _izAktar={hata:'Dosya okunamadı.'}; _izinModalCiz(); };
+  rd.readAsArrayBuffer(f);
+}
+function izinAktarYaz(){
+  var A=_izAktar; if(!A || !A.liste || !db) return;
+  var btn=document.getElementById('izAktarBtn'); if(btn){ btn.disabled=true; btn.textContent='⏳ Aktarılıyor...'; }
+  var kim=(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', z=new Date().toISOString();
+  var isler=A.liste.map(function(p){ return db.collection('izinPersonel').doc(p.id).set({ad:p.ad, excelAd:p.excelAd, gorev:p.gorev, gy:p.gy, giris:p.giris, yil:p.yil, devir:p.devir, hak:p.hak, hakExcel:p.hakExcel, kul0:p.kul0, not0:p.not0, aktif:true, guncel:z, guncelleyen:kim, kaynak:_bkTemiz(A.dosya,120)}, {merge:true}); });
+  A.pasif.forEach(function(p){ isler.push(db.collection('izinPersonel').doc(p.id).set({aktif:false, guncel:z, guncelleyen:kim}, {merge:true})); });
+  Promise.all(isler).then(function(){ _izAktar={tamam:A.liste.length, pasif:A.pasif.length}; _izinModalCiz(); izinOku(); })
+    .catch(function(err){ if(btn){ btn.disabled=false; btn.textContent='🔄 Tekrar Dene'; } var h=document.getElementById('izModalHata'); if(h){ h.textContent='Aktarılamadı: '+((err&&err.message)||err); h.style.display='block'; } });
+}
+// ── Okuma ──
+function izinOku(){
+  var k=_dashKullanici; if(!db || !k) return;
+  _izYuk=true; _izHata=''; _izinCiz();
+  var q=function(c){ return k.gy ? db.collection(c).where('gy','==',k.gy).get() : db.collection(c).get(); };
+  Promise.all([q('izinPersonel'), q('izinKayit')]).then(function(l){
+    var n=function(x){ return _izSayi(x); };
+    _izP=l[0].docs.map(function(d){ var v=d.data()||{}; return {id:d.id, ad:_bkTemiz(v.ad,80)||d.id, gorev:_bkTemiz(v.gorev,30)||'—', gy:_bkTemiz(v.gy,60), giris:/^\d{4}-\d{2}-\d{2}$/.test(v.giris||'')?v.giris:'', yil:Math.round(Number(v.yil)||0), devir:n(v.devir), hak:n(v.hak), kul0:n(v.kul0), not0:_bkTemiz(v.not0,600), aktif:v.aktif!==false, excelAd:_bkTemiz(v.excelAd,80), hakManuel:!!v.hakManuel, hakExcel:_izSayi(v.hakExcel), hakNot:_bkTemiz(v.hakNot,120)}; });
+    _izK=l[1].docs.map(function(d){ var v=d.data()||{}; return {id:d.id, pid:_bkTemiz(v.pid,80), ad:_bkTemiz(v.ad,80), gy:_bkTemiz(v.gy,60), tur:IZ_TUR[v.tur]?v.tur:'idari', alt:_bkTemiz(v.alt,20), bas:_bkTemiz(v.bas,10), bit:_bkTemiz(v.bit,10), yarim:!!v.yarim, gun:n(v.gun), yerine:_bkTemiz(v.yerine,80), aciklama:_bkTemiz(v.aciklama,300), durum:v.durum==='iptal'?'iptal':'aktif', giren:_bkTemiz(v.giren,80), zaman:_bkTemiz(v.zaman,30), iptalEden:_bkTemiz(v.iptalEden,80), iptalZaman:_bkTemiz(v.iptalZaman,30)}; })
+      .filter(function(x){ return /^\d{4}-\d{2}-\d{2}$/.test(x.bas) && /^\d{4}-\d{2}-\d{2}$/.test(x.bit); });
+    _izYuk=false; _izinCiz();
+  }).catch(function(err){ _izYuk=false; _izHata=(err&&err.message)||String(err); _izinCiz(); });
+}
+// ── Hesap ──
+function _izDurum(p){   // bakiye
+  var y=String(p.yil||''), ky=(_izK||[]).filter(function(x){ return x.pid===p.id && x.durum==='aktif'; });
+  var panelYillik=0; ky.forEach(function(x){ if(x.tur==='yillik' && x.bas.slice(0,4)===y) panelYillik+=x.gun; });
+  var kul=p.kul0+panelYillik, top=p.devir+p.hak, kid=_izKidem(p.giris);
+  var son=ky.filter(function(x){ return x.bas<=_izBugun(); }).sort(function(a,b){ return a.bas<b.bas?1:-1; })[0]||null;
+  return {kul:kul, top:top, kal:top-kul, kid:kid, yasal:_izYasal(kid.y), son:son, kayit:ky};
+}
+function _izIzinde(gun){ return (_izK||[]).filter(function(x){ return x.durum==='aktif' && x.bas<=gun && x.bit>=gun && _izCalisma(gun); }); }
+function _izFiltre(){
+  var q=_bkKat(_izAra);
+  return (_izP||[]).filter(function(p){ return p.aktif && (!_izGY || p.gy===_izGY || (_izGY==='-' && !p.gy)) && (!_izGorev || p.gorev===_izGorev) && (!q || _bkKat(p.ad).indexOf(q)>-1); });
+}
+// ── Görünüm ──
+function izinGorunumToggle(ac){
+  _izAcik=(typeof ac==='boolean')?ac:!_izAcik;
+  var R=_izRol();
+  if(_izAcik){ if(typeof _crAcik!=='undefined' && _crAcik) ciroGorunumToggle(false); if(typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false); if(typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false); if(typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false); if(typeof _tkAcik!=='undefined' && _tkAcik) takipGorunumToggle(false); }
+  var alan=document.getElementById('izinAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), fp=document.querySelector('.filter-panel'), op=document.getElementById('operatorAlan'), btn=document.getElementById('navIzinBtn');
+  if(alan) alan.style.display=_izAcik?'block':'none';
+  if(R.op){ if(op) op.style.display=_izAcik?'none':'block'; }
+  else { if(bar) bar.style.display=_izAcik?'none':''; if(ic) ic.style.display=_izAcik?'none':''; if(fp) fp.style.display=_izAcik?'none':''; }
+  if(btn) btn.textContent=_izAcik?(R.op?'⬅ Yüklemeler':'📊 Panele Dön'):'🏖 İzin Takip';
+  if(_izAcik){ if(!_izAy) _izAy=_izBugun().slice(0,7); izinOku(); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+function izinPAcKapa(id){ _izAcikP[id]=!_izAcikP[id]; _izinCiz(); }
+function izinAyKaydir(n){ var p=_izAy.split('-'), d=new Date(Date.UTC(+p[0],+p[1]-1+n,1)); _izAy=_izS(d).slice(0,7); _izinCiz(); }
+function izinFiltre(alan, v){ if(alan==='ara') _izAra=v; else if(alan==='gy') _izGY=v; else _izGorev=v; _izinCiz(alan==='ara'); }
+function _izTag(t, alt){ var T=IZ_TUR[t]||IZ_TUR.idari, a=''; if(t==='mazeret' && alt){ IZ_MAZERET.forEach(function(m){ if(m[0]===alt) a=' · '+m[1].replace(/\s*\(.*\)/,'').toLocaleLowerCase('tr-TR'); }); }
+  return '<span style="font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;white-space:nowrap;background:'+T[2]+';color:'+T[3]+';">'+_kac(T[0].replace(' izni','').replace('Sağlık r','R')+a)+'</span>'; }
+function _izinCiz(sadeceTablo){
+  var alan=document.getElementById('izinAlan'); if(!alan || !_izAcik) return;
+  var R=_izRol();
+  var kart=function(ic, sag){ return '<div class="card"><div class="card-head" style="flex-wrap:wrap;"><div class="card-ic" style="background:#FEF3C7;">🏖</div><div class="card-title" style="flex:1;">Personel İzin Takip'+(R.gy?' — '+_kac(R.gy)+' ekibi':'')+'</div>'+(sag||'')+'</div><div class="card-body">'+ic+'</div></div>'; };
+  var btnSt='border:none;border-radius:9px;padding:8px 12px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;';
+  var sag=R.yaz?'<div style="display:flex;gap:6px;flex-wrap:wrap;"><button type="button" id="izAktarAc" onclick="izinModalAc(\'aktar\')" style="'+btnSt+'background:#F0FDFA;color:#0F766E;">⬆ Excel\'den Aktar</button><button type="button" id="izExcelBtn" onclick="izinExcelIndir()" style="'+btnSt+'background:#F0FDFA;color:#0F766E;">⬇ Excel</button><button type="button" id="izGirBtn" onclick="izinModalAc(\'gir\')" style="'+btnSt+'background:#0D9488;color:#fff;">＋ İzin Gir</button></div>'
+    :'<span style="font-size:10px;font-weight:700;border-radius:6px;padding:3px 8px;background:#F1F5F9;color:#475569;">Salt okunur</span>';
+  if(_izHata){ alan.innerHTML=kart('<div style="color:var(--red);font-size:13px;">⚠️ İzin verisi okunamadı: '+_kac(_izHata)+'</div>', sag); return; }
+  if(_izYuk && !_izP){ alan.innerHTML=kart('<div style="padding:16px;text-align:center;color:var(--mid);">⏳ Yükleniyor…</div>', sag); return; }
+  if(!_izP) return;
+  if(!_izP.filter(function(p){ return p.aktif; }).length){ alan.innerHTML=kart('<div style="padding:20px;text-align:center;color:var(--mid);font-size:13px;">'+(R.yaz?'Henüz personel yok. <b>⬆ Excel\'den Aktar</b> ile mevcut izin takip dosyanızı yükleyin.':'Ekibiniz için henüz izin kaydı yok.')+'</div>', sag); return; }
+  var bugun=_izBugun(), hafta=_izEkle(bugun,7), F=_izFiltre(), PM=Object.create(null); (_izP||[]).forEach(function(p){ PM[p.id]=p; });
+  var fid=Object.create(null); F.forEach(function(p){ fid[p.id]=1; });
+  var D=Object.create(null); F.forEach(function(p){ D[p.id]=_izDurum(p); });
+  // Tablo (filtre ile yeniden çizilen kısım)
+  var gruplar=[], grupAd={}; Object.keys(YO).forEach(function(g){ gruplar.push(g); grupAd[g]='👥 '+g; }); gruplar.push(''); grupAd['']='🏢 Yöneticiler ve diğer personel';
+  var tb='';
+  gruplar.forEach(function(g){
+    var l=F.filter(function(p){ return (p.gy||'')===g; }).sort(function(a,b){ var o={'Satış Müdürü':0,'GY':1}; return ((o[a.gorev]!=null?o[a.gorev]:2)-(o[b.gorev]!=null?o[b.gorev]:2)) || a.ad.localeCompare(b.ad,'tr'); });
+    if(!l.length) return;
+    tb+='<tr data-iz-grup="'+_kac(g)+'"><td colspan="9" style="background:#EEF2F7;font-weight:800;color:#1E3A5F;">'+_kac(grupAd[g])+' <span style="font-weight:600;color:var(--soft);font-size:11px;">('+l.length+')</span></td></tr>';
+    l.forEach(function(p){ var d=D[p.id], ac=!!_izAcikP[p.id], pay=d.top>0?Math.max(0,Math.min(100,d.kul/d.top*100)):0;
+      var kalRenk=d.kal<0?'var(--red)':(d.kal>10?'#EA580C':'#0F766E');
+      tb+='<tr data-iz-p="'+_kac(p.id)+'" style="cursor:pointer;" onclick="izinPAcKapa(this.getAttribute(\'data-iz-p\'))"><td style="white-space:nowrap;"><b>'+_kac(p.ad)+'</b> <span style="color:var(--blue);">'+(ac?'▾':'›')+'</span></td><td style="font-size:11px;white-space:nowrap;">'+_kac(p.gorev)+'</td><td style="white-space:nowrap;">'+_izTr(p.giris)+'</td><td style="white-space:nowrap;">'+d.kid.y+' yıl '+d.kid.m+' ay</td>'
+        +'<td class="num">'+_izGunYaz(p.devir)+'</td><td class="num">'+_izGunYaz(p.hak)+(p.hak!==d.yasal && d.yasal?' <span title="Mevzuata göre '+d.yasal+'" style="color:#EA580C;">⚠</span>':'')+'</td>'
+        +'<td style="white-space:nowrap;"><span style="height:6px;background:#E2E8F0;border-radius:4px;width:56px;display:inline-block;vertical-align:middle;margin-right:6px;overflow:hidden;"><i style="display:block;height:100%;width:'+pay.toFixed(0)+'%;background:#0D9488;"></i></span><b>'+_izGunYaz(d.kul)+'</b></td>'
+        +'<td class="num" data-iz-kalan style="color:'+kalRenk+';">'+_izGunYaz(d.kal)+'</td><td style="white-space:nowrap;font-size:11px;">'+(d.son?_izKisa(d.son.bas)+(d.son.bit!==d.son.bas?'–'+_izKisa(d.son.bit):''):'—')+'</td></tr>';
+      if(ac) tb+='<tr data-iz-detay="'+_kac(p.id)+'"><td colspan="9" style="background:var(--bg);padding:10px 12px;white-space:normal;">'+_izDetayHtml(p, d, R)+'</td></tr>';
+    });
+  });
+  var tablo='<div id="izTabloKutu" style="overflow-x:auto;"><table class="tbl" id="izTablo" style="min-width:820px;"><thead><tr><th>Personel</th><th>Görev</th><th>İşe giriş</th><th>Kıdem</th><th class="num">'+((_izP[0]&&_izP[0].yil)?(_izP[0].yil-1):'')+' devir</th><th class="num">'+((_izP[0]&&_izP[0].yil)||'')+' hak</th><th>Kullanılan</th><th class="num">Kalan</th><th>Son izin</th></tr></thead><tbody>'
+    +(tb||'<tr><td colspan="9" style="text-align:center;color:var(--mid);padding:14px;">Filtreye uyan personel yok.</td></tr>')+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--soft);margin-top:6px;">Kalan = Devir + Yıllık hak − Kullanılan (Excel\'e işlenmiş + panelde girilen yıllık izinler). ⚠ = Excel\'deki hak mevzuattan farklı. Satıra dokununca izin geçmişi açılır.</div>';
+  if(sadeceTablo && document.getElementById('izTabloAlan')){ document.getElementById('izTabloAlan').innerHTML=tablo; return; }
+  // KPI
+  var bugunIz=Object.create(null); _izIzinde(bugun).forEach(function(x){ if(fid[x.pid]) bugunIz[x.pid]=1; });
+  var yakin=(_izK||[]).filter(function(x){ return x.durum==='aktif' && fid[x.pid] && x.bit>=bugun && x.bas<=hafta; }).sort(function(a,b){ return a.bas<b.bas?-1:1; });
+  var cikacak=Object.create(null); yakin.forEach(function(x){ if(x.bas>bugun) cikacak[x.pid]=1; });
+  var yuksek=F.filter(function(p){ return D[p.id].kal>10; }).length;
+  var yildon=[]; F.forEach(function(p){ if(!p.giris) return; var y=_izKidem(p.giris).y, sonraki=(+bugun.slice(0,4))+'-'+p.giris.slice(5); if(sonraki<=bugun) sonraki=(+bugun.slice(0,4)+1)+'-'+p.giris.slice(5);
+    if(sonraki<=_izEkle(bugun,30) && _izYasal(y+1)!==_izYasal(y)) yildon.push({p:p, t:sonraki, eski:_izYasal(y), yeni:_izYasal(y+1), y:y+1}); });
+  var kpi=function(v,l,bg,c,id){ return '<div id="'+id+'" style="background:'+bg+';border-radius:12px;padding:12px;text-align:center;"><b style="display:block;font-size:22px;color:'+c+';">'+v+'</b><span style="font-size:11px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px;">'
+    +kpi(Object.keys(bugunIz).length,'Bugün izinde','#F0FDFA','#0F766E','izKpiBugun')+kpi(Object.keys(cikacak).length,'7 gün içinde izne çıkacak','#FFF7ED','#EA580C','izKpiHafta')
+    +kpi(yuksek,'Kalan izni 10 günden fazla','#FEF2F2','#DC2626','izKpiYuksek')+kpi(yildon.length,'30 gün içinde hak değişimi','#EFF6FF','#2563EB','izKpiYildon')+'</div>';
+  // Bugün / 7 gün + ekip uyarısı
+  var lr=function(sol,sagx){ return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid #F1F5F9;">'+sol+sagx+'</div>'; };
+  var hl=yakin.map(function(x){ var bu=x.bas<=bugun; return '<div data-iz-yakin="'+_kac(x.pid)+'">'+lr('<span><b>'+_kac(x.ad)+'</b> · '+_izKisa(x.bas)+(x.bit!==x.bas?'–'+_izKisa(x.bit):'')+(bu?' <span style="color:#0F766E;font-size:11px;font-weight:700;">bugün izinde</span>':'')+(x.yerine?' <span style="color:var(--soft);font-size:11px;">Yerine: '+_kac(x.yerine)+'</span>':'')+'</span>', _izTag(x.tur,x.alt))+'</div>'; }).join('')||'<div style="color:var(--mid);font-size:12px;padding:8px 2px;">Önümüzdeki 7 günde izin yok.</div>';
+  var uyari=[], gorulen={}; for(var i=0;i<14;i++){ var gn=_izEkle(bugun,i); if(!_izCalisma(gn)) continue; var say=Object.create(null);
+    _izIzinde(gn).forEach(function(x){ var p=PM[x.pid]; if(!p || !p.gy || !fid[x.pid]) return; (say[p.gy]=say[p.gy]||{})[x.pid]=1; });
+    Object.keys(say).forEach(function(g){ var n=Object.keys(say[g]).length; if(n>=3 && !gorulen[g]){ gorulen[g]=1; uyari.push('⚠️ '+_kac(g)+' ekibinde '+_izTr(gn)+' '+IZ_GUNLER[_izD(gn).getUTCDay()]+' günü '+n+' kişi izinde — rut planını kontrol edin.'); } }); }
+  var sol='<div>'+secHd('🟢 Bugün ve önümüzdeki 7 gün ('+_izKisa(bugun)+'–'+_izKisa(hafta)+')')+hl+uyari.map(function(u){ return '<div class="iz-uyari" style="background:#FFF7ED;color:#9A3412;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:600;margin-top:8px;">'+u+'</div>'; }).join('')+'</div>';
+  // Dikkat
+  var dk=[];
+  F.forEach(function(p){ var d=D[p.id];
+    if(d.kal<0) dk.push([0,p.ad,'kalan '+_izGunYaz(d.kal)+' gün','Eksi bakiye','#FEF2F2','#B91C1C']);
+    if(p.hak && d.yasal && p.hak!==d.yasal) dk.push([1,p.ad,d.kid.y+'. yıl · Excel hakkı '+_izGunYaz(p.hak),'Mevzuata göre '+d.yasal,'#FFF7ED','#C2410C',R.yaz?p.id:'']);
+    if(d.kal>=20) dk.push([3,p.ad,'kalan '+_izGunYaz(d.kal)+' gün','Yıl sonu planlansın','#FEF2F2','#B91C1C']); });
+  yildon.forEach(function(x){ dk.push([2,x.p.ad,x.y+'. yıl doluyor '+_izKisa(x.t), x.eski?('Hak '+x.eski+' → '+x.yeni):('İlk hak ediş '+x.yeni),'#EFF6FF','#1D4ED8']); });
+  dk.sort(function(a,b){ return a[0]-b[0] || a[1].localeCompare(b[1],'tr'); });
+  var dkh='<div>'+secHd('⏰ Dikkat ('+dk.length+')')+'<div style="max-height:260px;overflow:auto;">'+(dk.map(function(x){ return '<div data-iz-dikkat>'+lr('<span><b>'+_kac(x[1])+'</b> · '+_kac(x[2])+'</span>','<span style="display:flex;gap:6px;align-items:center;"><span style="font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;white-space:nowrap;background:'+x[4]+';color:'+x[5]+';">'+_kac(x[3])+'</span>'+(x[6]?'<button type="button" data-iz-duzelt="'+_kac(x[6])+'" onclick="izinHakDuzelt(this.getAttribute(\'data-iz-duzelt\'))" style="border:none;border-radius:7px;padding:3px 8px;font-size:11px;font-weight:700;background:#0D9488;color:#fff;cursor:pointer;white-space:nowrap;">Düzelt</button>':'')+'</span>')+'</div>'; }).join('')||'<div style="color:var(--mid);font-size:12px;padding:8px 2px;">Dikkat gerektiren kayıt yok.</div>')+'</div></div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;margin-bottom:14px;">'+sol+dkh+'</div>';
+  // Filtreler
+  var fs='border:1.5px solid var(--border);border-radius:9px;padding:8px 10px;font-size:13px;background:#fff;font-family:inherit;';
+  var gorevler=Object.create(null); (_izP||[]).forEach(function(p){ if(p.aktif) gorevler[p.gorev]=1; });
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"><input id="izAra" type="search" placeholder="🔎 Personel ara" value="'+_kac(_izAra)+'" oninput="izinFiltre(\'ara\',this.value)" style="'+fs+'flex:1;min-width:160px;">'
+    +(R.gy?'':'<select id="izGY" onchange="izinFiltre(\'gy\',this.value)" style="'+fs+'"><option value="">Tüm ekipler</option>'+Object.keys(YO).map(function(g){ return '<option value="'+_kac(g)+'"'+(_izGY===g?' selected':'')+'>'+_kac(g)+'</option>'; }).join('')+'<option value="-"'+(_izGY==='-'?' selected':'')+'>Yöneticiler ve diğer</option></select>')
+    +'<select id="izGorev" onchange="izinFiltre(\'gorev\',this.value)" style="'+fs+'"><option value="">Tüm görevler</option>'+Object.keys(gorevler).sort().map(function(g){ return '<option'+(_izGorev===g?' selected':'')+'>'+_kac(g)+'</option>'; }).join('')+'</select></div>';
+  h+='<div id="izTabloAlan">'+tablo+'</div>';
+  // Takvim
+  var ay=_izAy||bugun.slice(0,7), yy=+ay.slice(0,4), mm=+ay.slice(5,7), gs=new Date(Date.UTC(yy,mm,0)).getUTCDate(), ilk=ay+'-01', son=ay+'-'+('0'+gs).slice(-2);
+  var aykay=(_izK||[]).filter(function(x){ return x.durum==='aktif' && fid[x.pid] && x.bit>=ilk && x.bas<=son; });
+  var kisiler=[], kg=Object.create(null); aykay.forEach(function(x){ if(!kg[x.pid]){ kg[x.pid]=1; kisiler.push(x.pid); } });
+  kisiler.sort(function(a,b){ return (PM[a]?PM[a].ad:a).localeCompare(PM[b]?PM[b].ad:b,'tr'); });
+  var cw='grid-template-columns:150px repeat('+gs+',minmax(22px,1fr));';
+  var tk='<div class="iz-takvim" style="display:grid;'+cw+'font-size:10px;min-width:'+(150+gs*24)+'px;"><div style="position:sticky;left:0;background:#fff;font-weight:700;color:var(--soft);padding:4px;">Personel</div>';
+  for(var g1=1; g1<=gs; g1++){ var ds=ay+'-'+('0'+g1).slice(-2), pz=_izD(ds).getUTCDay()===0, tt=IZ_TATIL[ds]; tk+='<div title="'+_izTr(ds)+(tt==='d'?' dini bayram (çalışılmıyor)':tt==='r'?' resmi tatil (çalışılıyor · yıllık izinden düşmez)':'')+'" style="text-align:center;font-weight:700;color:var(--soft);padding:4px 0;'+(pz?'background:#F1F5F9;':tt==='d'?'background:#FEE2E2;':tt==='r'?'background:#FEF3C7;':'')+'">'+g1+'</div>'; }
+  kisiler.forEach(function(pid){ var p=PM[pid]; tk+='<div style="position:sticky;left:0;background:#fff;font-weight:600;font-size:11px;padding:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #F1F5F9;">'+_kac(p?p.ad:pid)+'</div>';
+    for(var g2=1; g2<=gs; g2++){ var ds2=ay+'-'+('0'+g2).slice(-2), pz2=_izD(ds2).getUTCDay()===0, tt2=IZ_TATIL[ds2], renk='';
+      if(!pz2 && tt2!=='d') aykay.forEach(function(x){ if(x.pid===pid && x.bas<=ds2 && x.bit>=ds2) renk=(IZ_TUR[x.tur]||IZ_TUR.idari)[1]; });
+      tk+='<div data-iz-gun="'+ds2+'" style="height:24px;border-bottom:1px solid #F1F5F9;border-right:1px solid #F8FAFC;'+(renk?'background:'+renk+';'+(tt2==='r'?'opacity:.55;':''):pz2?'background:#F1F5F9;':tt2==='d'?'background:#FEE2E2;':tt2==='r'?'background:#FEF3C7;':'')+'"></div>'; } });
+  tk+='</div>';
+  var leg='<div style="display:flex;gap:12px;font-size:11px;color:var(--mid);margin-top:8px;flex-wrap:wrap;">'+Object.keys(IZ_TUR).map(function(t){ return '<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;background:'+IZ_TUR[t][1]+';"></i>'+_kac(IZ_TUR[t][0])+'</span>'; }).join('')+'<span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;background:#F1F5F9;border:1px solid #ddd;"></i>Pazar</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;background:#FEE2E2;"></i>Dini bayram (çalışılmıyor)</span><span><i style="display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px;background:#FEF3C7;"></i>Resmi tatil (çalışılıyor · yıllık izinden düşmez)</span></div>';
+  var nb='border:none;border-radius:8px;padding:5px 10px;font-weight:700;font-size:12px;cursor:pointer;background:#F1F5F9;color:#334155;font-family:inherit;';
+  h+='<div style="margin-top:18px;">'+secHd('📅 İzin takvimi')+'<div style="display:flex;align-items:center;gap:8px;margin:6px 0 8px;"><button type="button" id="izAyGeri" onclick="izinAyKaydir(-1)" style="'+nb+'">‹</button><b id="izAyAd" style="font-size:13px;min-width:120px;text-align:center;">'+IZ_AYLAR[mm-1]+' '+yy+'</b><button type="button" id="izAyIleri" onclick="izinAyKaydir(1)" style="'+nb+'">›</button><span style="font-size:11px;color:var(--soft);">'+kisiler.length+' kişinin bu ay izni var</span></div>'
+    +(kisiler.length?'<div style="overflow-x:auto;">'+tk+'</div>'+leg:'<div style="color:var(--mid);font-size:12px;padding:8px 2px;">Bu ay için izin kaydı yok.</div>')+'</div>';
+  alan.innerHTML=kart(h, sag);
+}
+function _izDetayHtml(p, d, R){
+  var h='<div style="display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;margin-bottom:8px;"><span>Toplam: <b>'+_izGunYaz(d.top)+'</b> (devir '+_izGunYaz(p.devir)+' + hak '+_izGunYaz(p.hak)+')</span><span>Excel\'e işlenmiş: <b>'+_izGunYaz(p.kul0)+'</b></span><span>Panelde: <b>'+_izGunYaz(d.kul-p.kul0)+'</b></span><span>Kalan: <b>'+_izGunYaz(d.kal)+'</b></span>'+(p.excelAd && _bkKat(p.excelAd)!==_bkKat(p.ad)?'<span style="color:var(--soft);">Excel\'deki ad: '+_kac(p.excelAd)+'</span>':'')+(p.hakManuel?'<span style="color:#0F766E;">🔒 Hak panelde düzeltildi: '+_kac(p.hakNot)+'</span>':'')+'</div>';
+  if(p.not0) h+='<div style="font-size:11px;color:var(--mid);background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 8px;margin-bottom:8px;"><b>'+(p.yil||'')+' Excel kaydı:</b> '+_kac(p.not0)+'</div>';
+  var l=(_izK||[]).filter(function(x){ return x.pid===p.id; }).sort(function(a,b){ return a.bas<b.bas?1:-1; });
+  if(!l.length) return h+'<div style="font-size:12px;color:var(--mid);">Panelde girilmiş izin yok.</div>';
+  h+='<table class="tbl" style="font-size:12px;background:#fff;"><thead><tr><th>Tarih</th><th>Tür</th><th class="num">Gün</th><th>Yerine</th><th>Açıklama</th><th>Giren</th>'+(R.yaz?'<th></th>':'')+'</tr></thead><tbody>';
+  l.forEach(function(x){ var ip=x.durum==='iptal';
+    h+='<tr data-iz-kayit="'+_kac(x.id)+'" style="'+(ip?'opacity:.55;text-decoration:line-through;':'')+'"><td style="white-space:nowrap;">'+_izTr(x.bas)+(x.bit!==x.bas?' – '+_izTr(x.bit):'')+(x.yarim?' (yarım)':'')+'</td><td>'+_izTag(x.tur,x.alt)+'</td><td class="num">'+_izGunYaz(x.gun)+'</td><td>'+_kac(x.yerine||'—')+'</td><td style="white-space:normal;">'+_kac((R.gy && x.tur==='rapor')?'—':(x.aciklama||'—'))+'</td><td style="font-size:11px;color:var(--soft);white-space:nowrap;">'+_kac(x.giren.split('@')[0])+' · '+_kac(_bkZamanTr(x.zaman))+(ip?'<br>İptal: '+_kac(x.iptalEden.split('@')[0])+' · '+_kac(_bkZamanTr(x.iptalZaman)):'')+'</td>'
+      +(R.yaz?'<td>'+(ip?'<span style="font-size:11px;color:var(--red);text-decoration:none;">İptal</span>':'<button type="button" data-iz-iptal="'+_kac(x.id)+'" onclick="event.stopPropagation();izinIptal(this.getAttribute(\'data-iz-iptal\'))" style="border:none;border-radius:7px;padding:4px 8px;font-size:11px;font-weight:700;background:#FEF2F2;color:#B91C1C;cursor:pointer;">İptal et</button>')+'</td>':'')+'</tr>'; });
+  return h+'</tbody></table>';
+}
+function izinIptal(id){
+  if(!db || !_izRol().yaz) return;
+  var x=(_izK||[]).filter(function(k){ return k.id===id; })[0]; if(!x) return;
+  if(!confirm(x.ad+' · '+_izTr(x.bas)+(x.bit!==x.bas?' – '+_izTr(x.bit):'')+' iznini iptal etmek istiyor musunuz? (Kayıt silinmez, "İptal" olarak kalır.)')) return;
+  var kim=(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'';
+  db.collection('izinKayit').doc(id).set({durum:'iptal', iptalEden:kim, iptalZaman:new Date().toISOString()}, {merge:true}).then(function(){ izinOku(); })
+    .catch(function(err){ alert('İptal edilemedi: '+((err&&err.message)||err)); });
+}
+// ── Modal: izin girişi / Excel aktarım ──
+var _izModalTur='';
+function izinModalAc(t){ _izModalTur=t; if(t==='aktar') _izAktar=null; var m=document.getElementById('izModal'); if(!m){ m=document.createElement('div'); m.id='izModal'; m.setAttribute('onclick','if(event.target===this) izinModalKapa()'); m.style.cssText='position:fixed;inset:0;background:rgba(15,25,35,.45);z-index:9000;display:flex;align-items:flex-start;justify-content:center;padding:40px 12px;overflow:auto;'; document.body.appendChild(m); } m.style.display='flex'; _izinModalCiz(); }
+function izinModalKapa(){ var m=document.getElementById('izModal'); if(m) m.style.display='none'; _izModalTur=''; }
+function _izinModalCiz(){
+  var m=document.getElementById('izModal'); if(!m || !_izModalTur) return;
+  var kutu=function(ic){ return '<div style="background:#fff;border-radius:16px;width:100%;max-width:'+(_izModalTur==='aktar'?'760':'540')+'px;padding:18px;box-sizing:border-box;">'+ic+'<div id="izModalHata" style="display:none;background:#FEF2F2;color:#B91C1C;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;margin-top:10px;"></div></div>'; };
+  var bs='border:none;border-radius:9px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;';
+  if(_izModalTur==='aktar'){
+    var A=_izAktar, h='<h3 style="font-size:15px;margin:0 0 6px;">⬆ Excel\'den Aktar</h3><p style="font-size:12px;color:#4A5568;margin:0 0 12px;line-height:1.5;">Mevcut <b>izin takip Excel</b> dosyanızı seçin. En güncel yıl sayfası okunur (ör. "2026 İZİNLER GK"). Alınan sütunlar: Grup Yöneticisi, Adı, Giriş Trh, Devir, Yıllık İzin, Kullanılan İzin, Açıklama. <b>TC kimlik no okunmaz.</b> Aynı personel tekrar yüklenirse güncellenir; panelde girilen izinler korunur.</p>';
+    if(!A || A.yuk || A.hata){
+      h+='<div id="izDrop" onclick="document.getElementById(\'izDosya\').click()" style="border:2px dashed #CBD5E0;border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:10px;"><div style="font-size:28px;">🏖</div><div style="font-size:13px;font-weight:600;color:#4A5568;">'+(A&&A.yuk?'⏳ Okunuyor…':'Excel dosyasını seçin')+'</div><div style="font-size:11px;color:#8896A7;margin-top:3px;">.xlsx, .xls</div></div><input type="file" id="izDosya" accept=".xlsx,.xls" style="display:none" onchange="izinDosyaOku(this.files[0])">'
+        +(A&&A.hata?'<div id="izAktarHata" style="background:#FEF2F2;color:#B91C1C;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;">⚠️ '+_kac(A.hata)+'</div>':'');
+      h+='<div style="display:flex;justify-content:flex-end;margin-top:12px;"><button type="button" onclick="izinModalKapa()" style="'+bs+'background:#F1F5F9;color:#334155;">Kapat</button></div>';
+      m.innerHTML=kutu(h); return;
+    }
+    if(A.tamam!=null){ m.innerHTML=kutu(h+'<div id="izAktarTamam" style="background:#F0FDF4;color:#166534;border-radius:10px;padding:12px;font-size:13px;font-weight:700;">✅ '+A.tamam+' personel aktarıldı'+(A.pasif?' · '+A.pasif+' personel listede olmadığı için pasif yapıldı':'')+'.</div><div style="display:flex;justify-content:flex-end;margin-top:12px;"><button type="button" onclick="izinModalKapa()" style="'+bs+'background:#0D9488;color:#fff;">Tamam</button></div>'); return; }
+    var L=A.liste, sayi=function(f){ return L.filter(f).length; };
+    var top=function(k){ var t=0; L.forEach(function(p){ t+=(k==='kal'?p.devir+p.hak-p.kul0:p[k]); }); return _izGunYaz(t); };
+    h+='<div id="izOnizleme" style="font-size:12px;color:#4A5568;line-height:1.7;background:#F8FAFC;border-radius:10px;padding:10px 12px;margin-bottom:10px;">📄 '+_kac(A.dosya)+' · sayfa <b>'+_kac(A.sayfa)+'</b><br>👥 <b>'+L.length+' personel</b> · ST '+sayi(function(p){ return p.gorev==='ST'; })+' · GY '+sayi(function(p){ return p.gorev==='GY'; })+' · diğer '+sayi(function(p){ return p.gorev!=='ST' && p.gorev!=='GY'; })
+      +'<br>📊 Devir <b>'+top('devir')+'</b> · Yıllık hak <b>'+top('hak')+'</b> · Kullanılan <b>'+top('kul0')+'</b> · Kalan <b>'+top('kal')+'</b> gün</div>';
+    var notlar=[];
+    L.forEach(function(p){ if(p.fark) notlar.push('✏️ Ad düzeltildi: "'+p.excelAd+'" → <b>'+p.ad+'</b>'); });
+    L.forEach(function(p){ if(p.gorev==='ST' && p.gyx && _bkKat(p.gyx)!==_bkKat(p.gy) && p.gyx.indexOf(p.gy.split(' ')[0])!==0) notlar.push('👥 '+p.ad+': Excel\'de '+p.gyx+' altında → panelde <b>'+p.gy+'</b> ekibi'); });
+    L.forEach(function(p){ if(!p.eslesti) notlar.push('➕ Panelde ST/GY olarak yok: <b>'+p.ad+'</b> → görev "'+p.gorev+'"'+(p.gy?' · '+p.gy+' ekibi':' · yalnız Müdür/Operatör görür')); });
+    L.forEach(function(p){ if(p.devir+p.hak-p.kul0<0) notlar.push('🔴 Eksi bakiye: '+p.ad+' ('+_izGunYaz(p.devir+p.hak-p.kul0)+')'); });
+    L.forEach(function(p){ if(p.koru) notlar.push('🔒 '+p.ad+': panelde düzeltilmiş hak korunuyor ('+p.hak+'; Excel\'de '+p.hakExcel+')'); else if(p.hak && p.yasal && p.hak!==p.yasal) notlar.push('⚠️ Hak farkı: '+p.ad+' — Excel '+p.hak+', mevzuata göre '+p.yasal+' (aktarılan: Excel değeri; panelden düzeltilebilir)'); });
+    A.pasif.forEach(function(p){ notlar.push('⏸ Dosyada yok, pasif yapılacak: '+p.ad); });
+    h+=(notlar.length?'<div id="izAktarNot" style="max-height:220px;overflow:auto;font-size:12px;line-height:1.6;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:10px;">'+notlar.map(function(n){ return '<div>'+n.replace(/<(?!\/?b>)/g,'&lt;')+'</div>'; }).join('')+'</div>':'')
+      +'<div style="max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:10px;"><table class="tbl" id="izOnTablo" style="font-size:12px;"><thead><tr><th>Ekip</th><th>Personel</th><th>Görev</th><th>Giriş</th><th class="num">Devir</th><th class="num">Hak</th><th class="num">Kull.</th><th class="num">Kalan</th></tr></thead><tbody>'
+      +L.slice().sort(function(a,b){ var o=Object.keys(YO), x=a.gy?o.indexOf(a.gy):99, y=b.gy?o.indexOf(b.gy):99; return (x-y) || a.ad.localeCompare(b.ad,'tr'); }).map(function(p){ return '<tr><td style="font-size:11px;white-space:nowrap;">'+_kac(p.gy||'—')+'</td><td style="white-space:nowrap;">'+_kac(p.ad)+'</td><td>'+_kac(p.gorev)+'</td><td>'+_izTr(p.giris)+'</td><td class="num">'+_izGunYaz(p.devir)+'</td><td class="num">'+_izGunYaz(p.hak)+'</td><td class="num">'+_izGunYaz(p.kul0)+'</td><td class="num">'+_izGunYaz(p.devir+p.hak-p.kul0)+'</td></tr>'; }).join('')+'</tbody></table></div>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button type="button" onclick="izinModalAc(\'aktar\')" style="'+bs+'background:#F1F5F9;color:#334155;">Başka dosya</button><button type="button" id="izAktarBtn" onclick="izinAktarYaz()" style="'+bs+'background:#0D9488;color:#fff;">✅ '+L.length+' personeli aktar</button></div>';
+    m.innerHTML=kutu(h); return;
+  }
+  // İzin girişi
+  var P=(_izP||[]).filter(function(p){ return p.aktif; }).sort(function(a,b){ return a.ad.localeCompare(b.ad,'tr'); });
+  if(!P.length){ m.innerHTML=kutu('<h3 style="font-size:15px;margin:0 0 10px;">＋ İzin Girişi</h3><div style="font-size:13px;color:var(--mid);">Önce <b>⬆ Excel\'den Aktar</b> ile personel listesini yükleyin.</div><div style="display:flex;justify-content:flex-end;margin-top:12px;"><button type="button" onclick="izinModalKapa()" style="'+bs+'background:#F1F5F9;color:#334155;">Kapat</button></div>'); return; }
+  var fs='border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;font-size:14px;font-family:inherit;width:100%;box-sizing:border-box;background:#fff;', lb='font-size:11px;font-weight:700;color:var(--mid);display:flex;flex-direction:column;gap:4px;';
+  var stler=[]; Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(s){ stler.push(s); }); }); P.forEach(function(p){ if(p.gorev==='Yedek Temsilci' && stler.indexOf(p.ad)<0) stler.push(p.ad); }); stler.sort(function(a,b){ return a.localeCompare(b,'tr'); });
+  var b=_izBugun();
+  var h='<h3 style="font-size:15px;margin:0 0 12px;">＋ İzin Girişi</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">'
+    +'<label style="'+lb+'grid-column:1/-1;">Personel<select id="izfP" onchange="izinFormHesap()" style="'+fs+'"><option value="">— Seçin —</option>'+P.map(function(p){ return '<option value="'+_kac(p.id)+'">'+_kac(p.ad)+' — '+_kac(p.gorev)+(p.gy?' · '+_kac(p.gy):'')+'</option>'; }).join('')+'</select></label>'
+    +'<label style="'+lb+'">İzin türü<select id="izfTur" onchange="izinFormHesap(true)" style="'+fs+'">'+Object.keys(IZ_TUR).map(function(t){ return '<option value="'+t+'">'+_kac(IZ_TUR[t][0])+'</option>'; }).join('')+'</select></label>'
+    +'<label style="'+lb+'" id="izfAltL">Mazeret türü<select id="izfAlt" onchange="izinFormHesap(true)" style="'+fs+'">'+IZ_MAZERET.map(function(x){ return '<option value="'+x[0]+'">'+_kac(x[1])+'</option>'; }).join('')+'</select></label>'
+    +'<label style="'+lb+'">Süre<select id="izfYarim" onchange="izinFormHesap()" style="'+fs+'"><option value="">Tam gün</option><option value="1">Yarım gün</option></select></label>'
+    +'<label style="'+lb+'">Başlangıç<input type="date" id="izfBas" value="'+b+'" onchange="izinFormHesap()" style="'+fs+'"></label>'
+    +'<label style="'+lb+'">Bitiş<input type="date" id="izfBit" value="'+b+'" onchange="izinFormHesap()" style="'+fs+'"></label>'
+    +'<label style="'+lb+'grid-column:1/-1;">Yerine bakacak temsilci (isteğe bağlı)<select id="izfYerine" style="'+fs+'"><option value="">—</option>'+stler.map(function(s){ return '<option>'+_kac(s)+'</option>'; }).join('')+'</select></label>'
+    +'<label style="'+lb+'grid-column:1/-1;" id="izfAcL">Açıklama (isteğe bağlı)<textarea id="izfAc" rows="2" maxlength="300" style="'+fs+'resize:vertical;"></textarea></label></div>'
+    +'<div id="izfHesap" style="background:#F0FDFA;border-radius:10px;padding:10px 12px;margin-top:12px;font-size:12px;line-height:1.7;"></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;"><button type="button" onclick="izinModalKapa()" style="'+bs+'background:#F1F5F9;color:#334155;">Vazgeç</button><button type="button" id="izfKaydet" onclick="izinKaydet()" style="'+bs+'background:#0D9488;color:#fff;">💾 Kaydet</button></div>'
+    +'<div style="font-size:11px;color:var(--soft);margin-top:8px;">Cumartesi ve arife tam iş günüdür. Pazar, dini bayramlar ve resmi tatiller (çalışılsa da) yıllık izinden düşülmez. Excel\'e zaten işlenmiş izinleri tekrar girmeyin. Kayıt silinmez; gerekirse "İptal" edilir.</div>';
+  m.innerHTML=kutu(h); izinFormHesap(true);
+}
+function _izForm(){
+  var v=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  var p=(_izP||[]).filter(function(x){ return x.id===v('izfP'); })[0]||null, tur=v('izfTur'), bas=v('izfBas'), bit=v('izfBit'), yarim=v('izfYarim')==='1';
+  if(yarim) bit=bas;
+  return {p:p, tur:tur, alt:tur==='mazeret'?v('izfAlt'):'', bas:bas, bit:bit, yarim:yarim, gun:_izGunHesap(bas,bit,yarim), yerine:v('izfYerine'), aciklama:tur==='rapor'?'':_bkTemiz(v('izfAc'),300)};
+}
+function izinFormHesap(turDegisti){
+  var e=function(id){ return document.getElementById(id); }; if(!e('izfHesap')) return;
+  var tur=e('izfTur').value;
+  e('izfAltL').style.display=tur==='mazeret'?'':'none';
+  e('izfAcL').style.display=tur==='rapor'?'none':'';
+  if(e('izfYarim').value==='1'){ e('izfBit').value=e('izfBas').value; e('izfBit').disabled=true; } else e('izfBit').disabled=false;
+  if(turDegisti && tur==='mazeret'){ var alt=e('izfAlt').value, g=0; IZ_MAZERET.forEach(function(x){ if(x[0]===alt) g=x[2]; }); if(g && e('izfBas').value){ var s=e('izfBas').value, n=0, t=0; while(t<g && n<30){ t+=_izGunDegeri(s); if(t<g) s=_izEkle(s,1); n++; } e('izfBit').value=s; } }
+  var F=_izForm(), h='';
+  if(F.bas && F.bit && F.bit<F.bas) h='<span style="color:var(--red);font-weight:700;">⚠️ Bitiş, başlangıçtan önce olamaz.</span>';
+  else if(F.bas && F.bit){
+    h='📆 '+_izTr(F.bas)+' '+IZ_GUNLER[_izD(F.bas).getUTCDay()]+(F.bit!==F.bas?' – '+_izTr(F.bit)+' '+IZ_GUNLER[_izD(F.bit).getUTCDay()]:'')+(F.yarim?' (yarım gün)':'')+'<br>İzinden düşen: <b id="izfGun" style="color:#0F766E;">'+_izGunYaz(F.gun)+' iş günü</b>';
+    var dus=[]; for(var s=F.bas, n=0; s<=F.bit && n<400; s=_izEkle(s,1), n++){ if(_izD(s).getUTCDay()===0) dus.push(_izKisa(s)+' Pazar'); else if(IZ_TATIL[s]==='d') dus.push(_izKisa(s)+' bayram'); else if(IZ_TATIL[s]==='r') dus.push(_izKisa(s)+' resmi tatil'); }
+    if(dus.length) h+=' <span style="color:var(--soft);">('+dus.slice(0,6).join(', ')+(dus.length>6?'…':'')+' sayılmadı)</span>';
+    h+=' · İşe dönüş: <b id="izfDonus" style="color:#0F766E;">'+_izTr(_izDonus(F.bit))+' '+IZ_GUNLER[_izD(_izDonus(F.bit)).getUTCDay()]+'</b>';
+    if(F.p){ var d=_izDurum(F.p);
+      if(F.tur==='yillik') h+='<br>Kalan yıllık izin: '+_izGunYaz(d.kal)+' → <b id="izfKalan" style="color:'+(d.kal-F.gun<0?'var(--red)':'#0F766E')+';">'+_izGunYaz(d.kal-F.gun)+' gün</b>'+(d.kal-F.gun<0?' <span style="color:var(--red);font-weight:700;">(eksiye düşüyor)</span>':'');
+      else h+='<br>'+_kac(IZ_TUR[F.tur][0])+' yıllık izin bakiyesinden düşmez (kalan '+_izGunYaz(d.kal)+' gün).';
+      var cak=d.kayit.filter(function(x){ return x.bas<=F.bit && x.bit>=F.bas; });
+      if(cak.length) h+='<br><span id="izfCakisma" style="color:var(--red);font-weight:700;">⚠️ Bu tarihlerde zaten izin kaydı var: '+cak.map(function(x){ return _izTr(x.bas)+(x.bit!==x.bas?'–'+_izTr(x.bit):''); }).join(', ')+'</span>';
+    }
+  }
+  e('izfHesap').innerHTML=h;
+}
+function izinKaydet(){
+  var F=_izForm(), hata=document.getElementById('izModalHata'), btn=document.getElementById('izfKaydet');
+  var dur=function(t){ if(hata){ hata.textContent=t; hata.style.display='block'; } };
+  if(!F.p) return dur('Personel seçin.');
+  if(!F.bas || !F.bit) return dur('Başlangıç ve bitiş tarihini girin.');
+  if(F.bit<F.bas) return dur('Bitiş, başlangıçtan önce olamaz.');
+  if(F.gun<=0) return dur('Seçilen tarihlerde iş günü yok (Pazar / resmi tatil).');
+  if(_izDurum(F.p).kayit.some(function(x){ return x.bas<=F.bit && x.bit>=F.bas; })) return dur('Bu tarihlerde zaten izin kaydı var. Önce eski kaydı iptal edin.');
+  if(!db) return;
+  var kim=(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', id=F.bas.replace(/-/g,'')+'_'+F.p.id.slice(0,30)+'_'+Date.now().toString(36);
+  btn.disabled=true; btn.textContent='⏳ Kaydediliyor...';
+  db.collection('izinKayit').doc(id).set({pid:F.p.id, ad:F.p.ad, gy:F.p.gy, tur:F.tur, alt:F.alt, bas:F.bas, bit:F.bit, yarim:F.yarim, gun:F.gun, yerine:F.yerine, aciklama:F.aciklama, durum:'aktif', giren:kim, zaman:new Date().toISOString()})
+    .then(function(){ izinModalKapa(); izinOku(); })
+    .catch(function(err){ btn.disabled=false; btn.textContent='💾 Kaydet'; dur('Kaydedilemedi: '+((err&&err.message)||err)); });
+}
+function izinExcelIndir(){
+  if(typeof XLSX==='undefined' || !XLSX.utils){ alert('Excel kütüphanesi yüklenemedi.'); return; }
+  var P=_izFiltre(), PM=Object.create(null); (_izP||[]).forEach(function(p){ PM[p.id]=p; });
+  var s1=P.map(function(p){ var d=_izDurum(p); return {'Personel':p.ad, 'Görev':p.gorev, 'Grup Yöneticisi':p.gy||'', 'İşe Giriş':_izTr(p.giris), 'Kıdem':d.kid.y+' yıl '+d.kid.m+' ay', 'Devir':p.devir, 'Yıllık Hak':p.hak, 'Mevzuata Göre Hak':d.yasal, 'Toplam':d.top, 'Excel\'e İşlenmiş':p.kul0, 'Panelde Girilen (Yıllık)':d.kul-p.kul0, 'Kullanılan':d.kul, 'Kalan':d.kal, 'Excel Açıklama':p.not0||''}; });
+  var fid=Object.create(null); P.forEach(function(p){ fid[p.id]=1; });
+  var s2=(_izK||[]).filter(function(x){ return fid[x.pid]; }).sort(function(a,b){ return a.bas<b.bas?-1:1; }).map(function(x){ return {'Personel':x.ad, 'Grup Yöneticisi':x.gy||'', 'Tür':IZ_TUR[x.tur][0], 'Başlangıç':_izTr(x.bas), 'Bitiş':_izTr(x.bit), 'Gün':x.gun, 'Yerine':x.yerine, 'Açıklama':x.aciklama, 'Durum':x.durum==='iptal'?'İptal':'Aktif', 'Giren':x.giren, 'Kayıt Zamanı':_bkZamanTr(x.zaman)}; });
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(s1), 'Personel Bakiye');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(s2.length?s2:[{'Personel':'Panelde girilmiş izin yok'}]), 'İzin Kayıtları');
+  XLSX.writeFile(wb, 'Izin_Takip_'+_izBugun()+'.xlsx');
+}
+function izinHakDuzelt(id){
+  if(!db || !_izRol().yaz) return;
+  var p=(_izP||[]).filter(function(x){ return x.id===id; })[0]; if(!p) return; var d=_izDurum(p), y=d.yasal;
+  if(!y || y===p.hak) return;
+  if(!confirm(p.ad+' — '+d.kid.y+'. yıl\n'+(p.yil||'')+' yıllık izin hakkı '+_izGunYaz(p.hak)+' → '+y+' gün olarak düzeltilsin mi?\nKalan izin '+_izGunYaz(d.kal)+' → '+_izGunYaz(d.kal+y-p.hak)+' gün olur.')) return;
+  var kim=(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'';
+  db.collection('izinPersonel').doc(id).set({hak:y, hakManuel:true, hakExcel:p.hakExcel||p.hak, hakNot:'Excel '+_izGunYaz(p.hakExcel||p.hak)+' → mevzuata göre '+y+' ('+d.kid.y+'. yıl)', hakDuzelten:kim, hakZaman:new Date().toISOString()}, {merge:true})
+    .then(function(){ izinOku(); }).catch(function(err){ alert('Düzeltilemedi: '+((err&&err.message)||err)); });
+}
+
 // ===== RAPOR TAKİBİ — açılış sayaçları =====
 // GY: GY panelinde açtığı alanlar → goruntuleme/{GY}__{alan}__{YYYYMMDD}. ST: ST Panelinde açtığı alanlar → stGoruntuleme/{STkodu}__{alan}__{YYYYMMDD}.
 // Her açılış +1 (kural: yalnız kendi adına, yalnız +1; silinemez). Müdür: GY + ST takibi. GY: yalnız kendi ST'leri.
@@ -1764,6 +2146,7 @@ function raporGoruntule(r){
 }
 function takipGorunumToggle(ac){
   _tkAcik=(typeof ac==='boolean')?ac:!_tkAcik;
+  if(_tkAcik && typeof _izAcik!=='undefined' && _izAcik) izinGorunumToggle(false);
   if(_tkAcik){ if(typeof _crAcik!=='undefined' && _crAcik) ciroGorunumToggle(false); if(typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false); if(typeof _odAcik!=='undefined' && _odAcik) odakGorunumToggle(false); if(typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false); }
   var alan=document.getElementById('takipAlan'), bar=document.querySelector('.ozet-bar'), ic=document.getElementById('icerik'), btn=document.getElementById('navTakipBtn');
   if(alan) alan.style.display=_tkAcik?'block':'none';
@@ -1849,6 +2232,7 @@ function _odZamanTr(iso){ try{ var d=new Date(iso); if(isNaN(d)) return ''; retu
 // ── Görünüm aç/kapa (Bakiye görünümüyle karşılıklı kapanır) ──
 function odakGorunumToggle(ac){
   _odAcik=(typeof ac==='boolean')?ac:!_odAcik;
+  if(_odAcik && typeof _izAcik!=='undefined' && _izAcik) izinGorunumToggle(false);
   if(_odAcik && typeof _bkAcik!=='undefined' && _bkAcik) bakiyeGorunumToggle(false);
   if(_odAcik && typeof _asAcik!=='undefined' && _asAcik) aracGorunumToggle(false);
   if(_odAcik && typeof _tkAcik!=='undefined' && _tkAcik) takipGorunumToggle(false);
