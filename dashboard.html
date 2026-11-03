@@ -1438,7 +1438,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-03a';
+var SURUM='2026-11-03b';
 (function(){
   var son=0;
   function bant(){
@@ -1518,11 +1518,12 @@ function ciroHesapla(coz, bas, bit){
   coz.R.forEach(function(x){
     if(coz.tarihli && (x[1]<bas || x[1]>bit)) return;
     var pl=K.p[x[0]], tm=bul(pl), anah=tm?tm.st:('#'+pl);
-    var o=S[anah]||(S[anah]={st:tm?tm.st:pl, gy:tm?tm.gy:'', merkez:!tm, t:0, g:Object.create(null), u:Object.create(null), c:Object.create(null), d:Object.create(null), cu:Object.create(null), k:Object.create(null)});
+    var o=S[anah]||(S[anah]={st:tm?tm.st:pl, gy:tm?tm.gy:'', merkez:!tm, t:0, g:Object.create(null), u:Object.create(null), c:Object.create(null), d:Object.create(null), cu:Object.create(null), k:Object.create(null), gm:Object.create(null), km:Object.create(null)});
     var gn=K.g[x[2]]; o.t+=x[5]; o.g[gn]=(o.g[gn]||0)+x[5];
     var u=o.u[x[3]]||(o.u[x[3]]={t:0,p:0}); u.t+=x[5]; u.p+=x[6];
     o.c[x[4]]=(o.c[x[4]]||0)+x[5];
     o.k[x[7]]=(o.k[x[7]]||0)+x[5];   // müşteri grubu (Bayi Kategori)
+    (o.gm[gn]||(o.gm[gn]=Object.create(null)))[x[4]]=1; (o.km[x[7]]||(o.km[x[7]]=Object.create(null)))[x[4]]=1;   // grup bazında SYMS (satış yapılan müşteri)
     var cm=o.cu[x[4]]||(o.cu[x[4]]=Object.create(null)), cq=cm[x[3]]||(cm[x[3]]=[0,0]); cq[0]+=x[5]; cq[1]+=x[6];   // müşteri × ürün (TL, PAK)
     if(x[1]){ var gd=o.d[x[1]]||(o.d[x[1]]=Object.create(null)), gg=gd[gn]||(gd[gn]=[0,0]); gg[0]+=x[5]; gg[1]+=x[6]; }   // günlük döküm (TL, PAK)
   });
@@ -1531,8 +1532,8 @@ function ciroHesapla(coz, bas, bit){
     var gc=Object.create(null); Object.keys(o.u).forEach(function(ui){ var g=K.ug[ui]; gc[g]=(gc[g]||0)+1; });
     var us=Object.keys(o.u).sort(function(a,b){ return o.u[b].t-o.u[a].t; }), usx=Object.create(null); us.forEach(function(ui,i){ usx[ui]=i; });
     return {st:o.st, gy:o.gy, merkez:o.merkez, t:r2(o.t), m:Object.keys(o.c).length, ces:Object.keys(o.u).length,
-      g:Object.keys(o.g).map(function(g){ return {g:g, t:r2(o.g[g]), c:gc[g]||0}; }).sort(function(a,b){ return b.t-a.t; }),
-      k:Object.keys(o.k).map(function(ki){ return {k:K.k[ki], t:r2(o.k[ki])}; }).sort(function(a,b){ return b.t-a.t; }),
+      g:Object.keys(o.g).map(function(g){ return {g:g, t:r2(o.g[g]), c:gc[g]||0, m:Object.keys(o.gm[g]||{}).length}; }).sort(function(a,b){ return b.t-a.t; }),
+      k:Object.keys(o.k).map(function(ki){ return {k:K.k[ki], t:r2(o.k[ki]), m:Object.keys(o.km[ki]||{}).length}; }).sort(function(a,b){ return b.t-a.t; }),
       u:us.map(function(ui){ return {k:K.u[ui]===K.ua[ui]?'':K.u[ui], a:K.ua[ui], g:K.ug[ui], t:r2(o.u[ui].t), p:Math.round(o.u[ui].p)}; }),
       c:Object.keys(o.c).map(function(ci){ return {k:K.c[ci]===K.ca[ci]?'':K.c[ci], a:K.ca[ci], t:r2(o.c[ci]), u:Object.keys(o.cu[ci]).map(function(ui){ return {i:usx[ui], t:r2(o.cu[ci][ui][0]), p:Math.round(o.cu[ci][ui][1])}; }).sort(function(a,b){ return b.t-a.t; })}; }).sort(function(a,b){ return b.t-a.t; }),
       d:Object.keys(o.d).sort().map(function(t){ return {t:t, g:Object.keys(o.d[t]).map(function(g){ return {g:g, t:r2(o.d[t][g][0]), p:Math.round(o.d[t][g][1])}; })}; })};
@@ -1643,8 +1644,8 @@ function ciroVeriOku(){
       if(String(d.yuklendi||'')>v.yuklendi){ v.yuklendi=String(d.yuklendi||''); v.bas=_bkTemiz(d.bas,10); v.bit=_bkTemiz(d.bit,10); }
       d.st.forEach(function(o){ if(!o || typeof o!=='object') return;
         var z={st:_bkTemiz(o.st,80), gy:(x.b==='_merkez'?'':x.b), t:_bkSayi(o.t), m:Math.round(_bkSayi(o.m)), ces:Math.round(_bkSayi(o.ces)),
-          g:(Array.isArray(o.g)?o.g:[]).map(function(q){ return {g:_bkTemiz(q&&q.g,40)||'(Grupsuz)', t:_bkSayi(q&&q.t), c:Math.round(_bkSayi(q&&q.c))}; }),
-          k:(Array.isArray(o.k)?o.k:[]).map(function(q){ return {k:_bkTemiz(q&&q.k,40)||'(Belirsiz)', t:_bkSayi(q&&q.t)}; })};
+          g:(Array.isArray(o.g)?o.g:[]).map(function(q){ return {g:_bkTemiz(q&&q.g,40)||'(Grupsuz)', t:_bkSayi(q&&q.t), c:Math.round(_bkSayi(q&&q.c)), m:(q&&q.m!=null)?Math.round(_bkSayi(q.m)):null}; }),
+          k:(Array.isArray(o.k)?o.k:[]).map(function(q){ return {k:_bkTemiz(q&&q.k,40)||'(Belirsiz)', t:_bkSayi(q&&q.t), m:(q&&q.m!=null)?Math.round(_bkSayi(q.m)):null}; })};
         if(x.b==='_merkez'){ if(md) v.merkez.push(z); } else v.st.push(z); }); });
     _crVeri=v; _crYuk=false; _ciroCiz();
   }).catch(function(err){ _crYuk=false; _crVeri={hata:(err&&err.message)||String(err)}; _ciroCiz(); });
@@ -1693,6 +1694,9 @@ function _ciroCiz(){
   var G=Object.keys(GT).filter(function(g){ return Math.abs(GT[g])>=0.5; }).sort(function(a,b){ return GT[b]-GT[a]; });   // en yüksek ciro solda/üstte
   var mus=0; dl.forEach(function(o){ mus+=o.m; });
   var KT={t:Object.create(null), l:[]}; dl.forEach(function(o){ (o.k||[]).forEach(function(q){ KT.t[q.k]=(KT.t[q.k]||0)+q.t; }); });
+  // SYMS kırılımı (ST bazında satış yapılan müşteri; ST'ler toplanır — üst karttaki SYMS ile aynı mantık). Eski yüklemede m yok → gösterilmez.
+  var GMS=Object.create(null), KMS=Object.create(null), smVar=false; dl.forEach(function(o){ o.g.forEach(function(q){ if(q.m!=null){ smVar=true; GMS[q.g]=(GMS[q.g]||0)+q.m; } }); (o.k||[]).forEach(function(q){ if(q.m!=null) KMS[q.k]=(KMS[q.k]||0)+q.m; }); });
+  var sms=function(v){ return smVar?' <span class="cr-syms" style="font-size:11px;font-weight:700;color:#0F766E;background:#F0FDFA;border-radius:6px;padding:1px 6px;white-space:nowrap;">SYMS '+(v||0).toLocaleString('tr-TR')+'</span>':''; };
   KT.l=Object.keys(KT.t).filter(function(k){ return Math.abs(KT.t[k])>=0.5; }).sort(function(a,b){ return KT.t[b]-KT.t[a]; });   // müşteri grubu: en yüksek ciro üstte
   var h='<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px;">'
     +'<div style="font-size:12px;color:var(--mid);">📅 Dönem: <b>'+(V.bas?_bkTarihTr(V.bas)+' – '+_bkTarihTr(V.bit):'—')+'</b> · Yükleme: '+_bkZamanTr(V.yuklendi)+(gyF?' · '+_kac(gyF):'')+(stF?' · '+_kac(stF):'')+'</div>'+yukleBtn+'</div>';
@@ -1700,14 +1704,15 @@ function _ciroCiz(){
   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">'
     +kutu(_bkKisa(top),'Brüt Ciro')+kutu(dl.length,'Satış Temsilcisi')+kutu(dl.length?_bkKisa(top/dl.length):'—','ST Başına Ortalama')+kutu(mus.toLocaleString('tr-TR'),'SYMS (müşteri)')+'</div>';
   var ozet='<div>'+secHd('📦 Ürün Grubuna Göre (en yüksek ciro üstte)')+G.map(function(g){ var pay=top?Math.round(GT[g]/top*1000)/10:0;
-      return row(_kac(g), _bkPara(GT[g])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'); }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>')
+      return '<div data-ugrup="'+_kac(g)+'">'+row(_kac(g), _bkPara(GT[g])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'+sms(GMS[g]))+'</div>'; }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>'+sms(mus))
     +(KT.l.length?'<div id="crMusGrup" style="margin-top:14px;">'+secHd('🏪 Müşteri Grubuna Göre (en yüksek ciro üstte)')+KT.l.map(function(k){ var pay=top?Math.round(KT.t[k]/top*1000)/10:0;
-      return '<div data-mgrup="'+_kac(k)+'">'+row(_kac(k), _bkPara(KT.t[k])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>')+'</div>'; }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>')+'</div>'
+      return '<div data-mgrup="'+_kac(k)+'">'+row(_kac(k), _bkPara(KT.t[k])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'+sms(KMS[k]))+'</div>'; }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>'+sms(mus))+'</div>'
+    +(smVar?'<div style="font-size:10px;color:var(--soft);margin-top:6px;line-height:1.4;">SYMS = dönemde o gruptan satış yapılan müşteri sayısı. Bir müşteri birden çok ürün grubundan aldığı için ürün grubu SYMS\'lerinin toplamı genel SYMS\'den büyüktür.</div>':'<div style="font-size:10px;color:var(--soft);margin-top:6px;">Grup bazında SYMS için ciro dosyasını yeniden yükleyin.</div>')
       :'<div style="margin-top:12px;font-size:11px;color:var(--soft);">🏪 Müşteri grubu kırılımı için ciro dosyasını yeniden yükleyin.</div>')+'</div>';
   var nST=Math.max(15, Math.round((G.length+KT.l.length+3)*1.28));   // sol sütun uzadıkça grafikte daha çok ST
   var stl=dl.slice().sort(function(a,b){ return b.t-a.t; }), mx=Math.max.apply(null, stl.map(function(o){ return o.t; }).concat([1]));   // tüm ST'ler; kutu nST satır yüksekliğinde, kalanı kaydırılır
-  var grf=_grfAd('📈 Temsilci Bazında Brüt Ciro ('+stl.length+' ST'+(stl.length>nST?' · kaydırın ↕':'')+')')+'<div id="crStGrf" style="max-height:'+(nST*25)+'px;overflow-y:auto;padding-right:6px;">'+(stl.length?stl.map(function(o){
-    return '<div class="hbar" data-tip="'+_kac(o.st)+': '+_bkPara(o.t)+'"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.t/mx*100).toFixed(1)+'%;background:#0D9488;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+_bkKisa(o.t)+'</span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede satış yok.</div>')+'</div>';
+  var grf=_grfAd('📈 Temsilci Bazında Brüt Ciro · SYMS ('+stl.length+' ST'+(stl.length>nST?' · kaydırın ↕':'')+')')+'<div id="crStGrf" style="max-height:'+(nST*25)+'px;overflow-y:auto;padding-right:6px;">'+(stl.length?stl.map(function(o){
+    return '<div class="hbar" data-st-syms="'+o.m+'" data-tip="'+_kac(o.st)+': '+_bkPara(o.t)+' · SYMS '+o.m.toLocaleString('tr-TR')+'"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.t/mx*100).toFixed(1)+'%;background:#0D9488;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+_bkKisa(o.t)+' <span class="cr-syms" style="font-size:10px;font-weight:700;color:#0F766E;background:#F0FDFA;border-radius:6px;padding:1px 5px;">SYMS '+o.m.toLocaleString('tr-TR')+'</span></span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede satış yok.</div>')+'</div>';
   h+=_kartIci(ozet, grf);
   // GY → ST tablosu (GY ve ST'ler ciroya göre büyükten küçüğe; sütunlar ürün grupları, en yüksek solda)
   var gyT=Object.create(null); dl.forEach(function(o){ gyT[o.gy]=(gyT[o.gy]||0)+o.t; });
