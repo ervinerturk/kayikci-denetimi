@@ -1438,7 +1438,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-03b';
+var SURUM='2026-11-03c';
 (function(){
   var son=0;
   function bant(){
@@ -1703,16 +1703,23 @@ function _ciroCiz(){
   var kutu=function(v,l){ return '<div style="background:#F0FDFA;border-radius:10px;padding:10px;text-align:center;"><b style="display:block;font-size:17px;color:#0F766E;">'+v+'</b><span style="font-size:10px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">'
     +kutu(_bkKisa(top),'Brüt Ciro')+kutu(dl.length,'Satış Temsilcisi')+kutu(dl.length?_bkKisa(top/dl.length):'—','ST Başına Ortalama')+kutu(mus.toLocaleString('tr-TR'),'SYMS (müşteri)')+'</div>';
-  var ozet='<div>'+secHd('📦 Ürün Grubuna Göre (en yüksek ciro üstte)')+G.map(function(g){ var pay=top?Math.round(GT[g]/top*1000)/10:0;
-      return '<div data-ugrup="'+_kac(g)+'">'+row(_kac(g), _bkPara(GT[g])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'+sms(GMS[g]))+'</div>'; }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>'+sms(mus))
-    +(KT.l.length?'<div id="crMusGrup" style="margin-top:14px;">'+secHd('🏪 Müşteri Grubuna Göre (en yüksek ciro üstte)')+KT.l.map(function(k){ var pay=top?Math.round(KT.t[k]/top*1000)/10:0;
-      return '<div data-mgrup="'+_kac(k)+'">'+row(_kac(k), _bkPara(KT.t[k])+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+'</span>'+sms(KMS[k]))+'</div>'; }).join('')+row('<b>Toplam</b>','<b>'+_bkPara(top)+'</b>'+sms(mus))+'</div>'
-    +(smVar?'<div style="font-size:10px;color:var(--soft);margin-top:6px;line-height:1.4;">SYMS = dönemde o gruptan satış yapılan müşteri sayısı. Bir müşteri birden çok ürün grubundan aldığı için ürün grubu SYMS\'lerinin toplamı genel SYMS\'den büyüktür.</div>':'<div style="font-size:10px;color:var(--soft);margin-top:6px;">Grup bazında SYMS için ciro dosyasını yeniden yükleyin.</div>')
-      :'<div style="margin-top:12px;font-size:11px;color:var(--soft);">🏪 Müşteri grubu kırılımı için ciro dosyasını yeniden yükleyin.</div>')+'</div>';
-  var nST=Math.max(15, Math.round((G.length+KT.l.length+3)*1.28));   // sol sütun uzadıkça grafikte daha çok ST
+  // Grup tabloları: Grup | Brüt Ciro | Pay | SYMS — mobilde de hizalı (v53)
+  var gTablo=function(baslik, liste, tutar, symsMap, attr){
+    var th='style="font-size:10px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.3px;padding:6px 4px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;"';
+    var td='padding:8px 4px;border-bottom:1px solid #F1F5F9;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;';
+    return '<table class="cr-gtablo" style="width:100%;border-collapse:collapse;font-size:13px;table-layout:auto;"><thead><tr><th '+th.replace('text-align:right','text-align:left')+'>'+baslik+'</th><th '+th+'>Brüt Ciro</th><th '+th+'>Pay</th>'+(smVar?'<th '+th+'>SYMS</th>':'')+'</tr></thead><tbody>'
+      +liste.map(function(x){ var pay=top?Math.round(tutar[x]/top*1000)/10:0;
+        return '<tr '+attr+'="'+_kac(x)+'"><td style="padding:8px 4px;border-bottom:1px solid #F1F5F9;color:var(--dark);line-height:1.25;">'+_kac(x)+'</td><td style="'+td+'font-weight:700;">'+_bkPara(tutar[x])+'</td><td style="'+td+'color:var(--soft);font-size:11px;">%'+pay.toLocaleString('tr-TR')+'</td>'+(smVar?'<td class="cr-syms" style="'+td+'font-weight:700;color:#0F766E;">'+(symsMap[x]||0).toLocaleString('tr-TR')+'</td>':'')+'</tr>'; }).join('')
+      +'<tr style="background:#F8FAFC;"><td style="padding:8px 4px;font-weight:800;">Toplam</td><td style="'+td+'font-weight:800;">'+_bkPara(top)+'</td><td style="'+td+'color:var(--soft);font-size:11px;">%100</td>'+(smVar?'<td style="'+td+'font-weight:800;color:#0F766E;">'+mus.toLocaleString('tr-TR')+'</td>':'')+'</tr></tbody></table>';
+  };
+  var ozet='<div>'+secHd('📦 Ürün Grubuna Göre (en yüksek ciro üstte)')+gTablo('Ürün Grubu', G, GT, GMS, 'data-ugrup')
+    +(KT.l.length?'<div id="crMusGrup" style="margin-top:16px;">'+secHd('🏪 Müşteri Grubuna Göre (en yüksek ciro üstte)')+gTablo('Müşteri Grubu', KT.l, KT.t, KMS, 'data-mgrup')+'</div>'
+      :'<div style="margin-top:12px;font-size:11px;color:var(--soft);">🏪 Müşteri grubu kırılımı için ciro dosyasını yeniden yükleyin.</div>')
+    +(smVar?'<div style="font-size:10px;color:var(--soft);margin-top:6px;line-height:1.4;">SYMS = dönemde o gruptan satış yapılan müşteri sayısı. Bir müşteri birden çok ürün grubundan aldığı için ürün grubu SYMS\'lerinin toplamı genel SYMS\'den büyüktür.</div>':'<div style="font-size:10px;color:var(--soft);margin-top:6px;">Grup bazında SYMS için ciro dosyasını yeniden yükleyin.</div>')+'</div>';
+  var nST=Math.max(15, Math.round((G.length+KT.l.length+5)*34/30));   // sol tablolar uzadıkça grafikte daha çok ST (satır ~30px)   // sol sütun uzadıkça grafikte daha çok ST
   var stl=dl.slice().sort(function(a,b){ return b.t-a.t; }), mx=Math.max.apply(null, stl.map(function(o){ return o.t; }).concat([1]));   // tüm ST'ler; kutu nST satır yüksekliğinde, kalanı kaydırılır
-  var grf=_grfAd('📈 Temsilci Bazında Brüt Ciro · SYMS ('+stl.length+' ST'+(stl.length>nST?' · kaydırın ↕':'')+')')+'<div id="crStGrf" style="max-height:'+(nST*25)+'px;overflow-y:auto;padding-right:6px;">'+(stl.length?stl.map(function(o){
-    return '<div class="hbar" data-st-syms="'+o.m+'" data-tip="'+_kac(o.st)+': '+_bkPara(o.t)+' · SYMS '+o.m.toLocaleString('tr-TR')+'"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.t/mx*100).toFixed(1)+'%;background:#0D9488;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+_bkKisa(o.t)+' <span class="cr-syms" style="font-size:10px;font-weight:700;color:#0F766E;background:#F0FDFA;border-radius:6px;padding:1px 5px;">SYMS '+o.m.toLocaleString('tr-TR')+'</span></span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede satış yok.</div>')+'</div>';
+  var grf=_grfAd('📈 Temsilci Bazında Brüt Ciro · SYMS ('+stl.length+' ST'+(stl.length>nST?' · kaydırın ↕':'')+')')+'<div id="crStGrf" style="max-height:'+(nST*30)+'px;overflow-y:auto;padding-right:6px;">'+(stl.length?stl.map(function(o){
+    return '<div class="hbar" data-st-syms="'+o.m+'" data-tip="'+_kac(o.st)+': '+_bkPara(o.t)+' · SYMS '+o.m.toLocaleString('tr-TR')+'"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.t/mx*100).toFixed(1)+'%;background:#0D9488;"></span></span><span class="hbar-v" style="white-space:nowrap;line-height:1.15;">'+_bkKisa(o.t)+'<span class="cr-syms" style="display:block;font-size:10px;font-weight:700;color:#0F766E;">SYMS '+o.m.toLocaleString('tr-TR')+'</span></span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede satış yok.</div>')+'</div>';
   h+=_kartIci(ozet, grf);
   // GY → ST tablosu (GY ve ST'ler ciroya göre büyükten küçüğe; sütunlar ürün grupları, en yüksek solda)
   var gyT=Object.create(null); dl.forEach(function(o){ gyT[o.gy]=(gyT[o.gy]||0)+o.t; });
