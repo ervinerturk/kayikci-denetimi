@@ -517,6 +517,10 @@ function secHd(t){
 // Not: rapor verileri raporNormalle() içinde zaten kaçışlanmış geliyor; tooltip metni textContent ile basılır.
 var GRF_MAVI='#2a78d6', GRF_TURUNCU='#eb6834', GRF_GRI='#CBD5E1', GRF_KIRMIZI='#DC2626';
 function _grfAd(t){ return '<div class="grf-bas">'+t+'</div>'; }
+// v57: temsilci grafikleri kesilmez; tüm ST'ler gösterilir, 15 satırı aşınca kutu içinde yandan çubukla kayar
+var GRF_KAYDIR_N=15;
+function _grfKaydir(ic, n){ return '<div class="grf-kaydir" data-n="'+(n||0)+'" style="max-height:'+(GRF_KAYDIR_N*30)+'px;overflow-y:auto;padding-right:6px;">'+ic+'</div>'; }
+function _grfSay(n){ return n>GRF_KAYDIR_N?' ('+n+' ST · kaydırın ↕)':(n?' ('+n+' ST)':''); }
 function _grfBar(liste, renk, birim){
   liste=(liste||[]).filter(function(x){ return x && x.deger>0; });
   if(!liste.length) return '<div class="grf-bos">Gösterilecek veri yok.</div>';
@@ -727,7 +731,8 @@ function _gorevKartHtml(gy, st, donem){
   k+=row('Tamamlama Oranı', '%'+oran, oran>=80?'g':oran<50?'r':'o');
   k+=row('Ort. Dönüş Süresi', sureN?(sureT/sureN*24<1?'1 saatten az':sureT/sureN<1?Math.round(sureT/sureN*24)+' saat':(sureT/sureN).toFixed(1).replace('.',',')+' gün'):'—');
   var g2=_grfAd('📊 Durum Dağılımı')+_grfYigin([{ad:'Yapıldı',deger:nOk,renk:GRF_MAVI},{ad:'Yapılamadı',deger:nNo,renk:GRF_KIRMIZI},{ad:'Bekleyen',deger:nBek,renk:GRF_GRI}],'görev');
-  g2+=_grfAd('⏳ Temsilci Bazında Açık Görev (ilk 8)')+_grfBar(_sayilariSirala(acikST,8), GRF_TURUNCU, 'açık görev');
+  var _ag=_sayilariSirala(acikST,999).filter(function(x){ return x.deger>0; });
+  g2+=_grfAd('⏳ Temsilci Bazında Açık Görev'+_grfSay(_ag.length))+_grfKaydir(_grfBar(_ag, GRF_TURUNCU, 'açık görev'), _ag.length);
   // Tablo: önce süresi geçenler, sonra bekleyenler (son tarihe göre), sonra cevaplananlar (yeni → eski)
   var sira=liste.slice().sort(function(a,b){
     var pa=gec(a)?0:a.durum==='bekliyor'?1:2, pb=gec(b)?0:b.durum==='bekliyor'?1:2;
@@ -1135,10 +1140,10 @@ function _bakiyeCiz(sadeceArama){
     h+='</tbody></table></div>';
   }
   // Grafik: temsilci bazında 21+ gün
-  var _gl=tl.filter(function(o){ return o.u>0.5; }).slice(0,10), _gmx=Math.max.apply(null,_gl.map(function(o){ return o.u; }).concat([1]));
-  var grf=_grfAd('🔴 Temsilci Bazında 21+ Gün Bakiye (ilk 10)')+(_gl.length?_gl.map(function(o){
+  var _gl=tl.filter(function(o){ return o.u>0.5; }), _gmx=Math.max.apply(null,_gl.map(function(o){ return o.u; }).concat([1]));
+  var grf=_grfAd('🔴 Temsilci Bazında 21+ Gün Bakiye'+_grfSay(_gl.length))+(_gl.length?_grfKaydir(_gl.map(function(o){
       return '<div class="hbar" data-tip="'+_kac(o.st)+': 21+ gün '+_bkPara(o.u)+' / toplam '+_bkPara(o.t)+'"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(o.u/_gmx*100).toFixed(1)+'%;background:'+GRF_KIRMIZI+';"></span></span><span class="hbar-v" style="white-space:nowrap;">'+_bkKisa(o.u)+'</span></div>';
-    }).join(''):'<div class="grf-bos">21 günü geçen bakiye yok. 👍</div>');
+    }).join(''), _gl.length):'<div class="grf-bos">21 günü geçen bakiye yok. 👍</div>');
   // Temsilci tablosu (satıra tıkla → müşteriler)
   var tt=secHd('🧑‍💼 Temsilci Bazında (satıra tıklayınca müşteriler açılır)')
     +'<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;"><thead><tr><th>Temsilci</th><th class="num">Müşteri</th><th class="num">Toplam</th><th class="num">21+ Gün</th><th class="num">21+ %</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
@@ -1408,9 +1413,9 @@ function _aracCiz(sadeceArama){
   var grCes=Object.create(null); dl.forEach(function(d){ d.u.forEach(function(z){ if(z.p>0) (grCes[z.g]||(grCes[z.g]=Object.create(null)))[z.k||z.a]=1; }); });
   var cesN=function(g){ return grCes[g]?Object.keys(grCes[g]).length:0; };
   var ozet='<div>'+secHd('📦 Ürün Grubuna Göre ('+(pk?'Pk':'TL')+')')+G.map(function(g){ var v=genel.g[g]||0, pay=genel.top?Math.round(v/genel.top*1000)/10:0; return row(_kac(g), fmt(v)+' <span style="font-size:10px;color:var(--soft);">%'+pay.toLocaleString('tr-TR')+' · Çeşit: '+cesN(g)+'</span>'); }).join('')+row('<b>Toplam</b>','<b>'+fmt(genel.top)+'</b> <span style="font-size:10px;color:var(--soft);font-weight:700;">Toplam çeşit: '+Object.keys(urunSet).length+'</span>')+'</div>';
-  var stl=dl.slice().sort(function(a,b){ return b._o.top-a._o.top; }).slice(0,15), mx=Math.max.apply(null, stl.map(function(d){ return d._o.top; }).concat([1]));
-  var grf=_grfAd('🚚 Temsilci Bazında Araç Stoku — '+(pk?'Pk':'TL')+' (ilk 15)')+(stl.length?stl.map(function(d){
-    return '<div class="hbar" data-tip="'+_kac(d.st)+': '+fmt(d._o.top)+'"><span class="hbar-l">'+_kac(d.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(d._o.top/mx*100).toFixed(1)+'%;background:#2563EB;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+kisa(d._o.top)+'</span></div>'; }).join(''):'<div class="grf-bos">Bu filtrede araç yok.</div>');
+  var stl=dl.slice().sort(function(a,b){ return b._o.top-a._o.top; }), mx=Math.max.apply(null, stl.map(function(d){ return d._o.top; }).concat([1]));
+  var grf=_grfAd('🚚 Temsilci Bazında Araç Stoku — '+(pk?'Pk':'TL')+_grfSay(stl.length))+(stl.length?_grfKaydir(stl.map(function(d){
+    return '<div class="hbar" data-tip="'+_kac(d.st)+': '+fmt(d._o.top)+'"><span class="hbar-l">'+_kac(d.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(d._o.top/mx*100).toFixed(1)+'%;background:#2563EB;"></span></span><span class="hbar-v" style="white-space:nowrap;">'+kisa(d._o.top)+'</span></div>'; }).join(''), stl.length):'<div class="grf-bos">Bu filtrede araç yok.</div>');
   h+=_kartIci(ozet, grf);
   // Ana tablo: GY → ST, sütunlar ürün grupları
   var gyler=Object.keys(YO).filter(function(g){ return dl.some(function(d){ return d.gy===g; }); });
@@ -1466,7 +1471,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-04c';
+var SURUM='2026-11-04d';
 (function(){
   var son=0;
   function bant(){
@@ -2729,8 +2734,9 @@ function _odakCiz(){
   // Grafikler
   var stl=Object.keys(ST).map(function(k){ return ST[k]; }).sort(function(a,b){ return dv(b)-dv(a) || a.st.localeCompare(b.st,'tr'); });
   var mx1=Math.max.apply(null, stl.map(dv).concat([1]));
-  var g1=_grfAd(sy?'🟢 Temsilci Bazında İlgili Dönem SYMS (müşteri)':'🟢 Temsilci Bazında Artırılan Çeşit')+(stl.some(function(o){ return o.d>0; })?stl.filter(function(o){ return o.d>0; }).slice(0,15).map(function(o){
-    return '<div class="hbar" data-tip="'+_kac(o.st)+': '+o.d+' çeşit artırıldı · '+o.s+' müşteride (SYMS) / '+o.m+' müşteri"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(dv(o)/mx1*100).toFixed(1)+'%;background:#16A34A;"></span></span><span class="hbar-v">'+dv(o)+'</span></div>'; }).join(''):'<div class="grf-bos">Henüz ST girişi yok.</div>');
+  var _n1=stl.filter(function(o){ return o.d>0; }).length;
+  var g1=_grfAd((sy?'🟢 Temsilci Bazında İlgili Dönem SYMS (müşteri)':'🟢 Temsilci Bazında Artırılan Çeşit')+_grfSay(_n1))+(stl.some(function(o){ return o.d>0; })?_grfKaydir(stl.filter(function(o){ return o.d>0; }).map(function(o){
+    return '<div class="hbar" data-tip="'+_kac(o.st)+': '+o.d+' çeşit artırıldı · '+o.s+' müşteride (SYMS) / '+o.m+' müşteri"><span class="hbar-l">'+_kac(o.st)+'</span><span class="hbar-t"><span class="hbar-f" style="width:'+(dv(o)/mx1*100).toFixed(1)+'%;background:#16A34A;"></span></span><span class="hbar-v">'+dv(o)+'</span></div>'; }).join(''), stl.filter(function(o){ return o.d>0; }).length):'<div class="grf-bos">Henüz ST girişi yok.</div>');
   var mx2=Math.max.apply(null, UR.map(function(x){ return x.satis+x.st; }).concat([1]));
   var g2=_grfAd('📦 Ürün Bazında: Satıştan Var + ST ile Eklenen (müşteri)')+U.map(function(u,i){ var x=UR[i];
     return '<div class="hbar" data-tip="'+_kac(u.a)+': satıştan '+x.satis+', ST ile eklenen '+x.st+' müşteri"><span class="hbar-l">'+_kac(u.a)+'</span><span class="hbar-t" style="display:flex;"><span class="hbar-f" style="width:'+(x.satis/mx2*100).toFixed(1)+'%;background:#86C99B;border-radius:0;"></span><span class="hbar-f" style="width:'+(x.st/mx2*100).toFixed(1)+'%;background:#16A34A;'+(x.st?'':'display:none;')+'"></span></span><span class="hbar-v">'+x.satis+(x.st?' +'+x.st:'')+'</span></div>'; }).join('');
@@ -3190,7 +3196,8 @@ function _guncelleIc(){
   done.filter(function(n){return n.so==='Var';}).forEach(function(n){ (n.soUrunler||[]).forEach(function(u){ _soTum[u]=(_soTum[u]||0)+1; }); });
   g2+=_grfAd('📦 En Çok Stok Out Olan Ürünler (ilk 6)')+_grfBar(_sayilariSirala(_soTum,6), GRF_KIRMIZI, 'noktada');
   g2+=_tazelikGrafikleri(data);
-  if(!(gy&&st)) g2+=_grfAd('⏱ '+(!gy?'GY':'Temsilci')+' Bazında Ort. Ziyaret Süresi (dk)')+_grfBar(Object.keys(_zKir).map(function(k){ return {ad:k, deger:Math.round(_zKir[k].t/_zKir[k].s)}; }).sort(function(a,b){return b.deger-a.deger;}).slice(0,8), GRF_MAVI, 'dk ort.');
+  if(!(gy&&st)){ var _zl=Object.keys(_zKir).map(function(k){ return {ad:k, deger:Math.round(_zKir[k].t/_zKir[k].s)}; }).sort(function(a,b){return b.deger-a.deger;});
+    g2+=_grfAd('⏱ '+(!gy?'GY':'Temsilci')+' Bazında Ort. Ziyaret Süresi (dk)'+(gy?_grfSay(_zl.length):''))+(gy?_grfKaydir(_grfBar(_zl, GRF_MAVI, 'dk ort.'), _zl.length):_grfBar(_zl, GRF_MAVI, 'dk ort.')); }   // GY listesi (5) eskisi gibi; temsilci listesi kaydırmalı
   _html+='<div class="card"><div class="card-head"><div class="card-ic">🏪</div><div class="card-title">Ziyaret Edilen Noktalar</div></div><div class="card-body">'+_kartIci(k2,g2)+'</div></div>';
 
   // ── KART 3: STANT ──
