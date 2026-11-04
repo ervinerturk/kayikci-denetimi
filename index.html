@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
 <title>Kayıkçı Saha Denetim</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" integrity="sha384-AQ3POAMqIhwS81FrUH95ekxqBZHeP5tG2JfEL3+7GuTtfRLWnrRh32UxwzM+//A9" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" integrity="sha384-TnlRYaR4JYz/lpaGuaiU61PjNberSA4vjLjtF+oRC/IkohkJqnWxw5EmDSOt1vA1" crossorigin="anonymous"></script>
 <script>
 var _db = null;
 var _auth = null;
@@ -363,11 +363,6 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
         <label class="lb">Grup Yöneticisi</label>
         <select class="inp" id="sYon" onchange="onYon()">
           <option value="">Seçiniz...</option>
-          <option value="ABDİL İNCİ">ABDİL İNCİ</option>
-          <option value="SABRİ ALTUNDAĞ">SABRİ ALTUNDAĞ</option>
-          <option value="TUĞRUL NAVRUZ">TUĞRUL NAVRUZ</option>
-          <option value="UMUT ONAT DOĞAN">UMUT ONAT DOĞAN</option>
-          <option value="İBRAHİM AYDIN">İBRAHİM AYDIN</option>
         </select>
       </div>
       <div class="f">
@@ -887,7 +882,7 @@ window.addEventListener('load', function(){
 });
 
 // ── VERİ ──
-var YO={"ABDİL İNCİ":["Adem GÜNEY","Batuhan ERSOY","Ferdi ÜNSALCI","İlhan Furkan AYTAŞ","Onur AYDIN","Orhan GÜNAKIN","Seyfettin SİVRİ","Soner BAHTİYAR"],"TUĞRUL NAVRUZ":["Ahmet SIRIKLIGİL","Akın DİZDAR","Cihangir ÇAKIR","Emrah AĞIR","Engin İL","Ömer Faruk KURUKALIP","Erdinç GÜNEŞ","Ertan GÖÇTÜRK","Tolga EREN"],"UMUT ONAT DOĞAN":["Ali KARAHANLI","Burak ÇIĞMAZ","Cenab ERİM","Fatih AKSU","Fatih ERGÜN","Muhammet BAHÇE","Nail İPEK","Serdar AKBABA"],"SABRİ ALTUNDAĞ":["Baturalp BAHÇE","Bayram Ali ÇINAR","Engin BABADAĞ","Hasan BALCI","Onur GÜNEY","Sergen ERMİŞ","Sinan KAN","Talha ÖZCAN"],"İBRAHİM AYDIN":["Engin ORUÇ","Erhan TİRYAKİ","Erkan KARAKÖSE","Kenan KARAHAN"]};
+var YO={};   // v58: ekip listesi sayfada değil (KVKK) — girişten sonra ayarlar/ekipler belgesinden yüklenir (_ekipUygula)
 var RUT={};   // Müşteri rut verisi artık sayfada değil: girişten sonra Firestore'dan yüklenir (rutYukle)
 var URUNLER=["100 GR. AY ÇEKİRDEK","100 GR. BOL TUZLU AY ÇEKİRDEK","180 GR. AY ÇEKİRDEK","180 GR. BOL TUZLU AY ÇEKİRDEK","45 GR. ANTEP FISTIĞI","45 GR. BADEM İÇİ","45 GR. FINDIK İÇİ","40 GR. KABAK ÇEKİRDEĞİ","45 GR. TUZLU YER FISTIĞI","45 GR. İŞLENMİŞ YER FISTIK","45 GR. KLASİK","45 GR. FESTİVAL","45 GR. NATUREL","45 GR. TUZLU SARI LEBLEBİ","90 GR. ANTEP FISTIĞI","90 GR. BADEM İÇİ","90 GR. ÇİĞ BADEM","90 GR. KAJU FISTIĞI","90 GR. FINDIK İÇİ","75 GR. TUZLU FINDIK İÇİ","80 GR. KABAK ÇEKİRDEĞİ","90 GR. TUZLU YER FISTIĞI","90 GR. İŞLENMİŞ YER FISTIĞI","90 GR. RANCH SOSLU YER FISTIĞI","90 GR. BARBEKÜ SOSLU YER FISTIĞI","90 GR. ACI SOSLU YER FISTIĞI","70 GR. TACO BAHARATLI KAPL. FISTIK","70 GR. EKŞİ&SOĞANLI KAPL.FISTIK","70 GR. CHILLI LİME KAPL.FISTIK","90 GR. ŞENLİK","90 GR. KOKTEYL","90 GR. KLASİK","90 GR. FESTİVAL","90 GR. NATUREL","90 GR. KARNAVAL","90 GR. BEYAZ LEBLEBİ","90 GR. TUZLU SARI LEBLEBİ","90 GR. ÇİFTE SARI LEBLEBİ","75 GR. MISIR","70 GR. CEVİZ İÇİ","135 GR. ANTEP FISTIĞI","180 GR. ANTEP FISTIĞI","135 GR. BADEM İÇİ","180 GR. BADEM İÇİ","180 GR. ÇİĞ BADEM İÇİ","135 GR. KAJU FISTIĞI","180 GR. KAJU FISTIĞI","140 GR. ÇİĞ KAJU FISTIĞI","140 GR. ZARLI KAJU FISTIĞI","135 GR. FINDIK İÇİ","180 GR. FINDIK İÇİ","140 GR. TUZLU FINDIK","140 GR. ÇİĞ FINDIK İÇİ","180 GR. KABAK ÇEKİRDEĞİ","180 GR. TUZSUZ KABAK ÇEKİRDEĞİ","180 GR. TUZLU YER FISTIĞI","180 GR. TUZSUZ YER FISTIĞI","250 GR. KABUKLU YER FISTIĞI","500 GR. KABUKLU YER FISTIĞI","180 GR. İŞLENMİŞ YER FISTIĞI","180 GR. RANCH SOSLU YER FISTIĞI","180 GR. BARBEKÜ SOSLU YER FISTIĞI","180 GR. ACI SOSLU YER FISTIĞI","140 GR. TACO BAHARATLI KAPL. FISTIK","140 GR. EKŞİ&SOĞANLI KAPL.FISTIK","140 GR. CHILLI LİME KAPL.FISTIK","180 GR. ŞENLİK","180 GR. KOKTEYL","180 GR. KLASİK","180 GR. FESTİVAL","180 GR. NATUREL","135 GR. KARNAVAL","180 GR. KARNAVAL","180 GR. BEYAZ LEBLEBİ","180 GR. TUZLU SARI LEBLEBİ","180 GR. ÇİFTE SARI LEBLEBİ","180 GR. MISIR","150 GR. CEVİZ İÇİ","140 GR. KURU KAYISI","140 GR. SULTANİYE","140 GR. KURU ERİK","140 GR. HURMA","30 GR. TADIMCA ANTEP FISTIKLI","30 GR. TADIMCA FINDIKLI","30 GR. TADIMCA YER FISTIKLI","30 GR. TADIMCA SPORTİF","30 GR. TADIMCA TAHILLI BAR","40 GR. TADIMCA TARÇINLI FINDIK HURMALI"];
 var ST_TEL={}; // Temsilci telefonları artık sayfada değil: girişten sonra Firestore'dan yüklenir (ayarlar/tel)
@@ -2680,14 +2675,27 @@ function taslakSil(){
 // ── LOGIN (Firebase Authentication) ──
 // Şifreler bu dosyada TUTULMAZ. Doğrulama Firebase sunucusunda yapılır.
 // Bu tablo yalnızca e-posta → ad/rol eşleşmesi içindir.
-var KULLANICILAR = {
-  'ervin.erturk@kayikci.com.tr':  {ad:'Ervin Ertürk',   rol:'md',  gy:''},
-  'abdil.inci@kayikci.com.tr':     {ad:'Abdil İnci',     rol:'gy',  gy:'ABDİL İNCİ'},
-  'sabri.altundag@kayikci.com.tr': {ad:'Sabri Altundağ', rol:'gy',  gy:'SABRİ ALTUNDAĞ'},
-  'tugrul.navruz@kayikci.com.tr':  {ad:'Tuğrul Navruz',  rol:'gy',  gy:'TUĞRUL NAVRUZ'},
-  'umut.dogan@kayikci.com.tr':     {ad:'Umut Onat Doğan',rol:'gy',  gy:'UMUT ONAT DOĞAN'},
-  'ibrahim.aydin@kayikci.com.tr':  {ad:'İbrahim Aydın',  rol:'gy',  gy:'İBRAHİM AYDIN'}
-};
+// v58: kullanıcı e-postaları ve rolleri sayfada değil (KVKK). Girişten sonra yalnız kendi kullanicilar/{e-posta} belgesi
+// ve ekip listesi (ayarlar/ekipler) okunur; sahada çevrimdışı açılabilsin diye bu cihazda saklanır (rut gibi).
+function _ekipUygula(d){
+  var l=(d && Array.isArray(d.liste))?d.liste:[];
+  Object.keys(YO).forEach(function(k){ delete YO[k]; });
+  l.forEach(function(x){ if(x && typeof x.gy==='string' && x.gy) YO[x.gy]=(Array.isArray(x.st)?x.st:[]).filter(function(s){ return typeof s==='string' && s; }); });
+  var s=document.getElementById('sYon');
+  if(s){ var v=s.value; while(s.options.length>1) s.remove(1); Object.keys(YO).forEach(function(g){ var o=document.createElement('option'); o.value=g; o.textContent=g; s.appendChild(o); }); s.value=v; }
+}
+function _rolDonustur(r){
+  if(!r || typeof r.tip!=='string') return null;
+  if(r.tip==='md') return {ad:String(r.ad||''), rol:'md', gy:''};
+  if(r.tip==='gy' && r.gy) return {ad:String(r.ad||''), rol:'gy', gy:String(r.gy)};
+  return null;   // Operatör / Muhasebe / Patron: GY formu kullanmaz
+}
+function _yetkiOku(email){
+  return Promise.all([_db.collection('kullanicilar').doc(email).get(), _db.collection('ayarlar').doc('ekipler').get()]).then(function(s){
+    var r=(s[0] && s[0].exists)?s[0].data():null, e=(s[1] && s[1].exists)?s[1].data():null;
+    return {r:r, e:e};
+  });
+}
 
 function loginEkraniGoster(){
   var ol=document.getElementById('loginOverlay');
@@ -2701,8 +2709,9 @@ function loginKontrol(){
   try{ localStorage.removeItem('kyk_kullanici'); sessionStorage.removeItem('kyk_kullanici'); }catch(e){}
   if(!_auth){ loginEkraniGoster(); return; }
   _auth.onAuthStateChanged(function(user){
-    var u = user && user.email ? KULLANICILAR[user.email.toLowerCase()] : null;
-    if(u && !user.emailVerified){
+    if(!user || !user.email){ loginEkraniGoster(); return; }
+    var email=user.email.toLowerCase(), anahtar='kyk_yetki_'+email;
+    if(!user.emailVerified){
       // E-posta doğrulanmadan içeri alınmaz (Firestore kuralları da doğrulanmamış hesaba veri vermez)
       try{ document.getElementById('loginPass').value=''; }catch(e){}
       user.sendEmailVerification().catch(function(){}).then(function(){
@@ -2712,11 +2721,18 @@ function loginKontrol(){
       loginEkraniGoster();
       return;
     }
-    if(u){ loginUygula(u); if(u.rol!=='md') rutYukle(u, user.email.toLowerCase()); }
-    else {
-      if(user) _auth.signOut();   // listede olmayan hesap → içeri alma
-      loginEkraniGoster();
-    }
+    var acildi=false, ac=function(r, e){ var u=_rolDonustur(r); if(!u) return false; _ekipUygula(e); if(!acildi){ acildi=true; loginUygula(u); if(u.rol!=='md') rutYukle(u, email); } return true; };
+    // 1) Bu cihazda saklı yetki varsa hemen aç (sahada çevrimdışı)
+    try{ var c=JSON.parse(localStorage.getItem(anahtar)||'null'); if(c && c.r) ac(c.r, c.e); }catch(e){}
+    if(!_db){ if(!acildi) loginEkraniGoster(); return; }
+    // 2) Sunucudan güncelini al
+    _yetkiOku(email).then(function(x){
+      if(!_rolDonustur(x.r)){ try{ localStorage.removeItem(anahtar); }catch(e){} _auth.signOut(); _girisMesaji('Bu hesap için form yetkisi tanımlı değil. Satış Müdürü ile görüşün.'); loginEkraniGoster(); return; }
+      try{ localStorage.setItem(anahtar, JSON.stringify({r:x.r, e:x.e, zaman:Date.now()})); }catch(e){}
+      if(acildi) _ekipUygula(x.e); else ac(x.r, x.e);
+    }).catch(function(err){
+      if(!acildi){ _girisMesaji('📡 Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.'); loginEkraniGoster(); }
+    });
   });
 }
 
@@ -2818,7 +2834,6 @@ function sifreSifirla(){
   if(!email){ _girisMesaji('Önce Kullanıcı Adı alanına e-posta adresinizi yazın.'); return; }
   if(!_auth){ _girisMesaji('Sunucuya bağlanılamadı, internet bağlantınızı kontrol edin.'); return; }
   var tamam='📧 Bu adres sistemde kayıtlıysa şifre belirleme bağlantısı gönderildi. E-postanızı (Spam klasörü dahil) kontrol edin.';
-  if(!KULLANICILAR[email]){ _girisMesaji(tamam,'bilgi'); return; }   // kayıtlı olup olmadığını belli etme
   _auth.sendPasswordResetEmail(email)
     .then(function(){ _girisMesaji(tamam,'bilgi'); })
     .catch(function(err){
@@ -3069,7 +3084,7 @@ function loginYap(){
   var hataEl = document.getElementById('loginHata');
   hataEl.style.display='none';
   if(!_auth){ toast('Sunucuya bağlanılamadı, internet bağlantınızı kontrol edin','e'); return; }
-  if(!KULLANICILAR[email]){ _girisMesaji('Kullanıcı adı veya şifre hatalı.'); document.getElementById('loginPass').value=''; return; }
+  if(!email || !sifre){ _girisMesaji('Kullanıcı adı veya şifre hatalı.'); document.getElementById('loginPass').value=''; return; }
   var hatirla = document.getElementById('beniHatirla');
   var kalicilik = (hatirla && hatirla.checked)
     ? firebase.auth.Auth.Persistence.LOCAL
@@ -3186,7 +3201,7 @@ function _panelimButonu(){
 function cikisYap(){
   try{ sessionStorage.removeItem('kyk_kullanici'); localStorage.removeItem('kyk_kullanici'); }catch(e){}
   // Çıkışta bu cihazdaki müşteri listesi kopyasını da sil
-  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('kyk_rut_')===0 || k.indexOf('rapor_')===0 || k==='kayikci_raporlar' || k==='kyk_ziyaret_giris') localStorage.removeItem(k); }); }catch(e){}
+  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('kyk_rut_')===0 || k.indexOf('kyk_yetki_')===0 || k.indexOf('rapor_')===0 || k==='kayikci_raporlar' || k==='kyk_ziyaret_giris') localStorage.removeItem(k); }); }catch(e){}
   if(_auth){ _auth.signOut().then(function(){ location.reload(); }); }
   else location.reload();
 }

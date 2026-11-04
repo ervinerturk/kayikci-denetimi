@@ -6,9 +6,9 @@
 <title>Kayıkçı Yönetim Paneli</title>
 <meta name="application-name" content="Kayıkçı Yönetim Paneli">
 <meta name="apple-mobile-web-app-title" content="Kayıkçı Yönetim Paneli">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" integrity="sha384-AQ3POAMqIhwS81FrUH95ekxqBZHeP5tG2JfEL3+7GuTtfRLWnrRh32UxwzM+//A9" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" integrity="sha384-TnlRYaR4JYz/lpaGuaiU61PjNberSA4vjLjtF+oRC/IkohkJqnWxw5EmDSOt1vA1" crossorigin="anonymous"></script>
 <script>
   var firebaseConfig = {
     apiKey: "AIzaSyBvp4dPmWap0U1voNkhdTrqFTVzqSyzwVI",
@@ -163,7 +163,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
   .kart-ici{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;}
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 </head>
 <style>
 #dashGirisEkrani{position:fixed;inset:0;background:#0F1923;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;}
@@ -236,11 +236,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
         <label>Grup Yöneticisi</label>
         <select class="fsel" id="fGY">
           <option value="">Tümü</option>
-          <option value="ABDİL İNCİ">ABDİL İNCİ</option>
-          <option value="TUĞRUL NAVRUZ">TUĞRUL NAVRUZ</option>
-          <option value="UMUT ONAT DOĞAN">UMUT ONAT DOĞAN</option>
-          <option value="SABRİ ALTUNDAĞ">SABRİ ALTUNDAĞ</option>
-          <option value="İBRAHİM AYDIN">İBRAHİM AYDIN</option>
         </select>
       </div>
       <div class="filter-group">
@@ -345,13 +340,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
 </div>
 
 <script>
-var YO={
-  "ABDİL İNCİ":["Adem GÜNEY","Batuhan ERSOY","Ferdi ÜNSALCI","İlhan Furkan AYTAŞ","Onur AYDIN","Orhan GÜNAKIN","Seyfettin SİVRİ","Soner BAHTİYAR"],
-  "TUĞRUL NAVRUZ":["Ahmet SIRIKLIGİL","Akın DİZDAR","Cihangir ÇAKIR","Emrah AĞIR","Engin İL","Ömer Faruk KURUKALIP","Erdinç GÜNEŞ","Ertan GÖÇTÜRK","Tolga EREN"],
-  "UMUT ONAT DOĞAN":["Ali KARAHANLI","Burak ÇIĞMAZ","Cenab ERİM","Fatih AKSU","Fatih ERGÜN","Muhammet BAHÇE","Nail İPEK","Serdar AKBABA"],
-  "SABRİ ALTUNDAĞ":["Baturalp BAHÇE","Bayram Ali ÇINAR","Engin BABADAĞ","Hasan BALCI","Onur GÜNEY","Sergen ERMİŞ","Sinan KAN","Talha ÖZCAN"],
-  "İBRAHİM AYDIN":["Engin ORUÇ","Erhan TİRYAKİ","Erkan KARAKÖSE","Kenan KARAHAN"]
-};
+var YO={};   // v58: ekip listesi sayfada değil (KVKK) — girişten sonra ayarlar/ekipler belgesinden yüklenir (_ekipUygula)
 
 function taniGoster(){
   var sonuc = [];
@@ -884,7 +873,6 @@ document.addEventListener('dblclick', function(e){
 // her GY kuralı gereği yalnız KENDİ belgesini okur; eşleşmeyen plasiyerler "_eslesmeyen" belgesinde (yalnız Müdür).
 // Kovalar: başlangıç günü 21 ve üstü olanlar "21+ gün (vadesi geçmiş)" sayılır.
 // ══════════════════════════════════════════════════════════════════════════
-var BK_OPERATOR='bayrampasa@kayikci.com.tr';
 var _bkVeri=null, _bkAcik=false, _bkHazir=null, _bkYukleniyor=false, _bkAcikST=Object.create(null);
 function _bkKat(x){ return String(x==null?'':x).toLocaleUpperCase('tr-TR').replace(/İ/g,'I').replace(/Ş/g,'S').replace(/Ğ/g,'G').replace(/Ü/g,'U').replace(/Ö/g,'O').replace(/Ç/g,'C').replace(/[^A-Z0-9]/g,''); }
 function _bkTemsilciBul(){
@@ -1208,7 +1196,7 @@ var AS_GRUP_SIRA=['Çekirdek','Kuru Yemiş','Çiğ Kuru Yemiş','Kuru Meyve','Ta
 function _asGrupSirala(a,b){ var i=AS_GRUP_SIRA.indexOf(a), j=AS_GRUP_SIRA.indexOf(b); return (i<0?99:i)-(j<0?99:j) || a.localeCompare(b,'tr'); }
 function _asPk(x){ return Math.round(x||0).toLocaleString('tr-TR')+' Pk'; }
 function _asDeger(x){ return _asOlcu==='pk' ? Math.round(x||0).toLocaleString('tr-TR') : Math.round(x||0).toLocaleString('tr-TR'); }
-// Depo adı → temsilci: "DEPO" atılır, Türkçe karakter/boşluk farkı yok sayılır; birebir yoksa tek harf farkı kabul (CENAP ↔ Cenab), tek aday şartıyla
+// Depo adı → temsilci: "DEPO" atılır, Türkçe karakter/boşluk farkı yok sayılır; birebir yoksa tek harf farkı kabul (ör. P ↔ B), tek aday şartıyla
 function _asDepoST(){
   var m=Object.create(null), l=[];
   Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(s){ var k=_bkKat(s); m[k]={st:s, gy:g}; l.push(k); }); });
@@ -1471,7 +1459,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-04d';
+var SURUM='2026-11-05a';
 (function(){
   var son=0;
   function bant(){
@@ -1854,7 +1842,7 @@ function _izRol(){ var k=_dashKullanici||{}; return {md:!k.gy && !k.operator && 
 function _izEsleyici(){
   var m=Object.create(null), l=[];
   Object.keys(YO).forEach(function(g){ (YO[g]||[]).forEach(function(s){ var k=_bkKat(s); m[k]={ad:s, gorev:'ST', gy:g}; l.push(k); }); var kg=_bkKat(g); m[kg]={ad:g, gorev:'GY', gy:''}; l.push(kg); });
-  m[_bkKat('ERVİN ERTÜRK')]={ad:'ERVİN ERTÜRK', gorev:'Satış Müdürü', gy:''}; l.push(_bkKat('ERVİN ERTÜRK'));
+  if(_EKIP.mudur){ m[_bkKat(_EKIP.mudur)]={ad:_EKIP.mudur, gorev:'Satış Müdürü', gy:''}; l.push(_bkKat(_EKIP.mudur)); }
   var lev=function(a,b){ if(Math.abs(a.length-b.length)>2) return 9; var d=[], i, j; for(i=0;i<=a.length;i++) d[i]=[i]; for(j=0;j<=b.length;j++) d[0][j]=j;
     for(i=1;i<=a.length;i++) for(j=1;j<=b.length;j++) d[i][j]=Math.min(d[i-1][j]+1, d[i][j-1]+1, d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); return d[a.length][b.length]; };
   var gyBul=function(x){ var k=_bkKat(x); if(!k) return ''; var g=Object.keys(YO).filter(function(G){ var kg=_bkKat(G); return kg===k || lev(kg,k)<=2 || kg.indexOf(k)===0 || k.indexOf(kg)===0 || (kg.slice(0,4)===k.slice(0,4) && kg.slice(-5)===k.slice(-5)); }); return g.length===1?g[0]:''; };
@@ -3754,18 +3742,33 @@ function raporDinleyiciBaslat(){
 <script>
 // ===== DASHBOARD GİRİŞ SİSTEMİ (Firebase Authentication) =====
 // Şifreler bu dosyada TUTULMAZ. Doğrulama Firebase sunucusunda yapılır.
-var DASH_KULLANICILAR = [
-  {email:'ervin.erturk@kayikci.com.tr',   ad:'Ervin Ertürk',   rol:'Satış Müdürü',    gy:''},
-  {email:'abdil.inci@kayikci.com.tr',      ad:'Abdil İnci',     rol:'Grup Yöneticisi', gy:'ABDİL İNCİ'},
-  {email:'sabri.altundag@kayikci.com.tr',  ad:'Sabri Altundağ', rol:'Grup Yöneticisi', gy:'SABRİ ALTUNDAĞ'},
-  {email:'tugrul.navruz@kayikci.com.tr',   ad:'Tuğrul Navruz',  rol:'Grup Yöneticisi', gy:'TUĞRUL NAVRUZ'},
-  {email:'umut.dogan@kayikci.com.tr',      ad:'Umut Doğan',     rol:'Grup Yöneticisi', gy:'UMUT ONAT DOĞAN'},
-  {email:'ibrahim.aydin@kayikci.com.tr',   ad:'İbrahim Aydın',  rol:'Grup Yöneticisi', gy:'İBRAHİM AYDIN'},
-  {email:'bayrampasa@kayikci.com.tr',      ad:'Operatör',       rol:'Operatör',        gy:'', operator:true},  // yalnız bakiye raporu yükler
-  {email:'umut.erdogan@kayikci.com.tr',    ad:'Umut Erdoğan',   rol:'Operatör',        gy:'', operator:true},  // Operatör ile aynı yetki
-  {email:'mehmet.ilgun@kayikci.com.tr',    ad:'Mehmet Ilgun',   rol:'Muhasebe Müdürü', gy:'', izleyici:'muhasebe'},  // salt okunur: özet + ciro/bakiye/stok detayı + izin
-  {email:'eray.kayikci@kayikci.com.tr',    ad:'Eray Kayıkçı',   rol:'Yönetim',         gy:'', izleyici:'patron'}     // salt okunur: yönetim özeti + izin
-];
+// v58: kullanıcı e-postaları ve rolleri sayfada değil (KVKK) — girişten sonra yalnız kendi kullanicilar/{e-posta} belgesi okunur
+var _EKIP={liste:[], mudur:''};
+function _ekipUygula(d){
+  var l=(d && Array.isArray(d.liste))?d.liste:[];
+  Object.keys(YO).forEach(function(k){ delete YO[k]; });
+  l.forEach(function(x){ if(x && typeof x.gy==='string' && x.gy) YO[x.gy]=(Array.isArray(x.st)?x.st:[]).filter(function(s){ return typeof s==='string' && s; }); });
+  _EKIP={liste:l, mudur:(d && typeof d.mudur==='string')?d.mudur:''};
+  var f=document.getElementById('fGY');
+  if(f){ var v=f.value; while(f.options.length>1) f.remove(1); Object.keys(YO).forEach(function(g){ var o=document.createElement('option'); o.value=g; o.textContent=g; f.appendChild(o); }); f.value=v; }
+}
+function _rolDonustur(e, r){   // kullanicilar/{e-posta} → panel kullanıcı nesnesi
+  if(!r || typeof r.tip!=='string') return null;
+  var k={email:e, ad:String(r.ad||e), rol:String(r.rolAd||''), gy:''};
+  if(r.tip==='md'){ k.rol=k.rol||'Satış Müdürü'; }
+  else if(r.tip==='gy'){ if(!r.gy) return null; k.gy=String(r.gy); k.rol=k.rol||'Grup Yöneticisi'; }
+  else if(r.tip==='op'){ k.operator=true; k.rol=k.rol||'Operatör'; }
+  else if(r.tip==='muhasebe' || r.tip==='patron'){ k.izleyici=r.tip; k.rol=k.rol||(r.tip==='muhasebe'?'Muhasebe Müdürü':'Yönetim'); }
+  else return null;
+  return k;
+}
+function _yetkiYukle(e){
+  if(!db) return Promise.reject(new Error('Sunucuya bağlanılamadı'));
+  return db.collection('kullanicilar').doc(e).get().then(function(d){
+    var k=_rolDonustur(e, d && d.exists ? d.data() : null); if(!k) return null;
+    return db.collection('ayarlar').doc('ekipler').get().then(function(x){ _ekipUygula(x && x.exists ? x.data() : null); return k; });
+  });
+}
 
 function _dashMesaj(metin, tur){
   var el=document.getElementById('dashGirisHata');
@@ -3778,7 +3781,6 @@ function dashSifreSifirla(){
   if(!email){ _dashMesaj('Önce e-posta adresinizi yazın.'); return; }
   if(!dashAuth){ _dashMesaj('Sunucuya bağlanılamadı.'); return; }
   var tamam='📧 Bu adres sistemde kayıtlıysa şifre belirleme bağlantısı gönderildi. E-postanızı (Spam dahil) kontrol edin.';
-  if(!DASH_KULLANICILAR.find(function(x){return x.email===email;})){ _dashMesaj(tamam,'bilgi'); return; }
   dashAuth.sendPasswordResetEmail(email).then(function(){ _dashMesaj(tamam,'bilgi'); })
     .catch(function(err){ _dashMesaj(/user-not-found/.test((err&&err.code)||'')?tamam:('Gönderilemedi: '+((err&&err.message)||err)), /user-not-found/.test((err&&err.code)||'')?'bilgi':''); });
 }
@@ -3790,8 +3792,7 @@ function dashGirisYap(){
   var hataEl = document.getElementById('dashGirisHata');
   hataEl.style.display = 'none'; hataEl.style.color = '';
 
-  var k = DASH_KULLANICILAR.find(function(x){ return x.email===email; });
-  if(!k || !dashAuth){ hataEl.textContent='E-posta veya şifre hatalı.'; hataEl.style.display='block'; document.getElementById('dashParola').value=''; return; }
+  if(!email || !sifre || !dashAuth){ hataEl.textContent='E-posta veya şifre hatalı.'; hataEl.style.display='block'; document.getElementById('dashParola').value=''; return; }
 
   var kalicilik = hatirla ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
   dashAuth.setPersistence(kalicilik)
@@ -3895,9 +3896,14 @@ function dashCikisYap(){
       });
       return;
     }
-    var k = DASH_KULLANICILAR.find(function(x){ return x.email===user.email.toLowerCase(); });
-    if(k){ dashOturumGoster(k); }
-    else { dashAuth.signOut(); }
+    _yetkiYukle(user.email.toLowerCase()).then(function(k){
+      if(k){ dashOturumGoster(k); }
+      else { _dashMesaj('Bu hesap için panel yetkisi tanımlı değil. Satış Müdürü ile görüşün.'); dashAuth.signOut(); }
+    }).catch(function(err){
+      var off=/offline|unavailable|network/i.test(String((err&&err.message)||err));
+      _dashMesaj(off?'📡 Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edip sayfayı yenileyin.':'Yetki bilgisi okunamadı: '+((err&&err.message)||err));
+      if(!off) dashAuth.signOut();
+    });
   });
 })();
 </script>

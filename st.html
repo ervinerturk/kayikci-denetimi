@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#1E3A5F">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Kayıkçı ST Paneli</title>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" integrity="sha384-AQ3POAMqIhwS81FrUH95ekxqBZHeP5tG2JfEL3+7GuTtfRLWnrRh32UxwzM+//A9" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" integrity="sha384-qn4Jh88HhJA8dplNQyGjOh9OGI4izVhrfj/qIFgaKcdgOE06pXqIKGlsCILZcLAC" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" integrity="sha384-TnlRYaR4JYz/lpaGuaiU61PjNberSA4vjLjtF+oRC/IkohkJqnWxw5EmDSOt1vA1" crossorigin="anonymous"></script>
 <script>
   var firebaseConfig = {
     apiKey: "AIzaSyBvp4dPmWap0U1voNkhdTrqFTVzqSyzwVI",
@@ -183,11 +183,11 @@ button,input,select{font-family:inherit;}
 var ST_ALAN='st.kayikci.com.tr';
 var AZ=2;   // 1-2 PAK satış: dolu ama "az" (sarı)
 var GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'];
-var ONIZLEME=false, ONZ_LISTE=[], MUDUR_EPOSTA='ervin.erturk@kayikci.com.tr';
+var ONIZLEME=false, ONZ_LISTE=[];   // v58: Müdür e-postası sayfada değil; rol kullanicilar/{e-posta} belgesinden okunur
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-10-31d';
+var SURUM='2026-11-05a';
 (function(){
   var son=0;
   function bant(){
@@ -250,9 +250,12 @@ function cikisYap(){
 if(auth) auth.onAuthStateChanged(function(u){
   if(!u || !u.email){ document.getElementById('giris').classList.remove('gizli'); document.getElementById('ana').classList.add('gizli'); return; }
   var e=u.email.toLowerCase();
-  if(e===MUDUR_EPOSTA){ onizlemeBaslat(e); return; }
   if(!new RegExp('^st[0-9]{2,4}@'+ST_ALAN.replace(/\./g,'\\.')+'$').test(e)){
-    gHata('Bu cihazda yönetici hesabı açık ('+e+'). ST paneli için önce o hesaptan çıkış yapın.'); return;
+    db.collection('kullanicilar').doc(e).get().then(function(d){
+      if(d.exists && (d.data()||{}).tip==='md'){ onizlemeBaslat(e); return; }
+      gHata('Bu cihazda yönetici hesabı açık ('+e+'). ST paneli için önce o hesaptan çıkış yapın.');
+    }).catch(function(){ gHata('Bu cihazda yönetici hesabı açık ('+e+'). ST paneli için önce o hesaptan çıkış yapın.'); });
+    return;
   }
   db.collection('stHesaplar').doc(e).get().then(function(d){
     if(!d.exists){ gHata('Hesabınız henüz tanımlanmamış. Satış Müdürünüze bildirin.'); auth.signOut(); return; }
