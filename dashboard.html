@@ -1466,7 +1466,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-04b';
+var SURUM='2026-11-04c';
 (function(){
   var son=0;
   function bant(){
@@ -1970,6 +1970,7 @@ function _izCss(){
    +'.iz-chips{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);overflow-x:auto;align-items:center}.iz-chip{border:none;padding:6px 12px;border-radius:20px;font-weight:700;font-size:12px;color:var(--mid);background:#F1F5F9;white-space:nowrap;cursor:pointer;font-family:inherit}.iz-chip.on{background:#1E3A5F;color:#fff}'
    +'.iz-sek{display:inline-flex;background:#F1F5F9;border-radius:10px;padding:3px;gap:2px}.iz-sek button{border:none;background:none;padding:6px 12px;border-radius:8px;font-weight:700;font-size:12px;color:var(--mid);cursor:pointer;font-family:inherit;white-space:nowrap}.iz-sek button.on{background:#fff;color:#0F766E;box-shadow:0 1px 3px rgba(15,25,35,.12)}'
    +'.iz-row{display:grid;grid-template-columns:minmax(190px,1.5fr) 74px minmax(130px,1fr) 60px minmax(130px,1fr) 104px;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #F1F5F9;cursor:pointer}.iz-row:hover{background:#F8FAFC}.iz-row.sec{background:#F0FDFA}'
+   +'@media(min-width:761px){#izGovde{overflow-y:auto;overscroll-behavior:contain}#izGovde .iz-row.hd{position:sticky;top:0;z-index:2}}'
    +'.iz-row.hd{cursor:default;background:#F8FAFC;font-size:10px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.3px;padding:7px 14px}.iz-grp{padding:6px 14px;background:#EEF2F7;font-size:11px;font-weight:800;color:#1E3A5F}'
    +'.iz-who{display:flex;align-items:center;gap:8px;min-width:0}.iz-who .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iz-who small{display:block;color:var(--soft);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
    +'.iz-av{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}'
@@ -2062,7 +2063,7 @@ function _izinCiz(sadeceListe){
     return '<div id="izTakvim">'+h+'</div>';
   };
   var govde=_izGor==='takvim'?takvim():liste;
-  if(sadeceListe && document.getElementById('izGovde')){ document.getElementById('izGovde').innerHTML=govde; return; }
+  if(sadeceListe && document.getElementById('izGovde')){ var _g=document.getElementById('izGovde'); _g.innerHTML=govde; _g.scrollTop=0; return; }
   // ── Özet şeridi + ekip uyarısı ──
   var topKal=0; FA.forEach(function(p){ topKal+=D[p.id].kal; });
   var eksi=FA.filter(function(p){ return D[p.id].kal<0; }).length;
@@ -2080,7 +2081,18 @@ function _izinCiz(sadeceListe){
   var chip=function(k,ad){ return '<button type="button" class="iz-chip'+(_izChip===k?' on':'')+'" id="izChip_'+k+'" onclick="izinFiltre(\'chip\',\''+k+'\')">'+ad+' '+L[k].length+'</button>'; };
   var chips='<div class="iz-chips">'+chip('tumu','Tümü')+chip('izinde','🟢 İzinde')+chip('yaklasan','📅 Yaklaşan')+chip('dikkat','⚠️ Dikkat')+(R.yaz?chip('ayrilan','🚪 Ayrılanlar'):'')+'</div>';
   alan.innerHTML=ust(bas+ser+arac+chips+'<div id="izGovde">'+govde+'</div>')+_izDrawerHtml();
+  _izYukseklik();
 }
+// Üst bölüm (başlık, özet, arama, filtreler) sabit; personel listesi / takvim kendi içinde kayar (v56)
+function _izYukseklik(){
+  var g=document.getElementById('izGovde'); if(!g || !_izAcik) return;
+  if(window.innerWidth<=760){ g.style.maxHeight=''; return; }   // telefonda sayfa normal kayar (Müdür kararı)
+  var ust=g.getBoundingClientRect().top+window.scrollY, y=window.innerHeight-ust-16;
+  g.style.maxHeight=Math.max(320, Math.floor(y))+'px';
+  var fazla=document.documentElement.scrollHeight-window.innerHeight;   // alttaki logo/alt bilgi de ekrana sığsın
+  if(fazla>0) g.style.maxHeight=Math.max(320, Math.floor(y-fazla))+'px';
+}
+window.addEventListener('resize', function(){ if(typeof _izAcik!=='undefined' && _izAcik) _izYukseklik(); });
 // ── Personel kartı (sağdan açılan panel; telefonda alttan) ──
 function izinSec(id){ _izSec=id||''; _izinCiz(); }
 function izinSecKapa(){ _izSec=''; _izinCiz(); }
