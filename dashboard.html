@@ -1459,7 +1459,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-05c';
+var SURUM='2026-11-05d';
 (function(){
   var son=0;
   function bant(){
@@ -1504,34 +1504,118 @@ function _crSTBul(){   // plasiyer → {st, gy}; birebir, yoksa tek harf farkı 
     if(!r){ var a=l.filter(function(x){ return lev(x,k)<=1; }); r=a.length===1?m[a[0]]:null; } on[k]=r; return r; };
 }
 // Ham dosya → kompakt kayıtlar (tarih aralığı değişince yeniden okumadan hesaplanır)
+// Başlık satırından satır işleyici kurar (başlıklar uymazsa null). SheetJS ile okuma ve büyük dosyada akışlı okuma bunu ortak kullanır.
+function _crIsleyici(basRow, sayfa){
+  var bas=(basRow||[]).map(_bkKat), ix=function(a){ for(var j=0;j<bas.length;j++){ if(a.indexOf(bas[j])>-1) return j; } return -1; };
+  var iP=ix(['PLASIYER','SATISTEMSILCISI','TEMSILCI']), iG=ix(['URUNKATEGORI','URUNGRUBU']), iB=ix(['BRUTFIYAT','BRUTTUTAR','BRUT']);
+  if(iP<0 || iG<0) return null;
+  if(iB<0) throw new Error('"'+_bkTemiz(sayfa,40)+'" sayfasında "Brüt Fiyat" sütunu bulunamadı.');
+  var iT=ix(['TARIH','FATURATARIHI','BELGETARIHI','EVRAKTARIHI']), iC=ix(['CARIKODU']), iA=ix(['CARIUNVANI','CARIADI']), iUK=ix(['URUNKOD','URUNKODU']), iU=ix(['URUN','URUNADI']), iQ=ix(['MIKTARPAK','MIKTAR']), iN=ix(['NETFIYAT','NETTUTAR']), iKG=ix(['BIRIMDONUSUMKG','TONAJ','KG']), iK=ix(['BAYIKATEGORI','MUSTERIGRUBU','CARIGRUBU','CARIKATEGORI']), iTC=ix(['TESLIMCARI']);
+  var K={p:[],g:[],u:[],ua:[],ug:[],c:[],ca:[],k:[],t:[],ta:[]}, X={p:Object.create(null),g:Object.create(null),u:Object.create(null),c:Object.create(null),k:Object.create(null),t:Object.create(null)};
+  var id=function(t,k){ var x=X[t][k]; if(x===undefined){ x=X[t][k]=K[t].length; K[t].push(k); } return x; };
+  var R=[], tmin='', tmax='';
+  return {
+    ekle:function(x){
+      if(!x) return;
+      var pl=_bkTemiz(x[iP],80), g=_bkTemiz(x[iG],40), b=_bkSayi(x[iB]);
+      if(!pl || /toplam/i.test(pl) || !g || Math.abs(b)<0.005) return;
+      var t=iT>-1?_crTarih(x[iT]):''; if(t){ if(!tmin||t<tmin) tmin=t; if(!tmax||t>tmax) tmax=t; }
+      var uk=_bkTemiz(iUK>-1?x[iUK]:'',20), ua=_bkTemiz(iU>-1?x[iU]:'',100), ukey=uk||ua;
+      var ui=X.u[ukey]; if(ui===undefined){ ui=id('u',ukey); K.ua[ui]=ua||uk; K.ug[ui]=g; }
+      var ck=_bkTemiz(iC>-1?x[iC]:'',20), ca=_bkTemiz(iA>-1?x[iA]:'',100), ckey=ck||ca;
+      var ci=X.c[ckey]; if(ci===undefined){ ci=id('c',ckey); K.ca[ci]=ca||ck; }
+      // Teslim Cari (v60b): zincir marketlerde fatura merkeze (Cari Kodu), mal şubeye (Teslim Cari) gider; rut listesi şube kodunu kullanır → yalnız Rut Kartı kullanır, ciro hesabı değişmez
+      var tc=iTC>-1?_bkTemiz(x[iTC],140):'', tm=tc?/^\s*(\d+)\s*-\s*(.*)$/.exec(tc):null, tk=tm?tm[1]:ck, ti=X.t[tk]; if(ti===undefined){ ti=id('t',tk); K.ta[ti]=tm?tm[2].trim():(ca||ck); }
+      R.push([id('p',pl), t, id('g',g), ui, ci, b, iQ>-1?_bkSayi(x[iQ]):0, id('k',(iK>-1?_bkTemiz(x[iK],40):'')||'(Belirsiz)'), iN>-1?_bkSayi(x[iN]):0, iKG>-1?_bkSayi(x[iKG]):0, ti]);
+    },
+    bitir:function(){
+      if(!R.length) throw new Error('Dosyada satış satırı bulunamadı.');
+      return {K:K, R:R, tmin:tmin, tmax:tmax, tarihli:iT>-1, sayfa:sayfa};
+    }
+  };
+}
+var CR_BASLIK_YOK='"Plasiyer", "Ürün Kategori" ve "Brüt Fiyat" başlıkları bulunamadı. Octapull "İki Tarih Arası Fatura Raporu" dosyasını yükleyin.';
 function ciroExcelCoz(wb){
   for(var si=0; si<wb.SheetNames.length; si++){
     var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[si]], {header:1, defval:'', raw:true});
     for(var h=0; h<Math.min(rows.length,15); h++){
-      var bas=(rows[h]||[]).map(_bkKat), ix=function(a){ for(var j=0;j<bas.length;j++){ if(a.indexOf(bas[j])>-1) return j; } return -1; };
-      var iP=ix(['PLASIYER','SATISTEMSILCISI','TEMSILCI']), iG=ix(['URUNKATEGORI','URUNGRUBU']), iB=ix(['BRUTFIYAT','BRUTTUTAR','BRUT']);
-      if(iP<0 || iG<0) continue;
-      if(iB<0) throw new Error('"'+_bkTemiz(wb.SheetNames[si],40)+'" sayfasında "Brüt Fiyat" sütunu bulunamadı.');
-      var iT=ix(['TARIH','FATURATARIHI','BELGETARIHI','EVRAKTARIHI']), iC=ix(['CARIKODU']), iA=ix(['CARIUNVANI','CARIADI']), iUK=ix(['URUNKOD','URUNKODU']), iU=ix(['URUN','URUNADI']), iQ=ix(['MIKTARPAK','MIKTAR']), iN=ix(['NETFIYAT','NETTUTAR']), iKG=ix(['BIRIMDONUSUMKG','TONAJ','KG']), iK=ix(['BAYIKATEGORI','MUSTERIGRUBU','CARIGRUBU','CARIKATEGORI']);
-      var K={p:[],g:[],u:[],ua:[],ug:[],c:[],ca:[],k:[]}, X={p:Object.create(null),g:Object.create(null),u:Object.create(null),c:Object.create(null),k:Object.create(null)};
-      var id=function(t,k){ var x=X[t][k]; if(x===undefined){ x=X[t][k]=K[t].length; K[t].push(k); } return x; };
-      var R=[], tmin='', tmax='';
-      for(var r=h+1; r<rows.length; r++){
-        var x=rows[r]; if(!x) continue;
-        var pl=_bkTemiz(x[iP],80), g=_bkTemiz(x[iG],40), b=_bkSayi(x[iB]);
-        if(!pl || /toplam/i.test(pl) || !g || Math.abs(b)<0.005) continue;
-        var t=iT>-1?_crTarih(x[iT]):''; if(t){ if(!tmin||t<tmin) tmin=t; if(!tmax||t>tmax) tmax=t; }
-        var uk=_bkTemiz(iUK>-1?x[iUK]:'',20), ua=_bkTemiz(iU>-1?x[iU]:'',100), ukey=uk||ua;
-        var ui=X.u[ukey]; if(ui===undefined){ ui=id('u',ukey); K.ua[ui]=ua||uk; K.ug[ui]=g; }
-        var ck=_bkTemiz(iC>-1?x[iC]:'',20), ca=_bkTemiz(iA>-1?x[iA]:'',100), ckey=ck||ca;
-        var ci=X.c[ckey]; if(ci===undefined){ ci=id('c',ckey); K.ca[ci]=ca||ck; }
-        R.push([id('p',pl), t, id('g',g), ui, ci, b, iQ>-1?_bkSayi(x[iQ]):0, id('k',(iK>-1?_bkTemiz(x[iK],40):'')||'(Belirsiz)'), iN>-1?_bkSayi(x[iN]):0, iKG>-1?_bkSayi(x[iKG]):0]);
-      }
-      if(!R.length) throw new Error('Dosyada satış satırı bulunamadı.');
-      return {K:K, R:R, tmin:tmin, tmax:tmax, tarihli:iT>-1, sayfa:wb.SheetNames[si]};
+      var P=_crIsleyici(rows[h], wb.SheetNames[si]); if(!P) continue;
+      for(var r=h+1; r<rows.length; r++) P.ekle(rows[r]);
+      return P.bitir();
     }
   }
-  throw new Error('"Plasiyer", "Ürün Kategori" ve "Brüt Fiyat" başlıkları bulunamadı. Octapull "İki Tarih Arası Fatura Raporu" dosyasını yükleyin.');
+  throw new Error(CR_BASLIK_YOK);
+}
+// ===== Büyük Excel (v60b): dosya tek parça belleğe alınmadan açılır, satır satır okunur.
+// SheetJS, 100 MB üstü Octapull dosyasında (açılmış sayfa 700+ MB) tarayıcının metin sınırına takılıp sayfayı boş okuyordu.
+var XL_AKIS_ESIK=25*1024*1024;
+function _xlZipDizin(file){
+  var son=Math.min(file.size, 65557+22);
+  return file.slice(file.size-son).arrayBuffer().then(function(ab){
+    var d=new DataView(ab), i; for(i=ab.byteLength-22; i>=0; i--){ if(d.getUint32(i,true)===0x06054b50) break; }
+    if(i<0) throw new Error('Dosya bir Excel (.xlsx) dosyası değil ya da bozuk.');
+    var n=d.getUint16(i+10,true), boy=d.getUint32(i+12,true), ofs=d.getUint32(i+16,true);
+    return file.slice(ofs, ofs+boy).arrayBuffer().then(function(cb){
+      var v=new DataView(cb), p=0, L={}, td=new TextDecoder();
+      for(var k=0;k<n && p+46<=cb.byteLength;k++){
+        if(v.getUint32(p,true)!==0x02014b50) break;
+        var yon=v.getUint16(p+10,true), cs=v.getUint32(p+20,true), adN=v.getUint16(p+28,true), ekN=v.getUint16(p+30,true), yrN=v.getUint16(p+32,true), lo=v.getUint32(p+42,true);
+        L[td.decode(new Uint8Array(cb, p+46, adN))]={yon:yon, cs:cs, lo:lo}; p+=46+adN+ekN+yrN;
+      }
+      return L;
+    });
+  });
+}
+function _xlZipMetinAkis(file, g, parca){   // açılan her metin parçası için parca(t); false dönerse durur
+  return file.slice(g.lo, g.lo+30).arrayBuffer().then(function(hb){
+    var h=new DataView(hb), bas=g.lo+30+h.getUint16(26,true)+h.getUint16(28,true), akis=file.slice(bas, bas+g.cs).stream();
+    if(g.yon===8){ if(typeof DecompressionStream==='undefined') throw new Error('Bu tarayıcı büyük dosyayı açamıyor; Chrome ya da Edge\'in güncel sürümünü kullanın.'); akis=akis.pipeThrough(new DecompressionStream('deflate-raw')); }
+    else if(g.yon!==0) throw new Error('Excel dosyasının sıkıştırma biçimi desteklenmiyor.');
+    var oku=akis.pipeThrough(new TextDecoderStream()).getReader();
+    var dongu=function(){ return oku.read().then(function(r){ if(r.done) return; if(parca(r.value)===false){ oku.cancel(); return; } return dongu(); }); };
+    return dongu();
+  });
+}
+function _xlCoz(s){ return s.indexOf('&')<0?s:s.replace(/&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);/g,function(m,e){ return e==='amp'?'&':e==='lt'?'<':e==='gt'?'>':e==='quot'?'"':e==='apos'?"'":String.fromCodePoint(e[1]==='x'?parseInt(e.slice(2),16):parseInt(e.slice(1),10)); }); }
+function _xlMetin(ic){ var m, t='', re=/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g; while((m=re.exec(ic))) t+=m[1]; return _xlCoz(t); }
+function _xlSutun(h){ var n=0; for(var i=0;i<h.length;i++){ var c=h.charCodeAt(i); if(c<65||c>90) break; n=n*26+(c-64); } return n-1; }
+// Büyük Octapull dosyasını akışla okur; sonuç ciroExcelCoz ile aynı biçimdedir
+function ciroExcelAkis(file, ilerle){
+  var L, SS=null;
+  return _xlZipDizin(file).then(function(x){ L=x;
+    var ss=L['xl/sharedStrings.xml']; if(!ss) return;
+    SS=[]; var kalan='';
+    return _xlZipMetinAkis(file, ss, function(t){ kalan+=t; var son=kalan.lastIndexOf('</si>'); if(son<0) return; var blok=kalan.slice(0,son+5); kalan=kalan.slice(son+5);
+      var m, re=/<si>([\s\S]*?)<\/si>|<si\/>/g; while((m=re.exec(blok))) SS.push(m[1]?_xlMetin(m[1]):''); });
+  }).then(function(){
+    var sayfalar=Object.keys(L).filter(function(a){ return /^xl\/worksheets\/sheet\d+\.xml$/.test(a); }).sort(function(a,b){ return parseInt(a.replace(/\D/g,''),10)-parseInt(b.replace(/\D/g,''),10); });
+    if(!sayfalar.length) throw new Error('Excel dosyasında sayfa bulunamadı.');
+    var toplam=0; sayfalar.forEach(function(a){ toplam+=L[a].cs; });
+    var si=0, okunan=0, sonuc=null, sonY=-1;
+    var sonraki=function(){
+      if(sonuc || si>=sayfalar.length){ if(!sonuc) throw new Error(CR_BASLIK_YOK); return sonuc; }
+      var ad=sayfalar[si++], g=L[ad], P=null, satir=0, kalan='', bayt=0;
+      var reS=/<row\b[^>]*>([\s\S]*?)<\/row>|<row\b[^>]*\/>/g, reC=/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
+      return _xlZipMetinAkis(file, g, function(t){
+        kalan+=t; bayt+=t.length; var son=kalan.lastIndexOf('</row>'); if(son<0) return; var blok=kalan.slice(0,son+6); kalan=kalan.slice(son+6);
+        var m; reS.lastIndex=0;
+        while((m=reS.exec(blok))){
+          var x=[], c, ic=m[1]||''; reC.lastIndex=0;
+          while((c=reC.exec(ic))){
+            var at=c[1], ref=/\br="([A-Z]+)\d*"/.exec(at), j=ref?_xlSutun(ref[1]):x.length, tip=(/\bt="([^"]+)"/.exec(at)||[])[1]||'n', govde=c[2]||'', v;
+            if(tip==='inlineStr') v=_xlMetin(govde);
+            else { var vv=/<v>([\s\S]*?)<\/v>/.exec(govde); v=vv?vv[1]:''; if(tip==='s') v=SS?(SS[+v]||''):''; else if(tip==='str'||tip==='e') v=_xlCoz(v); else if(tip==='b') v=(v==='1'); else if(v!=='') v=Number(v); }
+            while(x.length<j) x.push(''); x[j]=v;
+          }
+          satir++;
+          if(!P){ if(satir>15) return false; P=_crIsleyici(x, 'Rapor'); continue; }
+          P.ekle(x);
+        }
+        if(ilerle){ var y=Math.min(99, Math.round((okunan + g.cs*Math.min(1, bayt/(g.cs*6.5)))/toplam*100)); if(y!==sonY){ sonY=y; ilerle(y); } }
+      }).then(function(){ okunan+=g.cs; if(P) sonuc=P.bitir(); return sonraki(); });
+    };
+    return sonraki();
+  });
 }
 // Seçilen tarih aralığında ST / GY özetleri ve ST detayları
 function ciroHesapla(coz, bas, bit){
@@ -2641,13 +2725,13 @@ function rkHesapla(coz){
   coz.R.forEach(function(x){
     if(!x[1] || x[1]<bas) return; var wi=hix[_rkPzt(x[1])]; if(wi===undefined) return;
     var pl=K.p[x[0]], tm=bul(pl); if(!tm) eslesmeyen[pl]=1;
-    var c=C[x[4]]||(C[x[4]]={sts:Object.create(null), gys:Object.create(null), stT:Object.create(null), kat:K.k[x[7]], u:Object.create(null), son:''});
+    var mk=(x[10]!==undefined && K.t)?'t'+x[10]:'c'+x[4], c=C[mk]||(C[mk]={sts:Object.create(null), gys:Object.create(null), stT:Object.create(null), kat:K.k[x[7]], u:Object.create(null), son:''});
     var st=tm?tm.st:'', gy=tm?tm.gy:''; if(st){ c.sts[st]=1; c.stT[st]=(c.stT[st]||0)+x[5]; } if(gy) c.gys[gy]=1;
     if(x[1]>c.son) c.son=x[1];
     var u=c.u[x[3]]||(c.u[x[3]]={p:new Array(n).fill(0), t:new Array(n).fill(0), n:new Array(n).fill(0), kg:new Array(n).fill(0)});
     u.p[wi]+=x[6]; u.t[wi]+=x[5]; u.n[wi]+=(x[8]||0); u.kg[wi]+=(x[9]||0);
   });
-  var belgeler=Object.keys(C).map(function(ci){ var c=C[ci], kod=K.c[ci], ad=K.ca[ci]||kod;
+  var belgeler=Object.keys(C).map(function(mk){ var c=C[mk], ci=+mk.slice(1), tes=mk[0]==='t', kod=tes?K.t[ci]:K.c[ci], ad=(tes?K.ta[ci]:K.ca[ci])||kod;
     var stl=Object.keys(c.sts).sort(function(a,b){ return c.stT[b]-c.stT[a]; });
     return {id:rkKimlik(kod), v:{k:kod, a:ad, gr:c.kat||'', st:stl[0]||'', sts:stl, gys:Object.keys(c.gys), son:c.son, h:H, hk:HK, ht:HT,
       u:Object.keys(c.u).map(function(ui){ var u=c.u[ui]; return {a:K.ua[ui], k:(K.u[ui]===K.ua[ui]?'':K.u[ui]), g:K.ug[ui], p:u.p.map(Math.round), t:u.t.map(r2), n:u.n.map(r2), kg:u.kg.map(function(v){ return Math.round(v*100)/100; })}; })}};
@@ -2756,12 +2840,25 @@ function rkDosyaOku(files){
   if(files.length>1) return _rkCokluOku(files);
   if(!file) return; _rkHataG(''); _rkYukle=null; var on=document.getElementById('rkOnizleme'), btn=document.getElementById('rkYukleBtn'); btn.style.display='none';
   on.textContent='⏳ "'+file.name+'" okunuyor… (büyük dosyada 30-60 sn sürebilir, sayfayı kapatmayın)';
+  if(file.size>XL_AKIS_ESIK && /\.xlsx$/i.test(file.name)){
+    var yaz=function(y){ on.textContent='⏳ "'+file.name+'" büyük dosya ('+Math.round(file.size/1048576)+' MB) satır satır okunuyor… %'+y+' · 1-3 dk sürebilir, sayfayı kapatmayın'; }; yaz(0);
+    ciroExcelAkis(file, yaz).then(function(coz){ _rkOctOnizle(coz, file); }).catch(function(err){ on.textContent=''; _rkHataG('⚠️ '+((err&&err.message)||err)); });
+    return;
+  }
   var r=new FileReader();
   r.onload=function(e){ setTimeout(function(){
     try{
       var wb=XLSX.read(e.target.result,{type:'array', dense:true}), P=rkPbiCoz(wb);
       if(P){ _rkPbiOnizle(P, file.name); return; }
-      var coz=ciroExcelCoz(wb), H=rkHesapla(coz);
+      _rkOctOnizle(ciroExcelCoz(wb), file);
+    }catch(err){ on.textContent=''; _rkHataG('⚠️ '+err.message); }
+  }, 30); };
+  r.readAsArrayBuffer(file);
+}
+function _rkOctOnizle(coz, file){
+  var on=document.getElementById('rkOnizleme'), btn=document.getElementById('rkYukleBtn');
+    try{
+      var H=rkHesapla(coz);
       _rkYukle={H:H, dosya:_bkTemiz(file.name,120), bas:coz.tmin, bit:coz.tmax};
       on.innerHTML='<b>Önizleme</b><br>📅 Dosya: <b>'+_bkTarihTr(coz.tmin)+' – '+_bkTarihTr(coz.tmax)+'</b> · '+H.H.length+' hafta (Hf '+_rkHafta(H.H[0])+' – Hf '+_rkHafta(H.H[H.H.length-1])+')'
         +'<br>🏪 '+H.belgeler.length.toLocaleString('tr-TR')+' müşteri kartı'+(H.HK.some(function(x,i){ return x<H.HT[i]; })?' · eksik hafta: '+H.H.filter(function(w,i){ return H.HK[i]<H.HT[i]; }).map(function(w,i){ return 'Hf '+_rkHafta(w); }).join(', ')+' (karşılaştırmaya girmez)':'')+(H.merkezsiz?' · '+H.merkezsiz+' müşteri yalnız Merkez/eşleşmeyen plasiyerde (yalnız Müdür görür)':'')
@@ -2769,8 +2866,6 @@ function rkDosyaOku(files){
         +(H.H.length<7?'<div style="color:#B45309;margin-top:4px;">⚠️ Dosya '+H.H.length+' hafta içeriyor; kıyas için 7–8 hafta önerilir.</div>':'');
       btn.style.display='block';
     }catch(err){ on.textContent=''; _rkHataG('⚠️ '+err.message); }
-  }, 30); };
-  r.readAsArrayBuffer(file);
 }
 var RK_OLCU_AD={p:'Paket', t:'Brüt ₺', n:'Net ₺', kg:'Tonaj'};
 function _rkPbiOnizle(P, dosyaAd){
