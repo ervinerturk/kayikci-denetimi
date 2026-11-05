@@ -1459,7 +1459,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-05a';
+var SURUM='2026-11-05b';
 (function(){
   var son=0;
   function bant(){
@@ -1661,6 +1661,11 @@ function ciroSonYukleme(){
 // ── Veri okuma ──
 function _crTekil(z){ if(!z || typeof z!=='object' || z.m==null) return null; var o={m:Math.round(_bkSayi(z.m)), g:Object.create(null), k:Object.create(null)};
   (Array.isArray(z.g)?z.g:[]).forEach(function(q){ o.g[_bkTemiz(q&&q.a,40)||'(Grupsuz)']=Math.round(_bkSayi(q&&q.m)); }); (Array.isArray(z.k)?z.k:[]).forEach(function(q){ o.k[_bkTemiz(q&&q.a,40)||'(Belirsiz)']=Math.round(_bkSayi(q&&q.m)); }); return o; }
+// v59: dönemdeki iş günü (Pazar ve dini bayram hariç; Cumartesi, arife ve resmi tatil çalışılan gün) — İzin Takip ile aynı takvim
+function _crIsGunu(bas, bit){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(bas||'') || !/^\d{4}-\d{2}-\d{2}$/.test(bit||'') || bit<bas) return 0;
+  var n=0, g=bas, i=0; while(g<=bit && i<400){ if(_izCalisma(g)) n++; g=_izEkle(g,1); i++; } return n;
+}
 function ciroVeriOku(){
   if(!db || !_dashKullanici) return;
   _crYuk=true; _ciroCiz();
@@ -1734,7 +1739,7 @@ function _ciroCiz(){
     +'<div style="font-size:12px;color:var(--mid);">📅 Dönem: <b>'+(V.bas?_bkTarihTr(V.bas)+' – '+_bkTarihTr(V.bit):'—')+'</b> · Yükleme: '+_bkZamanTr(V.yuklendi)+(gyF?' · '+_kac(gyF):'')+(stF?' · '+_kac(stF):'')+'</div>'+yukleBtn+'</div>';
   var kutu=function(v,l){ return '<div style="background:#F0FDFA;border-radius:10px;padding:10px;text-align:center;"><b style="display:block;font-size:17px;color:#0F766E;">'+v+'</b><span style="font-size:10px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
   h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px;">'
-    +kutu(_bkKisa(top),'Brüt Ciro')+kutu(dl.length,'Satış Temsilcisi')+kutu(dl.length?_bkKisa(top/dl.length):'—','ST Başına Ortalama')+kutu(mus.toLocaleString('tr-TR'),'SYMS (müşteri)')+'</div>';
+    +kutu(_bkKisa(top),'Brüt Ciro')+kutu(dl.length,'Satış Temsilcisi')+kutu(dl.length?_bkKisa(top/dl.length):'—','ST Başına Ortalama')+kutu(_crIsGunu(V.bas,V.bit)&&dl.length?_bkKisa(top/dl.length/_crIsGunu(V.bas,V.bit)):'—','Araç Günlük Ortalama'+(_crIsGunu(V.bas,V.bit)?' ('+_crIsGunu(V.bas,V.bit)+' iş günü)':''))+kutu(mus.toLocaleString('tr-TR'),'SYMS (müşteri)')+'</div>';
   // Grup tabloları: Grup | Brüt Ciro | Pay | SYMS — mobilde de hizalı (v53)
   var gTablo=function(baslik, liste, tutar, symsMap, attr){
     var th='style="font-size:10px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.3px;padding:6px 4px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;"';
