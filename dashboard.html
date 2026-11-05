@@ -1459,7 +1459,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-05b';
+var SURUM='2026-11-05c';
 (function(){
   var son=0;
   function bant(){
@@ -1512,7 +1512,7 @@ function ciroExcelCoz(wb){
       var iP=ix(['PLASIYER','SATISTEMSILCISI','TEMSILCI']), iG=ix(['URUNKATEGORI','URUNGRUBU']), iB=ix(['BRUTFIYAT','BRUTTUTAR','BRUT']);
       if(iP<0 || iG<0) continue;
       if(iB<0) throw new Error('"'+_bkTemiz(wb.SheetNames[si],40)+'" sayfasında "Brüt Fiyat" sütunu bulunamadı.');
-      var iT=ix(['TARIH','FATURATARIHI','BELGETARIHI','EVRAKTARIHI']), iC=ix(['CARIKODU']), iA=ix(['CARIUNVANI','CARIADI']), iUK=ix(['URUNKOD','URUNKODU']), iU=ix(['URUN','URUNADI']), iQ=ix(['MIKTARPAK','MIKTAR']), iK=ix(['BAYIKATEGORI','MUSTERIGRUBU','CARIGRUBU','CARIKATEGORI']);
+      var iT=ix(['TARIH','FATURATARIHI','BELGETARIHI','EVRAKTARIHI']), iC=ix(['CARIKODU']), iA=ix(['CARIUNVANI','CARIADI']), iUK=ix(['URUNKOD','URUNKODU']), iU=ix(['URUN','URUNADI']), iQ=ix(['MIKTARPAK','MIKTAR']), iN=ix(['NETFIYAT','NETTUTAR']), iKG=ix(['BIRIMDONUSUMKG','TONAJ','KG']), iK=ix(['BAYIKATEGORI','MUSTERIGRUBU','CARIGRUBU','CARIKATEGORI']);
       var K={p:[],g:[],u:[],ua:[],ug:[],c:[],ca:[],k:[]}, X={p:Object.create(null),g:Object.create(null),u:Object.create(null),c:Object.create(null),k:Object.create(null)};
       var id=function(t,k){ var x=X[t][k]; if(x===undefined){ x=X[t][k]=K[t].length; K[t].push(k); } return x; };
       var R=[], tmin='', tmax='';
@@ -1525,7 +1525,7 @@ function ciroExcelCoz(wb){
         var ui=X.u[ukey]; if(ui===undefined){ ui=id('u',ukey); K.ua[ui]=ua||uk; K.ug[ui]=g; }
         var ck=_bkTemiz(iC>-1?x[iC]:'',20), ca=_bkTemiz(iA>-1?x[iA]:'',100), ckey=ck||ca;
         var ci=X.c[ckey]; if(ci===undefined){ ci=id('c',ckey); K.ca[ci]=ca||ck; }
-        R.push([id('p',pl), t, id('g',g), ui, ci, b, iQ>-1?_bkSayi(x[iQ]):0, id('k',(iK>-1?_bkTemiz(x[iK],40):'')||'(Belirsiz)')]);
+        R.push([id('p',pl), t, id('g',g), ui, ci, b, iQ>-1?_bkSayi(x[iQ]):0, id('k',(iK>-1?_bkTemiz(x[iK],40):'')||'(Belirsiz)'), iN>-1?_bkSayi(x[iN]):0, iKG>-1?_bkSayi(x[iKG]):0]);
       }
       if(!R.length) throw new Error('Dosyada satış satırı bulunamadı.');
       return {K:K, R:R, tmin:tmin, tmax:tmax, tarihli:iT>-1, sayfa:wb.SheetNames[si]};
@@ -1715,7 +1715,8 @@ function _ciroCiz(){
   var alan=document.getElementById('ciroAlan'); if(!alan || !_crAcik) return;
   var md=_dashKullanici && !_dashKullanici.gy && !_dashKullanici.operator;
   var kart=function(ic){ return '<div class="card"><div class="card-head"><div class="card-ic" style="background:#CCFBF1;">📈</div><div class="card-title">Ciro — Ürün Grubu Bazında (Brüt)</div></div><div class="card-body">'+ic+'</div></div>'; };
-  var yukleBtn=(md&&!_dashKullanici.izleyici)?'<button type="button" onclick="ciroYuklePaneliAc()" style="background:#F0FDFA;color:#0F766E;border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">⬆ Ciro Yükle</button>':'';
+  var rkBtn=(md&&!_dashKullanici.izleyici)?'<button type="button" id="rkYukleAc" onclick="rkYuklePaneliAc()" style="background:#EEF2F7;color:#1E3A5F;border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;margin-right:6px;">📋 Rut Kartı Yükle</button>':'';
+  var yukleBtn=(md&&!_dashKullanici.izleyici)?rkBtn+'<button type="button" onclick="ciroYuklePaneliAc()" style="background:#F0FDFA;color:#0F766E;border:none;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer;">⬆ Ciro Yükle</button>':'';
   if(_crYuk && !_crVeri){ alan.innerHTML=kart('<div style="padding:16px;text-align:center;color:var(--mid);">⏳ Yükleniyor…</div>'); return; }
   if(!_crVeri){ alan.innerHTML=''; return; }
   if(_crVeri.hata){ alan.innerHTML=kart(_hataHtml('Ciro raporu',_crVeri.hata,'ciroVeriOku')); return; }
@@ -1772,7 +1773,7 @@ function _ciroCiz(){
       +D.u.slice().sort(function(a,b){ return b.t-a.t; }).map(function(z){ return '<tr><td>'+_kac(z.a)+'</td><td style="white-space:nowrap;font-size:11px;">'+_kac(z.g)+'</td><td class="num">'+z.p.toLocaleString('tr-TR')+'</td><td class="num" style="white-space:nowrap;font-weight:700;">'+_bkPara(z.t)+'</td></tr>'; }).join('')
       +'</tbody></table></div></div>'
       +'<div style="min-width:0;">'+secHd('🏪 Müşteriler (en yüksek ciro üstte) · '+D.c.length)+'<div style="max-height:360px;overflow:auto;"><table class="tbl" style="font-size:12px;"><thead><tr><th>Müşteri</th><th class="num">Ciro</th></tr></thead><tbody>'
-      +D.c.map(function(z){ return '<tr><td>'+_kac(z.a)+(z.k?' <span style="font-size:10px;color:var(--soft);">'+_kac(z.k)+'</span>':'')+'</td><td class="num" style="white-space:nowrap;font-weight:700;">'+_bkPara(z.t)+'</td></tr>'; }).join('')
+      +D.c.map(function(z){ return '<tr><td>'+(z.k?'<a href="javascript:void(0)" class="rk-ac" data-rk-k="'+_kac(z.k)+'" data-rk-a="'+_kac(z.a)+'" onclick="rkKartAc(this.getAttribute(\'data-rk-k\'),this.getAttribute(\'data-rk-a\'))" title="Rut kartı" style="text-decoration:none;margin-right:4px;">📋</a>':'')+_kac(z.a)+(z.k?' <span style="font-size:10px;color:var(--soft);">'+_kac(z.k)+'</span>':'')+'</td><td class="num" style="white-space:nowrap;font-weight:700;">'+_bkPara(z.t)+'</td></tr>'; }).join('')
       +'</tbody></table></div></div></div>';
     return ut;
   };
@@ -2509,6 +2510,298 @@ function yonetimEkrani(){
   if(!document.getElementById('yoCss')){ var st=document.createElement('style'); st.id='yoCss'; st.textContent='body.izleyici .ozet-bar, body.izleyici #icerik{display:none!important}@media(max-width:600px){.yo-kpi{grid-template-columns:1fr 1fr!important}.yo-kpi b{font-size:16px!important}.yo-tbl th,.yo-tbl td{padding:6px 4px!important;font-size:11px!important}.yo-tbl td:first-child{white-space:normal!important}}'; document.head.appendChild(st); }
   document.body.classList.add('izleyici');
   _yoGorunum(); yonetimOku();
+}
+
+// ===== 📋 RUT KARTI (v60) — müşterinin haftalık ürün alımı (Paket / Brüt / Net / Tonaj) =====
+// Kaynak: Müdür'ün yüklediği Octapull "İki Tarih Arası Fatura Raporu" → rutKarti/{cari kodu} (müşteri başına bir belge).
+// Sunucu kuralı: Müdür hepsini, GY yalnız kendi ekibinin (gys), ST yalnız kendi (sts) müşterisini okur. Ortak kod: GY formu, ST Paneli, Müdür paneli.
+var RK={olcu:'p', doc:null, meta:null, kod:'', yuk:false, hata:'', liste:null, ara:''};
+var RK_OLCU=[['p','Paket'],['t','Brüt ₺'],['n','Net ₺'],['kg','Tonaj (kg)']];
+function _rkDb(){ return (typeof db!=='undefined' && db) || (typeof _db!=='undefined' && _db) || null; }
+function _rkE(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function rkKimlik(k){ k=String(k==null?'':k).trim(); if(!k) return ''; return k.replace(/[^0-9A-Za-z_-]/g,'_').slice(0,60); }
+function _rkTr(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d||'')?d.slice(8,10)+'.'+d.slice(5,7):'—'; }
+function _rkHafta(d){ var t=new Date(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))); var g=(t.getUTCDay()+6)%7; t.setUTCDate(t.getUTCDate()-g+3); var y=new Date(Date.UTC(t.getUTCFullYear(),0,4)); return 1+Math.round(((t-y)/864e5-3+((y.getUTCDay()+6)%7))/7); }
+function _rkSay(x,o){ x=Number(x)||0; if(!x) return ''; return o==='kg'? (Math.round(x*10)/10).toLocaleString('tr-TR') : Math.round(x).toLocaleString('tr-TR'); }
+function _rkCss(){
+  if(document.getElementById('rkCss')) return;
+  var s=document.createElement('style'); s.id='rkCss';
+  s.textContent='#rkArka{position:fixed;inset:0;background:rgba(15,25,35,.45);z-index:9500}'
+   +'#rkPanel{position:fixed;left:0;right:0;bottom:0;max-height:92vh;background:#fff;border-radius:18px 18px 0 0;z-index:9501;display:flex;flex-direction:column;font-family:Inter,system-ui,sans-serif;color:#0F1923;box-shadow:0 -8px 30px rgba(15,25,35,.25)}'
+   +'@media(min-width:900px){#rkPanel{left:50%;right:auto;width:860px;transform:translateX(-50%);bottom:24px;border-radius:18px;max-height:88vh}}'
+   +'#rkPanel .rk-bas{padding:14px 16px 10px;border-bottom:1px solid #E2E8F0}#rkPanel .rk-ad{font-size:16px;font-weight:800;line-height:1.25}#rkPanel .rk-alt{font-size:11.5px;color:#64748B;margin-top:3px}'
+   +'#rkPanel .rk-x{position:absolute;right:12px;top:10px;border:none;background:#F1F5F9;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer}'
+   +'#rkPanel .rk-olcu{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}#rkPanel .rk-olcu button{border:none;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;background:#F1F5F9;color:#475569;cursor:pointer;font-family:inherit}#rkPanel .rk-olcu button.on{background:#1E3A5F;color:#fff}'
+   +'#rkPanel .rk-ozet{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}#rkPanel .rk-ozet div{background:#F8FAFC;border-radius:10px;padding:7px 8px}#rkPanel .rk-ozet b{display:block;font-size:15px;font-variant-numeric:tabular-nums}#rkPanel .rk-ozet span{font-size:10px;color:#64748B;font-weight:600}'
+   +'#rkPanel .rk-govde{overflow:auto;flex:1;-webkit-overflow-scrolling:touch}#rkPanel table{border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums;min-width:100%}'
+   +'#rkPanel th{position:sticky;top:0;background:#F1F5F9;font-size:10.5px;color:#475569;font-weight:800;padding:7px 6px;text-align:right;white-space:nowrap;z-index:2}#rkPanel th small{display:block;font-weight:600;color:#94A3B8;font-size:9.5px}'
+   +'#rkPanel td{padding:6px;text-align:right;white-space:nowrap;border-bottom:1px solid #F1F5F9}#rkPanel td.u,#rkPanel th.u{position:sticky;left:0;text-align:left;background:#fff;z-index:1;white-space:normal;min-width:150px;max-width:220px}#rkPanel th.u{z-index:3;background:#F1F5F9}'
+   +'#rkPanel td.u small{display:block;color:#94A3B8;font-size:10px}#rkPanel td.t{font-weight:800}#rkPanel tr.uy-kirmizi td.u{box-shadow:inset 3px 0 0 #DC2626}#rkPanel tr.uy-turuncu td.u{box-shadow:inset 3px 0 0 #F59E0B}#rkPanel td.bos-kirmizi{background:#FEF2F2}'
+   +'#rkPanel tr.top td{background:#0F766E;color:#fff;font-weight:800;position:sticky;bottom:0}#rkPanel tr.top td.u{background:#0F766E}'
+   +'#rkPanel .rk-not{font-size:10.5px;color:#64748B;padding:8px 16px 12px;border-top:1px solid #E2E8F0;line-height:1.5}#rkPanel .rk-uyari{margin:8px 16px 0;background:#FFF7ED;color:#9A3412;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:600}'
+   +'#rkPanel .rk-mesaj{padding:28px 16px;text-align:center;color:#475569;font-size:13px;line-height:1.5}#rkPanel .rk-ara{width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:15px;margin-top:10px;font-family:inherit}'
+   +'#rkPanel .rk-mus{display:flex;justify-content:space-between;gap:8px;padding:11px 16px;border-bottom:1px solid #F1F5F9;cursor:pointer;font-size:13px}#rkPanel .rk-mus small{display:block;color:#94A3B8;font-size:11px}#rkPanel .rk-mus b{white-space:nowrap}';
+  document.head.appendChild(s);
+}
+function rkKapat(){ ['rkArka','rkPanel'].forEach(function(id){ var e=document.getElementById(id); if(e) e.remove(); }); }
+function _rkKutu(ic){
+  _rkCss(); rkKapat();
+  var a=document.createElement('div'); a.id='rkArka'; a.onclick=rkKapat; document.body.appendChild(a);
+  var p=document.createElement('div'); p.id='rkPanel'; p.setAttribute('role','dialog'); p.setAttribute('aria-label','Rut kartı'); p.innerHTML=ic; document.body.appendChild(p);
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && document.getElementById('rkPanel')) rkKapat(); });
+function _rkMeta(){
+  var d=_rkDb(); if(!d) return Promise.resolve(null); if(RK.meta) return Promise.resolve(RK.meta);
+  return d.collection('rutKarti').doc('_meta').get().then(function(x){ RK.meta=(x&&x.exists)?x.data():null; return RK.meta; }).catch(function(){ return null; });
+}
+// Kartı aç: cari kodu (rut / ciro listesinden) + görünen ad
+function rkKartAc(kod, ad){
+  var id=rkKimlik(kod); RK.kod=id; RK.doc=null; RK.hata='';
+  if(!id){ _rkKutu('<div class="rk-bas"><div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">Bu müşterinin cari kodu rut listesinde yok; rut kartı cari koduyla eşleşir.<br><small>Satış Müdürü rutu cari kodlu Excel ile güncellemeli.</small></div>'); return; }
+  var onb=null; try{ onb=JSON.parse(localStorage.getItem('kyk_rk_'+id)||'null'); }catch(e){}
+  if(onb && onb.doc){ RK.doc=onb.doc; RK.meta=RK.meta||onb.meta||null; rkCiz(ad, true); } else _rkKutu('<div class="rk-bas"><div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">⏳ Rut kartı yükleniyor…</div>');
+  var d=_rkDb(); if(!d){ if(!onb) RK.hata='Sunucuya bağlanılamadı.'; rkCiz(ad); return; }
+  Promise.all([d.collection('rutKarti').doc(id).get(), _rkMeta()]).then(function(s){
+    if(RK.kod!==id) return;
+    RK.doc=(s[0]&&s[0].exists)?s[0].data():{yok:true}; RK.hata='';
+    try{ if(!RK.doc.yok){ localStorage.setItem('kyk_rk_'+id, JSON.stringify({doc:RK.doc, meta:RK.meta, z:Date.now()})); var ks=Object.keys(localStorage).filter(function(k){ return k.indexOf('kyk_rk_')===0; }); if(ks.length>40) ks.slice(0,ks.length-40).forEach(function(k){ localStorage.removeItem(k); }); } }catch(e){}
+    rkCiz(ad);
+  }).catch(function(err){ if(RK.kod!==id) return; if(!onb){ RK.hata=/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok; bu müşterinin kartı daha önce bu cihazda açılmamış.':'Rut kartı okunamadı: '+((err&&err.message)||err); rkCiz(ad); } });
+}
+function rkOlcu(o){ RK.olcu=o; rkCiz(); }
+function rkCiz(ad, onbellek){
+  var D=RK.doc, M=RK.meta||{}, bas='<div class="rk-bas"><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button>';
+  if(RK.hata){ _rkKutu(bas+'<div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div></div><div class="rk-mesaj">'+_rkE(RK.hata)+'</div>'); return; }
+  if(!D) return;
+  if(D.yok){ _rkKutu(bas+'<div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div><div class="rk-alt">Cari: '+_rkE(RK.kod)+'</div></div><div class="rk-mesaj">Bu müşterinin yüklenen dönemde ('+_rkTr(M.bas)+' – '+_rkTr(M.bit)+') alım kaydı yok.</div>'); return; }
+  var VAR=RK_OLCU.filter(function(x){ return (D.u||[]).some(function(u){ return Array.isArray(u[x[0]]); }); }).map(function(x){ return x[0]; }); if(VAR.length && VAR.indexOf(RK.olcu)<0) RK.olcu=VAR[0];
+  var H=Array.isArray(D.h)?D.h:[], o=RK.olcu, U=(Array.isArray(D.u)?D.u:[]).map(function(u){ var v=(Array.isArray(u[o])?u[o]:[]).map(function(x){ return Number(x)||0; }); var t=0; v.forEach(function(x){ t+=x; }); return {a:u.a, k:u.k, g:u.g, v:v, t:t}; }).filter(function(u){ return Math.abs(u.t)>0.0001; }).sort(function(a,b){ return b.t-a.t; });
+  var n=H.length, kol=H.map(function(){ return 0; }), gen=0; U.forEach(function(u){ u.v.forEach(function(x,i){ kol[i]+=x; }); gen+=u.t; });
+  // Tam haftalar (dosya haftanın tüm iş günlerini kapsıyor): karşılaştırma ve uyarılar yalnız bunlarla
+  var HK=Array.isArray(D.hk)?D.hk:[], HT=Array.isArray(D.ht)?D.ht:[], tam=H.map(function(w,i){ return HK[i]==null || HT[i]==null || HK[i]>=HT[i]; });
+  var TI=[]; tam.forEach(function(x,i){ if(x) TI.push(i); }); var sI=TI.length?TI[TI.length-1]:-1, oI=TI.slice(0,-1);
+  var ortF=function(v){ return oI.length? oI.reduce(function(a,i){ return a+v[i]; },0)/oI.length : 0; };
+  var son=sI>-1?kol[sI]:0, ort=ortF(kol), deg=(sI>-1&&ort)?Math.round((son-ort)/ort*100):null;
+  var eski=M.yuklendi && D.yuklendi && String(D.yuklendi)<String(M.yuklendi);
+  var h=bas+'<div class="rk-ad">'+_rkE(D.a||ad||'Müşteri')+'</div><div class="rk-alt">Cari '+_rkE(D.k||RK.kod)+(D.gr?' · '+_rkE(D.gr):'')+(D.st?' · ST '+_rkE(D.st):'')+' · Veri: '+_rkTr(D.bas)+' – '+_rkTr(D.bit)+(D.son?' · Son alım '+_rkTr(D.son):'')+(onbellek?' · <i>cihazdaki kopya</i>':'')+'</div>'
+    +'<div class="rk-olcu" role="group" aria-label="Ölçü">'+RK_OLCU.filter(function(x){ return VAR.indexOf(x[0])>-1; }).map(function(x){ return '<button type="button" id="rkO_'+x[0]+'" class="'+(o===x[0]?'on':'')+'" aria-pressed="'+(o===x[0])+'" onclick="rkOlcu(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('')+'</div>'
+    +'<div class="rk-ozet"><div><b id="rkTop">'+(_rkSay(gen,o)||'0')+'</b><span>'+n+' hafta toplam</span></div><div><b>'+(_rkSay(n?gen/n:0,o)||'0')+'</b><span>Haftalık ort.</span></div><div><b>'+U.length+'</b><span>Çeşit</span></div><div><b style="color:'+(deg==null?'#0F1923':deg<0?'#DC2626':'#0F766E')+';">'+(deg==null?'—':(deg>0?'+':'')+deg+'%')+'</b><span>'+(sI>-1?'Hf '+_rkHafta(H[sI])+' / önceki ort.':'Son hafta / ort.')+'</span></div></div></div>';
+  if(eski) h+='<div class="rk-uyari">⚠️ Bu müşterinin son yüklemede ('+_rkTr(M.bas)+' – '+_rkTr(M.bit)+') alımı yok; tablo önceki yüklemeye ait.</div>';
+  if(!U.length) h+='<div class="rk-mesaj">Bu dönemde bu ölçüde değer yok.</div>';
+  else {
+    h+='<div class="rk-govde"><table id="rkTablo"><thead><tr><th class="u">Ürün</th>'+H.map(function(w,i){ return '<th'+(tam[i]?'':' title="Dosya bu haftanın '+HK[i]+'/'+HT[i]+' iş gününü kapsıyor" style="color:#B45309;"')+'>Hf '+_rkHafta(w)+'<small>'+(tam[i]?_rkTr(w):'eksik '+HK[i]+'/'+HT[i]+' gün')+'</small></th>'; }).join('')+'<th>Toplam</th></tr></thead><tbody>';
+    U.forEach(function(u){
+      var S2=TI.slice(-2), oncekiVar=TI.slice(0,-2).some(function(i){ return u.v[i]>0; }), son2Yok=TI.length>=3 && S2.every(function(i){ return !u.v[i]; });
+      var uOrt=ortF(u.v), dusuk=!son2Yok && TI.length>=3 && uOrt>0 && u.v[sI]<uOrt*0.5;
+      var cls=(oncekiVar&&son2Yok)?'uy-kirmizi':(dusuk?'uy-turuncu':'');
+      h+='<tr class="'+cls+'" data-rk-urun="'+_rkE(u.k||u.a)+'"><td class="u">'+_rkE(u.a)+'<small>'+_rkE(u.g||'')+(u.k?' · '+_rkE(u.k):'')+'</small></td>'
+        +u.v.map(function(x,i){ return '<td class="'+((oncekiVar&&son2Yok&&S2.indexOf(i)>-1)?'bos-kirmizi':'')+'"'+(tam[i]?'':' style="color:#94A3B8;"')+'>'+_rkSay(x,o)+'</td>'; }).join('')+'<td class="t">'+_rkSay(u.t,o)+'</td></tr>';
+    });
+    h+='<tr class="top"><td class="u">Toplam</td>'+kol.map(function(x){ return '<td>'+_rkSay(x,o)+'</td>'; }).join('')+'<td>'+_rkSay(gen,o)+'</td></tr></tbody></table></div>';
+  }
+  h+='<div class="rk-not"><span style="box-shadow:inset 3px 0 0 #DC2626;padding-left:6px;">Kırmızı</span>: önceden alınıp son 2 tam haftada hiç alınmayan ürün · <span style="box-shadow:inset 3px 0 0 #F59E0B;padding-left:6px;">Turuncu</span>: son tam hafta, önceki tam haftaların ortalamasının yarısından az. Haftalar Pazartesi–Pazar (ISO); dosyanın tam kapsamadığı hafta gri ve "eksik" yazar, karşılaştırmaya girmez.</div>';
+  _rkKutu(h);
+}
+// ST Paneli: kendi müşterilerinin listesi (yalnız kendi kartları; sunucu kuralı)
+function rkListeAc(st, zorla){ RK.st=st;
+  _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">⏳ Müşterileriniz yükleniyor…</div>');
+  var d=_rkDb(); if(!d) return; var lk='kyk_rkl_'+st;
+  // Gün içinde ikinci açılış sunucudan okumaz (ücretsiz okuma kotası); yükleme tarihi değiştiyse yenilenir
+  try{ var c=JSON.parse(localStorage.getItem(lk)||'null'); if(!zorla && c && c.gun===new Date().toISOString().slice(0,10) && Array.isArray(c.liste)){ RK.liste=c.liste; RK.meta=RK.meta||c.meta; rkListeCiz(); return; } }catch(e){}
+  Promise.all([d.collection('rutKarti').where('sts','array-contains',st).get(), _rkMeta()]).then(function(s){
+    RK.liste=s[0].docs.filter(function(x){ return x.id!=='_meta'; }).map(function(x){ var v=x.data()||{}, t=0; (v.u||[]).forEach(function(u){ (u.p||[]).forEach(function(z){ t+=Number(z)||0; }); }); return {id:x.id, a:String(v.a||x.id), k:String(v.k||x.id), son:v.son||'', t:t, doc:v}; }).sort(function(a,b){ return b.t-a.t; });
+    try{ localStorage.setItem(lk, JSON.stringify({gun:new Date().toISOString().slice(0,10), liste:RK.liste, meta:RK.meta})); }catch(e){}
+    rkListeCiz();
+  }).catch(function(err){ _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">'+_rkE(/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok.':'Okunamadı: '+((err&&err.message)||err))+'</div>'); });
+}
+function rkListeCiz(){
+  var q=(RK.ara||'').toLocaleUpperCase('tr-TR').trim(), l=(RK.liste||[]).filter(function(m){ return !q || m.a.toLocaleUpperCase('tr-TR').indexOf(q)>-1 || m.k.indexOf(q)>-1; });
+  var govde=l.length? l.map(function(m){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(\''+_rkE(m.id)+'\')"><div>'+_rkE(m.a)+'<small>'+_rkE(m.k)+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(m.t).toLocaleString('tr-TR')+' Pk</b></div>'; }).join('') : '<div class="rk-mesaj">'+((RK.liste||[]).length?'Eşleşen müşteri yok.':'Henüz rut kartı yüklenmedi ya da bu dönemde alım yok.')+'</div>';
+  var el=document.getElementById('rkListeGovde'); if(el){ el.innerHTML=govde; return; }
+  _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><div class="rk-alt">'+(RK.liste||[]).length+' müşteri · Veri: '+_rkTr((RK.meta||{}).bas)+' – '+_rkTr((RK.meta||{}).bit)+' · en çok paket alan üstte · <a href="javascript:void(0)" id="rkListeYenile" onclick="rkListeAc(RK.st,true)" style="color:#2563EB;font-weight:700;">↻ Yenile</a></div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button>'
+    +'<input id="rkAra" class="rk-ara" type="search" placeholder="🔎 Müşteri adı veya cari kodu" value="'+_rkE(RK.ara)+'" oninput="RK.ara=this.value;rkListeCiz()"></div><div class="rk-govde" id="rkListeGovde">'+govde+'</div>');
+}
+function rkListeSec(id){ var m=(RK.liste||[]).filter(function(x){ return x.id===id; })[0]; if(!m) return; RK.kod=id; RK.doc=m.doc; RK.hata='';
+  try{ localStorage.setItem('kyk_rk_'+id, JSON.stringify({doc:m.doc, meta:RK.meta, z:Date.now()})); }catch(e){}
+  rkCiz(m.a); var b=document.querySelector('#rkPanel .rk-bas'); if(b){ var g=document.createElement('button'); g.type='button'; g.id='rkGeri'; g.textContent='‹ Müşterilerim'; g.style.cssText='border:none;background:none;color:#2563EB;font-weight:700;font-size:12px;padding:0 0 6px;cursor:pointer;font-family:inherit'; g.onclick=function(){ rkListeCiz(); }; b.insertBefore(g,b.firstChild); } }
+
+// ===== 📋 RUT KARTI — Müdür yüklemesi (v60) =====
+// Aynı Octapull "İki Tarih Arası Fatura Raporu" (son 7–13 hafta). Müşteri × ürün × ISO hafta (Pzt–Paz): Paket, Brüt ₺, Net ₺, KG.
+var _rkYukle=null, RK_MAX_HAFTA=12;
+function _rkPzt(d){ var t=_izD(d), g=(t.getUTCDay()+6)%7; t.setUTCDate(t.getUTCDate()-g); return _izS(t); }
+function rkHesapla(coz){
+  if(!coz.tarihli || !coz.tmin) throw new Error('Dosyada "Tarih" sütunu yok; rut kartı haftalara bölünemez.');
+  var H=[], w=_rkPzt(coz.tmin), sonW=_rkPzt(coz.tmax); while(w<=sonW && H.length<200){ H.push(w); w=_izEkle(w,7); }
+  H=H.slice(-RK_MAX_HAFTA); var hix=Object.create(null); H.forEach(function(x,i){ hix[x]=i; });
+  var bul=_crSTBul(), K=coz.K, C=Object.create(null), n=H.length, eslesmeyen=Object.create(null), bas=H[0];
+  // Haftanın iş günü (Pzt–Cmt, dini bayram hariç) ve dosyanın kapsadığı iş günü → eksik hafta karşılaştırmaya girmez
+  var HT=H.map(function(w){ var s=0; for(var i=0;i<7;i++){ if(_izCalisma(_izEkle(w,i))) s++; } return s; });
+  var HK=H.map(function(w){ var s=0; for(var i=0;i<7;i++){ var g=_izEkle(w,i); if(g>=coz.tmin && g<=coz.tmax && _izCalisma(g)) s++; } return s; });
+  var r2=function(v){ return Math.round(v*100)/100; };
+  coz.R.forEach(function(x){
+    if(!x[1] || x[1]<bas) return; var wi=hix[_rkPzt(x[1])]; if(wi===undefined) return;
+    var pl=K.p[x[0]], tm=bul(pl); if(!tm) eslesmeyen[pl]=1;
+    var c=C[x[4]]||(C[x[4]]={sts:Object.create(null), gys:Object.create(null), stT:Object.create(null), kat:K.k[x[7]], u:Object.create(null), son:''});
+    var st=tm?tm.st:'', gy=tm?tm.gy:''; if(st){ c.sts[st]=1; c.stT[st]=(c.stT[st]||0)+x[5]; } if(gy) c.gys[gy]=1;
+    if(x[1]>c.son) c.son=x[1];
+    var u=c.u[x[3]]||(c.u[x[3]]={p:new Array(n).fill(0), t:new Array(n).fill(0), n:new Array(n).fill(0), kg:new Array(n).fill(0)});
+    u.p[wi]+=x[6]; u.t[wi]+=x[5]; u.n[wi]+=(x[8]||0); u.kg[wi]+=(x[9]||0);
+  });
+  var belgeler=Object.keys(C).map(function(ci){ var c=C[ci], kod=K.c[ci], ad=K.ca[ci]||kod;
+    var stl=Object.keys(c.sts).sort(function(a,b){ return c.stT[b]-c.stT[a]; });
+    return {id:rkKimlik(kod), v:{k:kod, a:ad, gr:c.kat||'', st:stl[0]||'', sts:stl, gys:Object.keys(c.gys), son:c.son, h:H, hk:HK, ht:HT,
+      u:Object.keys(c.u).map(function(ui){ var u=c.u[ui]; return {a:K.ua[ui], k:(K.u[ui]===K.ua[ui]?'':K.u[ui]), g:K.ug[ui], p:u.p.map(Math.round), t:u.t.map(r2), n:u.n.map(r2), kg:u.kg.map(function(v){ return Math.round(v*100)/100; })}; })}};
+  }).filter(function(b){ return b.id; });
+  return {H:H, HK:HK, HT:HT, belgeler:belgeler, eslesmeyen:Object.keys(eslesmeyen), merkezsiz:belgeler.filter(function(b){ return !b.v.gys.length; }).length};
+}
+// Power BI "Müşteri Bazlı" Excel çıktısı (Hafta | … | CariKodu_Adi | StokKodu_Adi / StokAdi | hafta sütunları | Total)
+function _rkIsoPzt(y, w){ var d=new Date(Date.UTC(y,0,4)), g=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-g+(w-1)*7); return _izS(d); }
+function _rkPbiOlcu(ad){ var s=_bkKat(ad); if(/BRUT|CIRO|TUTAR/.test(s)) return 't'; if(/NET/.test(s)) return 'n'; if(/TONAJ|KG/.test(s)) return 'kg'; return 'p'; }
+function _rkUrunAnah(x){ return _bkKat(x); }
+// Her sayfa bir ölçü (sayfa adına göre: Paket / Brüt Ciro / Net / Tonaj); ürünler müşteri + ürün adıyla eşleşir
+function rkPbiCoz(wb){
+  var S=[];
+  for(var si=0; si<wb.SheetNames.length; si++){
+    var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[si]], {header:1, defval:'', raw:true});
+    for(var h=1; h<Math.min(rows.length,10); h++){
+      var b=(rows[h]||[]).map(_bkKat), iC=b.indexOf('CARIKODUADI'), iU=b.indexOf('STOKKODUADI'), kodlu=iU>-1; if(!kodlu) iU=b.indexOf('STOKADI'); if(iC<0 || iU<0) continue;
+      var ust=rows[h-1]||[], kol=[]; for(var j=iU+1;j<ust.length;j++){ var w=parseInt(ust[j],10); if(w>=1 && w<=53) kol.push([j,w]); }
+      if(!kol.length) throw new Error('Power BI dosyasında hafta sütunları (Hafta satırı) bulunamadı ("'+wb.SheetNames[si]+'" sayfası).');
+      var bugun=new Date(), y=bugun.getUTCFullYear(), H=[], ywk=y; for(var i=kol.length-1;i>=0;i--){ if(i<kol.length-1 && kol[i][1]>kol[i+1][1]) ywk--; H.unshift(_rkIsoPzt(ywk, kol[i][1])); }
+      if(H[H.length-1]>_izS(bugun)){ H=H.map(function(x){ return _izEkle(x,-364); }); }   // hafta numaraları geçen yıla aitse
+      var kes=/^(.*)\s-\s(\S+)$/, R=[], kesik=false, ustToplam=0;
+      rows.forEach(function(x,r){ if(r<=h || !x) return;
+        if(/exceeded the allowed volume|some data may have been omitted/i.test(x.join(' '))) kesik=true;
+        var c=String(x[iC]||''), u=String(x[iU]||'').trim();
+        if(c==='Total' && !ustToplam){ kol.forEach(function(k){ ustToplam+=_bkSayi(x[k[0]]); }); }
+        if(!c || !u || c==='Total' || u==='Total') return;
+        var mc=kes.exec(c); if(!mc) return; var mu=kodlu?kes.exec(u):null; if(kodlu && !mu) return;
+        R.push({ck:mc[2], ca:mc[1].trim(), uk:mu?mu[2]:'', ua:mu?mu[1].trim():u, v:kol.map(function(k){ return Math.round(_bkSayi(x[k[0]])); })});
+      });
+      if(!R.length) continue;
+      var top=0; R.forEach(function(x){ x.v.forEach(function(v){ top+=v; }); });
+      S.push({o:_rkPbiOlcu(wb.SheetNames[si]), kodlu:kodlu, H:H, R:R, kesik:kesik, top:top, ustToplam:ustToplam, sayfa:wb.SheetNames[si]});
+      break;
+    }
+  }
+  if(!S.length) return null;
+  return _rkPbiSayfaBirlestir(S);
+}
+// Sayfaları (ölçüleri) tek tabloda birleştir: anahtar = cari kodu + ürün adı; ürün kodu kodlu sayfadan gelir
+function _rkPbiSayfaBirlestir(S){
+  S=S.slice().sort(function(a,b){ return (b.kodlu?1:0)-(a.kodlu?1:0); });
+  var Hs=Object.create(null); S.forEach(function(P){ P.H.forEach(function(w){ Hs[w]=1; }); }); var H=Object.keys(Hs).sort(), hi=Object.create(null); H.forEach(function(w,i){ hi[w]=i; });
+  var M=Object.create(null), R=[], olc=[], top={}, ust={}, kesik={}, sayfa=[];
+  S.forEach(function(P){ var o=P.o; if(olc.indexOf(o)<0) olc.push(o); sayfa.push(P.sayfa); top[o]=(top[o]||0); ust[o]=(ust[o]||0)+(P.ustToplam||0); if(P.kesik) kesik[o]=true;
+    P.R.forEach(function(x){ var k=x.ck+'|'+_rkUrunAnah(x.ua), r=M[k]; if(!r){ r=M[k]={ck:x.ck, ca:x.ca, uk:x.uk, ua:x.ua, m:{}}; R.push(r); } if(!r.uk && x.uk) r.uk=x.uk;
+      var a=r.m[o]||(r.m[o]=H.map(function(){ return 0; })); x.v.forEach(function(v,i){ var j=hi[P.H[i]]; if(v && !a[j]){ a[j]=v; top[o]+=v; } }); }); });
+  olc.sort(function(a,b){ return 'p t n kg'.indexOf(a)-'p t n kg'.indexOf(b); });
+  olc.forEach(function(o){ if(ust[o] && top[o]<ust[o]*0.98) kesik[o]=true; });
+  return {pbi:true, H:H, R:R, olc:olc, top:top, ustToplam:ust, kesikO:kesik, kesik:Object.keys(kesik).length>0, sayfa:sayfa};
+}
+// Birden çok Power BI dosyası (parça): haftalar birleşir, aynı müşteri × ürün × hafta × ölçü iki dosyada varsa bir kez sayılır
+function rkPbiBirlestir(L){
+  var Hs=Object.create(null); L.forEach(function(P){ P.H.forEach(function(w){ Hs[w]=1; }); }); var H=Object.keys(Hs).sort(), hi=Object.create(null); H.forEach(function(w,i){ hi[w]=i; });
+  var M=Object.create(null), R=[], olc=[], top={}, ust={}, kesik={}, eksikParca=[];
+  L.forEach(function(P,pi){ var pk=false;
+    P.olc.forEach(function(o){ if(olc.indexOf(o)<0) olc.push(o); top[o]=top[o]||0; ust[o]=(ust[o]||0)+(P.ustToplam[o]||0); if(P.kesikO[o]){ kesik[o]=true; pk=true; } });
+    if(pk) eksikParca.push(pi+1);
+    P.R.forEach(function(x){ var k=x.ck+'|'+_rkUrunAnah(x.ua), r=M[k]; if(!r){ r=M[k]={ck:x.ck, ca:x.ca, uk:x.uk, ua:x.ua, m:{}}; R.push(r); } if(!r.uk && x.uk) r.uk=x.uk;
+      Object.keys(x.m).forEach(function(o){ var a=r.m[o]||(r.m[o]=H.map(function(){ return 0; })); x.m[o].forEach(function(v,i){ var j=hi[P.H[i]]; if(v && !a[j]){ a[j]=v; top[o]+=v; } }); }); }); });
+  olc.sort(function(a,b){ return 'p t n kg'.indexOf(a)-'p t n kg'.indexOf(b); });
+  return {pbi:true, H:H, R:R, olc:olc, top:top, ustToplam:ust, kesikO:kesik, kesik:Object.keys(kesik).length>0, eksikParca:eksikParca, parca:L.length};
+}
+function _rkCokluOku(files){
+  _rkHataG(''); _rkYukle=null; var on=document.getElementById('rkOnizleme'), btn=document.getElementById('rkYukleBtn'); btn.style.display='none'; var L=[], i=0;
+  var sonraki=function(){
+    if(i>=files.length){ var P=rkPbiBirlestir(L); return _rkPbiOnizle(P, files.map(function(f){ return f.name; }).join(', ')); }
+    var f=files[i]; on.textContent='⏳ '+(i+1)+' / '+files.length+' · "'+f.name+'" okunuyor…'; var r=new FileReader();
+    r.onload=function(e){ setTimeout(function(){ try{ var P=rkPbiCoz(XLSX.read(e.target.result,{type:'array', dense:true})); if(!P) throw new Error('"'+f.name+'" Power BI Müşteri Bazlı çıktısı değil. Birden çok dosya yalnız Power BI parçaları için kullanılır.'); L.push(P); i++; sonraki(); }catch(err){ on.textContent=''; _rkHataG('⚠️ '+err.message); } }, 30); };
+    r.readAsArrayBuffer(f);
+  };
+  sonraki();
+}
+function rkPbiHesapla(P, rutEs){
+  var C=Object.create(null), Z=P.H.map(function(){ return 0; });
+  P.R.forEach(function(x){ var c=C[x.ck]||(C[x.ck]={a:x.ca, u:[]}), u={a:x.ua, k:x.uk||'', g:''}; P.olc.forEach(function(o){ u[o]=(x.m[o]||Z).slice(); }); c.u.push(u); });
+  var eslesmeyen=0, H=P.H.slice(-RK_MAX_HAFTA), kes=P.H.length-H.length;
+  var belgeler=Object.keys(C).map(function(ck){ var c=C[ck], m=rutEs[ck]||null; if(!m) eslesmeyen++;
+    var son=''; c.u.forEach(function(u){ P.olc.forEach(function(o){ u[o]=u[o].slice(kes); u[o].forEach(function(v,i){ if(v && H[i]>son) son=H[i]; }); }); });
+    return {id:rkKimlik(ck), v:{k:ck, a:c.a, gr:m?m.gr:'', st:m?m.st:'', sts:m?[m.st]:[], gys:m?[m.gy]:[], son:son?_izEkle(son,6):'', h:H, u:c.u, kaynak:'pbi'}};
+  }).filter(function(b){ return b.id; });
+  return {H:H, HK:H.map(function(){ return 1; }), HT:H.map(function(){ return 1; }), belgeler:belgeler, eslesmeyen:[], rutsuz:eslesmeyen, merkezsiz:eslesmeyen, pbi:true};
+}
+// Rut listesinden cari kodu → ST/GY (Power BI dosyasında plasiyer yok)
+function _rkRutEsle(){
+  return Promise.all(Object.keys(YO).map(function(g){ return db.collection('rutlar').doc(g).get().then(function(d){ return {g:g, d:(d&&d.exists)?d.data():null}; }); })).then(function(l){
+    var m=Object.create(null);
+    l.forEach(function(x){ var st=(x.d&&x.d.st)||{}; Object.keys(st).forEach(function(s){ var gun=st[s]||{}; Object.keys(gun).forEach(function(gn){ (Array.isArray(gun[gn])?gun[gn]:[]).forEach(function(mm){ if(mm && mm.k && !m[String(mm.k)]) m[String(mm.k)]={st:s, gy:x.g, gr:mm.gr||''}; }); }); }); });
+    return m;
+  });
+}
+function rkYuklePaneliAc(){
+  var m=document.getElementById('crModal'); ciroYuklePaneliAc(); m=document.getElementById('crModal');
+  document.getElementById('crModalIc').innerHTML='<div style="font-size:15px;font-weight:700;color:#0F1923;margin-bottom:6px;">📋 Rut Kartı Yükle</div>'
+    +'<p style="font-size:12px;color:#4A5568;margin:0 0 12px;line-height:1.5;">Octapull <b>İki Tarih Arası Fatura Raporu</b> (önerilen; ciro ile aynı dosya, Paket + Brüt + Net + Tonaj) ya da Power BI <b>Müşteri Bazlı</b> Excel çıktısı (Paket ve/veya Brüt Ciro sayfaları) — <b>son 7–12 hafta</b>. Müşteri × ürün × hafta özetlenir; GY yalnız kendi ekibinin, ST yalnız kendi müşterisinin kartını görür. En fazla son '+RK_MAX_HAFTA+' hafta alınır.</p>'
+    +'<div id="rkDrop" onclick="document.getElementById(\'rkDosya\').click()" style="border:2px dashed #CBD5E0;border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:12px;"><div style="font-size:28px;">📋</div><div style="font-size:13px;font-weight:600;color:#4A5568;">Excel dosyasını seçin</div><div style="font-size:11px;color:#8896A7;margin-top:3px;">.xlsx, .xls · Power BI çıktısı bölünmüşse (ör. GY ya da hafta filtresiyle) tüm parçaları birlikte seçin</div></div>'
+    +'<input type="file" id="rkDosya" accept=".xlsx,.xls" multiple style="display:none" onchange="rkDosyaOku(this.files)">'
+    +'<div id="rkHata" style="display:none;background:#FEF2F2;color:#B91C1C;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;margin-bottom:10px;"></div>'
+    +'<div id="rkOnizleme" style="font-size:12px;color:#4A5568;line-height:1.7;"></div>'
+    +'<button type="button" id="rkYukleBtn" onclick="rkSunucuyaYaz()" style="display:none;width:100%;margin-top:10px;background:#1E3A5F;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;">⬆ Rut kartlarını yükle</button>';
+  _rkYukle=null;
+}
+function _rkHataG(t){ var e=document.getElementById('rkHata'); if(e){ e.textContent=t; e.style.display=t?'block':'none'; } }
+function rkDosyaOku(files){
+  if(files && !files.length && files.name) files=[files]; files=Array.prototype.slice.call(files||[]); if(!files.length) return; var file=files[0];
+  if(files.length>1) return _rkCokluOku(files);
+  if(!file) return; _rkHataG(''); _rkYukle=null; var on=document.getElementById('rkOnizleme'), btn=document.getElementById('rkYukleBtn'); btn.style.display='none';
+  on.textContent='⏳ "'+file.name+'" okunuyor… (büyük dosyada 30-60 sn sürebilir, sayfayı kapatmayın)';
+  var r=new FileReader();
+  r.onload=function(e){ setTimeout(function(){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array', dense:true}), P=rkPbiCoz(wb);
+      if(P){ _rkPbiOnizle(P, file.name); return; }
+      var coz=ciroExcelCoz(wb), H=rkHesapla(coz);
+      _rkYukle={H:H, dosya:_bkTemiz(file.name,120), bas:coz.tmin, bit:coz.tmax};
+      on.innerHTML='<b>Önizleme</b><br>📅 Dosya: <b>'+_bkTarihTr(coz.tmin)+' – '+_bkTarihTr(coz.tmax)+'</b> · '+H.H.length+' hafta (Hf '+_rkHafta(H.H[0])+' – Hf '+_rkHafta(H.H[H.H.length-1])+')'
+        +'<br>🏪 '+H.belgeler.length.toLocaleString('tr-TR')+' müşteri kartı'+(H.HK.some(function(x,i){ return x<H.HT[i]; })?' · eksik hafta: '+H.H.filter(function(w,i){ return H.HK[i]<H.HT[i]; }).map(function(w,i){ return 'Hf '+_rkHafta(w); }).join(', ')+' (karşılaştırmaya girmez)':'')+(H.merkezsiz?' · '+H.merkezsiz+' müşteri yalnız Merkez/eşleşmeyen plasiyerde (yalnız Müdür görür)':'')
+        +(H.eslesmeyen.length?'<div style="color:#B45309;margin-top:4px;">⚠️ Ekip listesinde olmayan plasiyer: '+H.eslesmeyen.map(_kac).join(', ')+'</div>':'')
+        +(H.H.length<7?'<div style="color:#B45309;margin-top:4px;">⚠️ Dosya '+H.H.length+' hafta içeriyor; kıyas için 7–8 hafta önerilir.</div>':'');
+      btn.style.display='block';
+    }catch(err){ on.textContent=''; _rkHataG('⚠️ '+err.message); }
+  }, 30); };
+  r.readAsArrayBuffer(file);
+}
+var RK_OLCU_AD={p:'Paket', t:'Brüt ₺', n:'Net ₺', kg:'Tonaj'};
+function _rkPbiOnizle(P, dosyaAd){
+  var on=document.getElementById('rkOnizleme'), btn=document.getElementById('rkYukleBtn'), file={name:dosyaAd};
+  on.textContent='⏳ Power BI dosyası okundu; müşteriler rut listesiyle eşleştiriliyor…';
+  _rkRutEsle().then(function(m){ var H=rkPbiHesapla(P, m), bas=H.H[0], bit=_izEkle(H.H[H.H.length-1],6);
+    _rkYukle={H:H, dosya:_bkTemiz(file.name,120), bas:bas, bit:bit};
+    var olcAd=P.olc.map(function(o){ return RK_OLCU_AD[o]; }).join(' + ');
+    var ozet=P.olc.map(function(o){ return Math.round(P.top[o]).toLocaleString('tr-TR')+' '+(o==='p'?'paket':o==='kg'?'kg':'₺ '+(o==='t'?'brüt':'net')); }).join(' · ');
+    var eks=P.olc.filter(function(o){ return P.kesikO[o]; }).map(function(o){ var u=P.ustToplam[o]; return RK_OLCU_AD[o]+(u?' %'+Math.round(P.top[o]/u*100)+' ('+Math.round(P.top[o]).toLocaleString('tr-TR')+' / '+Math.round(u).toLocaleString('tr-TR')+')':''); });
+    on.innerHTML='<b>Önizleme — Power BI çıktısı ('+olcAd+')'+(P.parca>1?' · '+P.parca+' dosya birleştirildi':'')+'</b><br>📅 '+H.H.length+' hafta (Hf '+_rkHafta(H.H[0])+' – Hf '+_rkHafta(H.H[H.H.length-1])+') · '+_bkTarihTr(bas)+' – '+_bkTarihTr(bit)
+      +'<br>🏪 '+H.belgeler.length.toLocaleString('tr-TR')+' müşteri · '+P.R.length.toLocaleString('tr-TR')+' satır · '+ozet
+      +(H.rutsuz?'<div style="color:#B45309;margin-top:4px;">⚠️ '+H.rutsuz.toLocaleString('tr-TR')+' müşteri rut listesinde yok (cari kodu eşleşmedi) → yalnız Müdür görür.</div>':'')
+      +(eks.length?'<div id="rkKesik" style="background:#FEF2F2;color:#991B1B;border:2px solid #DC2626;border-radius:10px;padding:10px;margin-top:8px;font-weight:700;">⛔ Power BI dosyası EKSİK'+(P.eksikParca&&P.parca>1&&P.eksikParca.length?' ('+P.eksikParca.join(', ')+'. dosya)':'')+': dışa aktarma sınırı aşılmış, veri kesilmiş — gelen / dosyadaki genel toplam: '+eks.join(' · ')+'.<br><span style="font-weight:600;">Octapull "İki Tarih Arası Fatura Raporu"nu yükleyin ya da Power BI\'dan GY / hafta filtresiyle birkaç dosya alıp hepsini birlikte seçin. Yine de yüklenirse eksik müşterilerin kartı boş görünür.</span></div>':'');
+    btn.style.display='block'; btn.textContent=(eks.length?'⚠️ Eksik dosyayı yine de yükle':'⬆ Rut kartlarını yükle');
+  }).catch(function(err){ on.textContent=''; _rkHataG('⚠️ Rut listesi okunamadı: '+((err&&err.message)||err)); });
+}
+function rkSunucuyaYaz(){
+  var Y=_rkYukle; if(!Y || !db) return; var btn=document.getElementById('rkYukleBtn'), on=document.getElementById('rkOnizleme'); btn.disabled=true; _rkHataG('');
+  var kim=(dashAuth&&dashAuth.currentUser&&dashAuth.currentUser.email)||'', z=new Date().toISOString(), B=Y.H.belgeler, i=0, PARCA=400;
+  var tumST=[]; Object.keys(YO).forEach(function(g){ tumST=tumST.concat(YO[g]||[]); });
+  var adim=function(){
+    if(i>=B.length){
+      return db.collection('rutKarti').doc('_meta').set({bas:Y.bas, bit:Y.bit, h:Y.H.H, hk:Y.H.HK, ht:Y.H.HT, musteri:B.length, yuklendi:z, yukleyen:kim, dosya:Y.dosya, gys:Object.keys(YO), sts:tumST})
+        .then(function(){ btn.textContent='✅ Yüklendi'; on.innerHTML+='<div id="rkTamam" style="color:#047857;font-weight:700;margin-top:6px;">✅ '+B.length.toLocaleString('tr-TR')+' müşteri kartı yüklendi.</div>'; RK.meta=null; });
+    }
+    var b=db.batch(); B.slice(i,i+PARCA).forEach(function(x){ b.set(db.collection('rutKarti').doc(x.id), Object.assign({}, x.v, {bas:Y.bas, bit:Y.bit, yuklendi:z})); });
+    btn.textContent='⏳ Yükleniyor… '+Math.min(i+PARCA,B.length).toLocaleString('tr-TR')+' / '+B.length.toLocaleString('tr-TR');
+    return b.commit().then(function(){ i+=PARCA; return adim(); });
+  };
+  adim().catch(function(err){ btn.disabled=false; btn.textContent='⬆ Rut kartlarını yükle'; _rkHataG('⚠️ Yüklenemedi: '+((err&&err.message)||err)); });
 }
 
 // ===== RAPOR TAKİBİ — açılış sayaçları =====

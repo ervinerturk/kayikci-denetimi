@@ -486,6 +486,7 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
             onfocus="acGoster()" oninput="acFiltre(this.value)">
           <div class="ac-dd" id="ddNokta"></div>
         </div>
+        <button type="button" id="rkBtn" onclick="rkFormAc()" style="margin-top:8px;width:100%;padding:10px;border:1.5px solid #CBD5E1;border-radius:10px;background:#F8FAFC;color:#1E3A5F;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">📋 Rut Kartı — müşterinin haftalık alımları</button>
       </div>
 
       <!-- ZİYARET GİRİŞ / ÇIKIŞ SAATİ -->
@@ -3201,7 +3202,7 @@ function _panelimButonu(){
 function cikisYap(){
   try{ sessionStorage.removeItem('kyk_kullanici'); localStorage.removeItem('kyk_kullanici'); }catch(e){}
   // Çıkışta bu cihazdaki müşteri listesi kopyasını da sil
-  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('kyk_rut_')===0 || k.indexOf('kyk_yetki_')===0 || k.indexOf('rapor_')===0 || k==='kayikci_raporlar' || k==='kyk_ziyaret_giris') localStorage.removeItem(k); }); }catch(e){}
+  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('kyk_rut_')===0 || k.indexOf('kyk_yetki_')===0 || k.indexOf('kyk_rk_')===0 || k.indexOf('rapor_')===0 || k==='kayikci_raporlar' || k==='kyk_ziyaret_giris') localStorage.removeItem(k); }); }catch(e){}
   if(_auth){ _auth.signOut().then(function(){ location.reload(); }); }
   else location.reload();
 }
@@ -3212,5 +3213,128 @@ window.addEventListener('load', loginKontrol);
 </script>
 
 
+<script>
+// ===== 📋 RUT KARTI (v60) — müşterinin haftalık ürün alımı (Paket / Brüt / Net / Tonaj) =====
+// Kaynak: Müdür'ün yüklediği Octapull "İki Tarih Arası Fatura Raporu" → rutKarti/{cari kodu} (müşteri başına bir belge).
+// Sunucu kuralı: Müdür hepsini, GY yalnız kendi ekibinin (gys), ST yalnız kendi (sts) müşterisini okur. Ortak kod: GY formu, ST Paneli, Müdür paneli.
+var RK={olcu:'p', doc:null, meta:null, kod:'', yuk:false, hata:'', liste:null, ara:''};
+var RK_OLCU=[['p','Paket'],['t','Brüt ₺'],['n','Net ₺'],['kg','Tonaj (kg)']];
+function _rkDb(){ return (typeof db!=='undefined' && db) || (typeof _db!=='undefined' && _db) || null; }
+function _rkE(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function rkKimlik(k){ k=String(k==null?'':k).trim(); if(!k) return ''; return k.replace(/[^0-9A-Za-z_-]/g,'_').slice(0,60); }
+function _rkTr(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d||'')?d.slice(8,10)+'.'+d.slice(5,7):'—'; }
+function _rkHafta(d){ var t=new Date(Date.UTC(+d.slice(0,4),+d.slice(5,7)-1,+d.slice(8,10))); var g=(t.getUTCDay()+6)%7; t.setUTCDate(t.getUTCDate()-g+3); var y=new Date(Date.UTC(t.getUTCFullYear(),0,4)); return 1+Math.round(((t-y)/864e5-3+((y.getUTCDay()+6)%7))/7); }
+function _rkSay(x,o){ x=Number(x)||0; if(!x) return ''; return o==='kg'? (Math.round(x*10)/10).toLocaleString('tr-TR') : Math.round(x).toLocaleString('tr-TR'); }
+function _rkCss(){
+  if(document.getElementById('rkCss')) return;
+  var s=document.createElement('style'); s.id='rkCss';
+  s.textContent='#rkArka{position:fixed;inset:0;background:rgba(15,25,35,.45);z-index:9500}'
+   +'#rkPanel{position:fixed;left:0;right:0;bottom:0;max-height:92vh;background:#fff;border-radius:18px 18px 0 0;z-index:9501;display:flex;flex-direction:column;font-family:Inter,system-ui,sans-serif;color:#0F1923;box-shadow:0 -8px 30px rgba(15,25,35,.25)}'
+   +'@media(min-width:900px){#rkPanel{left:50%;right:auto;width:860px;transform:translateX(-50%);bottom:24px;border-radius:18px;max-height:88vh}}'
+   +'#rkPanel .rk-bas{padding:14px 16px 10px;border-bottom:1px solid #E2E8F0}#rkPanel .rk-ad{font-size:16px;font-weight:800;line-height:1.25}#rkPanel .rk-alt{font-size:11.5px;color:#64748B;margin-top:3px}'
+   +'#rkPanel .rk-x{position:absolute;right:12px;top:10px;border:none;background:#F1F5F9;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer}'
+   +'#rkPanel .rk-olcu{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}#rkPanel .rk-olcu button{border:none;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;background:#F1F5F9;color:#475569;cursor:pointer;font-family:inherit}#rkPanel .rk-olcu button.on{background:#1E3A5F;color:#fff}'
+   +'#rkPanel .rk-ozet{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}#rkPanel .rk-ozet div{background:#F8FAFC;border-radius:10px;padding:7px 8px}#rkPanel .rk-ozet b{display:block;font-size:15px;font-variant-numeric:tabular-nums}#rkPanel .rk-ozet span{font-size:10px;color:#64748B;font-weight:600}'
+   +'#rkPanel .rk-govde{overflow:auto;flex:1;-webkit-overflow-scrolling:touch}#rkPanel table{border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums;min-width:100%}'
+   +'#rkPanel th{position:sticky;top:0;background:#F1F5F9;font-size:10.5px;color:#475569;font-weight:800;padding:7px 6px;text-align:right;white-space:nowrap;z-index:2}#rkPanel th small{display:block;font-weight:600;color:#94A3B8;font-size:9.5px}'
+   +'#rkPanel td{padding:6px;text-align:right;white-space:nowrap;border-bottom:1px solid #F1F5F9}#rkPanel td.u,#rkPanel th.u{position:sticky;left:0;text-align:left;background:#fff;z-index:1;white-space:normal;min-width:150px;max-width:220px}#rkPanel th.u{z-index:3;background:#F1F5F9}'
+   +'#rkPanel td.u small{display:block;color:#94A3B8;font-size:10px}#rkPanel td.t{font-weight:800}#rkPanel tr.uy-kirmizi td.u{box-shadow:inset 3px 0 0 #DC2626}#rkPanel tr.uy-turuncu td.u{box-shadow:inset 3px 0 0 #F59E0B}#rkPanel td.bos-kirmizi{background:#FEF2F2}'
+   +'#rkPanel tr.top td{background:#0F766E;color:#fff;font-weight:800;position:sticky;bottom:0}#rkPanel tr.top td.u{background:#0F766E}'
+   +'#rkPanel .rk-not{font-size:10.5px;color:#64748B;padding:8px 16px 12px;border-top:1px solid #E2E8F0;line-height:1.5}#rkPanel .rk-uyari{margin:8px 16px 0;background:#FFF7ED;color:#9A3412;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:600}'
+   +'#rkPanel .rk-mesaj{padding:28px 16px;text-align:center;color:#475569;font-size:13px;line-height:1.5}#rkPanel .rk-ara{width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:15px;margin-top:10px;font-family:inherit}'
+   +'#rkPanel .rk-mus{display:flex;justify-content:space-between;gap:8px;padding:11px 16px;border-bottom:1px solid #F1F5F9;cursor:pointer;font-size:13px}#rkPanel .rk-mus small{display:block;color:#94A3B8;font-size:11px}#rkPanel .rk-mus b{white-space:nowrap}';
+  document.head.appendChild(s);
+}
+function rkKapat(){ ['rkArka','rkPanel'].forEach(function(id){ var e=document.getElementById(id); if(e) e.remove(); }); }
+function _rkKutu(ic){
+  _rkCss(); rkKapat();
+  var a=document.createElement('div'); a.id='rkArka'; a.onclick=rkKapat; document.body.appendChild(a);
+  var p=document.createElement('div'); p.id='rkPanel'; p.setAttribute('role','dialog'); p.setAttribute('aria-label','Rut kartı'); p.innerHTML=ic; document.body.appendChild(p);
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape' && document.getElementById('rkPanel')) rkKapat(); });
+function _rkMeta(){
+  var d=_rkDb(); if(!d) return Promise.resolve(null); if(RK.meta) return Promise.resolve(RK.meta);
+  return d.collection('rutKarti').doc('_meta').get().then(function(x){ RK.meta=(x&&x.exists)?x.data():null; return RK.meta; }).catch(function(){ return null; });
+}
+// Kartı aç: cari kodu (rut / ciro listesinden) + görünen ad
+function rkKartAc(kod, ad){
+  var id=rkKimlik(kod); RK.kod=id; RK.doc=null; RK.hata='';
+  if(!id){ _rkKutu('<div class="rk-bas"><div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">Bu müşterinin cari kodu rut listesinde yok; rut kartı cari koduyla eşleşir.<br><small>Satış Müdürü rutu cari kodlu Excel ile güncellemeli.</small></div>'); return; }
+  var onb=null; try{ onb=JSON.parse(localStorage.getItem('kyk_rk_'+id)||'null'); }catch(e){}
+  if(onb && onb.doc){ RK.doc=onb.doc; RK.meta=RK.meta||onb.meta||null; rkCiz(ad, true); } else _rkKutu('<div class="rk-bas"><div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">⏳ Rut kartı yükleniyor…</div>');
+  var d=_rkDb(); if(!d){ if(!onb) RK.hata='Sunucuya bağlanılamadı.'; rkCiz(ad); return; }
+  Promise.all([d.collection('rutKarti').doc(id).get(), _rkMeta()]).then(function(s){
+    if(RK.kod!==id) return;
+    RK.doc=(s[0]&&s[0].exists)?s[0].data():{yok:true}; RK.hata='';
+    try{ if(!RK.doc.yok){ localStorage.setItem('kyk_rk_'+id, JSON.stringify({doc:RK.doc, meta:RK.meta, z:Date.now()})); var ks=Object.keys(localStorage).filter(function(k){ return k.indexOf('kyk_rk_')===0; }); if(ks.length>40) ks.slice(0,ks.length-40).forEach(function(k){ localStorage.removeItem(k); }); } }catch(e){}
+    rkCiz(ad);
+  }).catch(function(err){ if(RK.kod!==id) return; if(!onb){ RK.hata=/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok; bu müşterinin kartı daha önce bu cihazda açılmamış.':'Rut kartı okunamadı: '+((err&&err.message)||err); rkCiz(ad); } });
+}
+function rkOlcu(o){ RK.olcu=o; rkCiz(); }
+function rkCiz(ad, onbellek){
+  var D=RK.doc, M=RK.meta||{}, bas='<div class="rk-bas"><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button>';
+  if(RK.hata){ _rkKutu(bas+'<div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div></div><div class="rk-mesaj">'+_rkE(RK.hata)+'</div>'); return; }
+  if(!D) return;
+  if(D.yok){ _rkKutu(bas+'<div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div><div class="rk-alt">Cari: '+_rkE(RK.kod)+'</div></div><div class="rk-mesaj">Bu müşterinin yüklenen dönemde ('+_rkTr(M.bas)+' – '+_rkTr(M.bit)+') alım kaydı yok.</div>'); return; }
+  var VAR=RK_OLCU.filter(function(x){ return (D.u||[]).some(function(u){ return Array.isArray(u[x[0]]); }); }).map(function(x){ return x[0]; }); if(VAR.length && VAR.indexOf(RK.olcu)<0) RK.olcu=VAR[0];
+  var H=Array.isArray(D.h)?D.h:[], o=RK.olcu, U=(Array.isArray(D.u)?D.u:[]).map(function(u){ var v=(Array.isArray(u[o])?u[o]:[]).map(function(x){ return Number(x)||0; }); var t=0; v.forEach(function(x){ t+=x; }); return {a:u.a, k:u.k, g:u.g, v:v, t:t}; }).filter(function(u){ return Math.abs(u.t)>0.0001; }).sort(function(a,b){ return b.t-a.t; });
+  var n=H.length, kol=H.map(function(){ return 0; }), gen=0; U.forEach(function(u){ u.v.forEach(function(x,i){ kol[i]+=x; }); gen+=u.t; });
+  // Tam haftalar (dosya haftanın tüm iş günlerini kapsıyor): karşılaştırma ve uyarılar yalnız bunlarla
+  var HK=Array.isArray(D.hk)?D.hk:[], HT=Array.isArray(D.ht)?D.ht:[], tam=H.map(function(w,i){ return HK[i]==null || HT[i]==null || HK[i]>=HT[i]; });
+  var TI=[]; tam.forEach(function(x,i){ if(x) TI.push(i); }); var sI=TI.length?TI[TI.length-1]:-1, oI=TI.slice(0,-1);
+  var ortF=function(v){ return oI.length? oI.reduce(function(a,i){ return a+v[i]; },0)/oI.length : 0; };
+  var son=sI>-1?kol[sI]:0, ort=ortF(kol), deg=(sI>-1&&ort)?Math.round((son-ort)/ort*100):null;
+  var eski=M.yuklendi && D.yuklendi && String(D.yuklendi)<String(M.yuklendi);
+  var h=bas+'<div class="rk-ad">'+_rkE(D.a||ad||'Müşteri')+'</div><div class="rk-alt">Cari '+_rkE(D.k||RK.kod)+(D.gr?' · '+_rkE(D.gr):'')+(D.st?' · ST '+_rkE(D.st):'')+' · Veri: '+_rkTr(D.bas)+' – '+_rkTr(D.bit)+(D.son?' · Son alım '+_rkTr(D.son):'')+(onbellek?' · <i>cihazdaki kopya</i>':'')+'</div>'
+    +'<div class="rk-olcu" role="group" aria-label="Ölçü">'+RK_OLCU.filter(function(x){ return VAR.indexOf(x[0])>-1; }).map(function(x){ return '<button type="button" id="rkO_'+x[0]+'" class="'+(o===x[0]?'on':'')+'" aria-pressed="'+(o===x[0])+'" onclick="rkOlcu(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('')+'</div>'
+    +'<div class="rk-ozet"><div><b id="rkTop">'+(_rkSay(gen,o)||'0')+'</b><span>'+n+' hafta toplam</span></div><div><b>'+(_rkSay(n?gen/n:0,o)||'0')+'</b><span>Haftalık ort.</span></div><div><b>'+U.length+'</b><span>Çeşit</span></div><div><b style="color:'+(deg==null?'#0F1923':deg<0?'#DC2626':'#0F766E')+';">'+(deg==null?'—':(deg>0?'+':'')+deg+'%')+'</b><span>'+(sI>-1?'Hf '+_rkHafta(H[sI])+' / önceki ort.':'Son hafta / ort.')+'</span></div></div></div>';
+  if(eski) h+='<div class="rk-uyari">⚠️ Bu müşterinin son yüklemede ('+_rkTr(M.bas)+' – '+_rkTr(M.bit)+') alımı yok; tablo önceki yüklemeye ait.</div>';
+  if(!U.length) h+='<div class="rk-mesaj">Bu dönemde bu ölçüde değer yok.</div>';
+  else {
+    h+='<div class="rk-govde"><table id="rkTablo"><thead><tr><th class="u">Ürün</th>'+H.map(function(w,i){ return '<th'+(tam[i]?'':' title="Dosya bu haftanın '+HK[i]+'/'+HT[i]+' iş gününü kapsıyor" style="color:#B45309;"')+'>Hf '+_rkHafta(w)+'<small>'+(tam[i]?_rkTr(w):'eksik '+HK[i]+'/'+HT[i]+' gün')+'</small></th>'; }).join('')+'<th>Toplam</th></tr></thead><tbody>';
+    U.forEach(function(u){
+      var S2=TI.slice(-2), oncekiVar=TI.slice(0,-2).some(function(i){ return u.v[i]>0; }), son2Yok=TI.length>=3 && S2.every(function(i){ return !u.v[i]; });
+      var uOrt=ortF(u.v), dusuk=!son2Yok && TI.length>=3 && uOrt>0 && u.v[sI]<uOrt*0.5;
+      var cls=(oncekiVar&&son2Yok)?'uy-kirmizi':(dusuk?'uy-turuncu':'');
+      h+='<tr class="'+cls+'" data-rk-urun="'+_rkE(u.k||u.a)+'"><td class="u">'+_rkE(u.a)+'<small>'+_rkE(u.g||'')+(u.k?' · '+_rkE(u.k):'')+'</small></td>'
+        +u.v.map(function(x,i){ return '<td class="'+((oncekiVar&&son2Yok&&S2.indexOf(i)>-1)?'bos-kirmizi':'')+'"'+(tam[i]?'':' style="color:#94A3B8;"')+'>'+_rkSay(x,o)+'</td>'; }).join('')+'<td class="t">'+_rkSay(u.t,o)+'</td></tr>';
+    });
+    h+='<tr class="top"><td class="u">Toplam</td>'+kol.map(function(x){ return '<td>'+_rkSay(x,o)+'</td>'; }).join('')+'<td>'+_rkSay(gen,o)+'</td></tr></tbody></table></div>';
+  }
+  h+='<div class="rk-not"><span style="box-shadow:inset 3px 0 0 #DC2626;padding-left:6px;">Kırmızı</span>: önceden alınıp son 2 tam haftada hiç alınmayan ürün · <span style="box-shadow:inset 3px 0 0 #F59E0B;padding-left:6px;">Turuncu</span>: son tam hafta, önceki tam haftaların ortalamasının yarısından az. Haftalar Pazartesi–Pazar (ISO); dosyanın tam kapsamadığı hafta gri ve "eksik" yazar, karşılaştırmaya girmez.</div>';
+  _rkKutu(h);
+}
+// ST Paneli: kendi müşterilerinin listesi (yalnız kendi kartları; sunucu kuralı)
+function rkListeAc(st, zorla){ RK.st=st;
+  _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">⏳ Müşterileriniz yükleniyor…</div>');
+  var d=_rkDb(); if(!d) return; var lk='kyk_rkl_'+st;
+  // Gün içinde ikinci açılış sunucudan okumaz (ücretsiz okuma kotası); yükleme tarihi değiştiyse yenilenir
+  try{ var c=JSON.parse(localStorage.getItem(lk)||'null'); if(!zorla && c && c.gun===new Date().toISOString().slice(0,10) && Array.isArray(c.liste)){ RK.liste=c.liste; RK.meta=RK.meta||c.meta; rkListeCiz(); return; } }catch(e){}
+  Promise.all([d.collection('rutKarti').where('sts','array-contains',st).get(), _rkMeta()]).then(function(s){
+    RK.liste=s[0].docs.filter(function(x){ return x.id!=='_meta'; }).map(function(x){ var v=x.data()||{}, t=0; (v.u||[]).forEach(function(u){ (u.p||[]).forEach(function(z){ t+=Number(z)||0; }); }); return {id:x.id, a:String(v.a||x.id), k:String(v.k||x.id), son:v.son||'', t:t, doc:v}; }).sort(function(a,b){ return b.t-a.t; });
+    try{ localStorage.setItem(lk, JSON.stringify({gun:new Date().toISOString().slice(0,10), liste:RK.liste, meta:RK.meta})); }catch(e){}
+    rkListeCiz();
+  }).catch(function(err){ _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">'+_rkE(/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok.':'Okunamadı: '+((err&&err.message)||err))+'</div>'); });
+}
+function rkListeCiz(){
+  var q=(RK.ara||'').toLocaleUpperCase('tr-TR').trim(), l=(RK.liste||[]).filter(function(m){ return !q || m.a.toLocaleUpperCase('tr-TR').indexOf(q)>-1 || m.k.indexOf(q)>-1; });
+  var govde=l.length? l.map(function(m){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(\''+_rkE(m.id)+'\')"><div>'+_rkE(m.a)+'<small>'+_rkE(m.k)+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(m.t).toLocaleString('tr-TR')+' Pk</b></div>'; }).join('') : '<div class="rk-mesaj">'+((RK.liste||[]).length?'Eşleşen müşteri yok.':'Henüz rut kartı yüklenmedi ya da bu dönemde alım yok.')+'</div>';
+  var el=document.getElementById('rkListeGovde'); if(el){ el.innerHTML=govde; return; }
+  _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><div class="rk-alt">'+(RK.liste||[]).length+' müşteri · Veri: '+_rkTr((RK.meta||{}).bas)+' – '+_rkTr((RK.meta||{}).bit)+' · en çok paket alan üstte · <a href="javascript:void(0)" id="rkListeYenile" onclick="rkListeAc(RK.st,true)" style="color:#2563EB;font-weight:700;">↻ Yenile</a></div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button>'
+    +'<input id="rkAra" class="rk-ara" type="search" placeholder="🔎 Müşteri adı veya cari kodu" value="'+_rkE(RK.ara)+'" oninput="RK.ara=this.value;rkListeCiz()"></div><div class="rk-govde" id="rkListeGovde">'+govde+'</div>');
+}
+function rkListeSec(id){ var m=(RK.liste||[]).filter(function(x){ return x.id===id; })[0]; if(!m) return; RK.kod=id; RK.doc=m.doc; RK.hata='';
+  try{ localStorage.setItem('kyk_rk_'+id, JSON.stringify({doc:m.doc, meta:RK.meta, z:Date.now()})); }catch(e){}
+  rkCiz(m.a); var b=document.querySelector('#rkPanel .rk-bas'); if(b){ var g=document.createElement('button'); g.type='button'; g.id='rkGeri'; g.textContent='‹ Müşterilerim'; g.style.cssText='border:none;background:none;color:#2563EB;font-weight:700;font-size:12px;padding:0 0 6px;cursor:pointer;font-family:inherit'; g.onclick=function(){ rkListeCiz(); }; b.insertBefore(g,b.firstChild); } }
+
+// GY formu: seçili müşterinin cari kodunu rut listesinden bul (önce bu ST'nin listesi)
+function rkFormAc(){
+  var ad=(document.getElementById('iNokta').value||'').trim();
+  if(!ad){ toast('Önce müşteri (nokta) seçin.','e'); return; }
+  var st=(document.getElementById('sST')||{}).value||'', kod='', sira=st&&RUT[st]?[st].concat(Object.keys(RUT)):Object.keys(RUT);
+  sira.some(function(s){ var g=(RUT[s]||{}).g||{}; return Object.keys(g).some(function(gun){ return (g[gun]||[]).some(function(m){ if(m && String(m.a||'').trim()===ad && m.k){ kod=m.k; return true; } return false; }); }); });
+  rkKartAc(kod, ad);
+}
+</script>
 </body>
 </html>
