@@ -50,6 +50,8 @@ button,input,select{font-family:inherit;}
 .akutu div{background:#fff;border-radius:12px;padding:10px 6px;text-align:center;box-shadow:0 1px 3px rgba(15,25,35,.06);}
 .akutu b{display:block;font-size:16px;color:var(--lac);}
 .akutu span{font-size:10px;color:var(--mid);font-weight:600;}
+.akutu.k4{grid-template-columns:repeat(4,1fr);}
+@media(max-width:520px){.akutu.k4{grid-template-columns:repeat(2,1fr);}}
 .aolcu{display:inline-flex;background:#E2E8F0;border-radius:10px;padding:3px;}
 .aolcu button{border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;background:transparent;color:var(--mid);}
 .aolcu button.on{background:var(--lac);color:#fff;}
@@ -187,7 +189,7 @@ var ONIZLEME=false, ONZ_LISTE=[];   // v58: Müdür e-postası sayfada değil; r
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-06a';
+var SURUM='2026-11-06b';
 (function(){
   var son=0;
   function bant(){
@@ -374,6 +376,15 @@ function ciroGunlukHtml(V){
   h+='<tr style="background:#0F766E;color:#fff;font-weight:800;"><td style="padding:7px 6px;">Toplam</td>'+G.map(function(g){ return '<td style="padding:7px 6px;text-align:right;white-space:nowrap;">'+f(top[g]||0)+'</td>'; }).join('')+'<td style="padding:7px 6px;text-align:right;white-space:nowrap;">'+f(gen)+'</td></tr></tbody></table></div>';
   return h;
 }
+// Günlük ortalama ciro (v61c): dönemdeki iş günü = Pazartesi–Cumartesi, dini bayramlar hariç (panel ile aynı takvim)
+var IZ_TATIL={'2026-01-01':'r','2026-03-20':'d','2026-03-21':'d','2026-03-22':'d','2026-04-23':'r','2026-05-01':'r','2026-05-19':'r','2026-05-27':'d','2026-05-28':'d','2026-05-29':'d','2026-05-30':'d','2026-07-15':'r','2026-08-30':'r','2026-10-29':'r',
+  '2027-01-01':'r','2027-03-09':'d','2027-03-10':'d','2027-03-11':'d','2027-04-23':'r','2027-05-01':'r','2027-05-16':'d','2027-05-17':'d','2027-05-18':'d','2027-05-19':'d','2027-07-15':'r','2027-08-30':'r','2027-10-29':'r'};
+function _cIsGunu(bas, bit){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(bas||'') || !/^\d{4}-\d{2}-\d{2}$/.test(bit||'') || bit<bas) return 0;
+  var n=0, d=new Date(bas+'T00:00:00Z'), son=new Date(bit+'T00:00:00Z'), i=0;
+  while(d<=son && i<400){ var g=d.toISOString().slice(0,10); if(d.getUTCDay()!==0 && IZ_TATIL[g]!=='d') n++; d.setUTCDate(d.getUTCDate()+1); i++; }
+  return n;
+}
 function ciroCiz(sadeceMusteri){
   var el=document.getElementById('cirom'); if(!el || !CIRO) return;
   if(C_YUK && !C_VERI){ el.innerHTML='<div class="bos">⏳ Ciro bilginiz yükleniyor…</div>'; return; }
@@ -391,7 +402,7 @@ function ciroCiz(sadeceMusteri){
   };
   if(sadeceMusteri && document.getElementById('cListe')){ document.getElementById('cListe').innerHTML=musteri(); return; }
   el.innerHTML='<div class="bilgi">📅 Dönem: <b>'+esc(tr(V.bas))+' – '+esc(tr(V.bit))+'</b> · Brüt ciro (KDV hariç) · <a href="javascript:ciroYenile()" style="color:var(--lac);font-weight:700;">↻ Yenile</a></div>'
-    +'<div class="akutu"><div><b id="cTop">'+tl(V.t)+'</b><span>Brüt Ciro</span></div><div><b id="cSyms">'+V.m+'</b><span>SYMS (müşteri)</span></div><div><b>'+V.ces+'</b><span>Ürün Çeşidi</span></div></div>'
+    +'<div class="akutu k4"><div><b id="cTop">'+tl(V.t)+'</b><span>Brüt Ciro</span></div><div><b id="cGun">'+(_cIsGunu(V.bas,V.bit)?tl(V.t/_cIsGunu(V.bas,V.bit)):'—')+'</b><span>Günlük Ortalama'+(_cIsGunu(V.bas,V.bit)?' ('+_cIsGunu(V.bas,V.bit)+' iş günü)':'')+'</span></div><div><b id="cSyms">'+V.m+'</b><span>SYMS (müşteri)</span></div><div><b>'+V.ces+'</b><span>Ürün Çeşidi</span></div></div>'
     +'<div class="akart">'+V.g.map(function(g,i){ var pay=V.t?Math.round(g.t/V.t*1000)/10:0, ac=!!C_ACIK[i];
         return '<div class="asat cgrup" data-grup="'+esc(g.g)+'" onclick="ciroGrup('+i+')"><div class="n"><b>'+esc(g.g)+'</b><span class="ok">'+(ac?'▾':'›')+'</span></div><div class="v">'+tl(g.t)+'<small>%'+pay.toLocaleString('tr-TR')+' · Çeşit-'+g.c+'</small></div></div>'
           +(ac?'<div style="background:#F8FAFC;border-radius:8px;padding:0 10px;margin:2px 0 6px;">'+V.u.filter(function(z){ return z.g===g.g; }).map(function(z){ return '<div class="asat" data-urun="1"><div class="n">'+esc(z.a)+'<small>'+esc(z.k)+'</small></div><div class="v">'+tl(z.t)+'<small>'+pk(z.p)+'</small></div></div>'; }).join('')+'</div>':''); }).join('')+'</div>'
