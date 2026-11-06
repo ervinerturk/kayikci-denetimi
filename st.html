@@ -187,7 +187,7 @@ var ONIZLEME=false, ONZ_LISTE=[];   // v58: Müdür e-postası sayfada değil; r
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-05c';
+var SURUM='2026-11-06a';
 (function(){
   var son=0;
   function bant(){
@@ -619,7 +619,7 @@ function _rkCss(){
    +'#rkPanel .rk-govde{overflow:auto;flex:1;-webkit-overflow-scrolling:touch}#rkPanel table{border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums;min-width:100%}'
    +'#rkPanel th{position:sticky;top:0;background:#F1F5F9;font-size:10.5px;color:#475569;font-weight:800;padding:7px 6px;text-align:right;white-space:nowrap;z-index:2}#rkPanel th small{display:block;font-weight:600;color:#94A3B8;font-size:9.5px}'
    +'#rkPanel td{padding:6px;text-align:right;white-space:nowrap;border-bottom:1px solid #F1F5F9}#rkPanel td.u,#rkPanel th.u{position:sticky;left:0;text-align:left;background:#fff;z-index:1;white-space:normal;min-width:150px;max-width:220px}#rkPanel th.u{z-index:3;background:#F1F5F9}'
-   +'#rkPanel td.u small{display:block;color:#94A3B8;font-size:10px}#rkPanel td.t{font-weight:800}#rkPanel tr.uy-kirmizi td.u{box-shadow:inset 3px 0 0 #DC2626}#rkPanel tr.uy-turuncu td.u{box-shadow:inset 3px 0 0 #F59E0B}#rkPanel td.bos-kirmizi{background:#FEF2F2}'
+   +'#rkPanel td.u small{display:block;color:#94A3B8;font-size:10px}#rkPanel td.t{font-weight:800}#rkPanel tr.uy-kirmizi td.u{box-shadow:inset 3px 0 0 #DC2626}#rkPanel tr.uy-turuncu td.u{box-shadow:inset 3px 0 0 #F59E0B}#rkPanel td.bos-kirmizi{background:#FEF2F2}#rkPanel .rk-f{background:#F1F5F9;color:#334155;font-weight:700;border-left:1px solid #E2E8F0}'
    +'#rkPanel tr.top td{background:#0F766E;color:#fff;font-weight:800;position:sticky;bottom:0}#rkPanel tr.top td.u{background:#0F766E}'
    +'#rkPanel .rk-not{font-size:10.5px;color:#64748B;padding:8px 16px 12px;border-top:1px solid #E2E8F0;line-height:1.5}#rkPanel .rk-uyari{margin:8px 16px 0;background:#FFF7ED;color:#9A3412;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:600}'
    +'#rkPanel .rk-mesaj{padding:28px 16px;text-align:center;color:#475569;font-size:13px;line-height:1.5}#rkPanel .rk-ara{width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:15px;margin-top:10px;font-family:inherit}'
@@ -658,29 +658,29 @@ function rkCiz(ad, onbellek){
   if(!D) return;
   if(D.yok){ _rkKutu(bas+'<div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div><div class="rk-alt">Cari: '+_rkE(RK.kod)+'</div></div><div class="rk-mesaj">Bu müşterinin yüklenen dönemde ('+_rkTr(M.bas)+' – '+_rkTr(M.bit)+') alım kaydı yok.</div>'); return; }
   var VAR=RK_OLCU.filter(function(x){ return (D.u||[]).some(function(u){ return Array.isArray(u[x[0]]); }); }).map(function(x){ return x[0]; }); if(VAR.length && VAR.indexOf(RK.olcu)<0) RK.olcu=VAR[0];
-  var H=Array.isArray(D.h)?D.h:[], o=RK.olcu, U=(Array.isArray(D.u)?D.u:[]).map(function(u){ var v=(Array.isArray(u[o])?u[o]:[]).map(function(x){ return Number(x)||0; }); var t=0; v.forEach(function(x){ t+=x; }); return {a:u.a, k:u.k, g:u.g, v:v, t:t}; }).filter(function(u){ return Math.abs(u.t)>0.0001; }).sort(function(a,b){ return b.t-a.t; });
+  var H=Array.isArray(D.h)?D.h:[], o=RK.olcu, U=(Array.isArray(D.u)?D.u:[]).map(function(u){ var v=(Array.isArray(u[o])?u[o]:[]).map(function(x){ return Number(x)||0; }); var t=0; v.forEach(function(x){ t+=x; }); return {a:u.a, k:u.k, g:u.g, v:v, t:t, f:u.f}; }).filter(function(u){ return Math.abs(u.t)>0.0001; }).sort(function(a,b){ return b.t-a.t; });
   var n=H.length, kol=H.map(function(){ return 0; }), gen=0; U.forEach(function(u){ u.v.forEach(function(x,i){ kol[i]+=x; }); gen+=u.t; });
   // Tam haftalar (dosya haftanın tüm iş günlerini kapsıyor): karşılaştırma ve uyarılar yalnız bunlarla
   var HK=Array.isArray(D.hk)?D.hk:[], HT=Array.isArray(D.ht)?D.ht:[], tam=H.map(function(w,i){ return HK[i]==null || HT[i]==null || HK[i]>=HT[i]; });
   var TI=[]; tam.forEach(function(x,i){ if(x) TI.push(i); }); var sI=TI.length?TI[TI.length-1]:-1, oI=TI.slice(0,-1);
   var ortF=function(v){ return oI.length? oI.reduce(function(a,i){ return a+v[i]; },0)/oI.length : 0; };
   var son=sI>-1?kol[sI]:0, ort=ortF(kol), deg=(sI>-1&&ort)?Math.round((son-ort)/ort*100):null;
-  var eski=M.yuklendi && D.yuklendi && String(D.yuklendi)<String(M.yuklendi);
+  var eski=M.yuklendi && D.yuklendi && String(D.yuklendi)<String(M.yuklendi), FT=(D.fs!=null);   // Fatura sütunu: yalnız Evrak No içeren (Octapull) yüklemede
   var h=bas+'<div class="rk-ad">'+_rkE(D.a||ad||'Müşteri')+'</div><div class="rk-alt">Cari '+_rkE(D.k||RK.kod)+(D.gr?' · '+_rkE(D.gr):'')+(D.st?' · ST '+_rkE(D.st):'')+' · Veri: '+_rkTr(D.bas)+' – '+_rkTr(D.bit)+(D.son?' · Son alım '+_rkTr(D.son):'')+(onbellek?' · <i>cihazdaki kopya</i>':'')+'</div>'
     +'<div class="rk-olcu" role="group" aria-label="Ölçü">'+RK_OLCU.filter(function(x){ return VAR.indexOf(x[0])>-1; }).map(function(x){ return '<button type="button" id="rkO_'+x[0]+'" class="'+(o===x[0]?'on':'')+'" aria-pressed="'+(o===x[0])+'" onclick="rkOlcu(\''+x[0]+'\')">'+x[1]+'</button>'; }).join('')+'</div>'
     +'<div class="rk-ozet"><div><b id="rkTop">'+(_rkSay(gen,o)||'0')+'</b><span>'+n+' hafta toplam</span></div><div><b>'+(_rkSay(n?gen/n:0,o)||'0')+'</b><span>Haftalık ort.</span></div><div><b>'+U.length+'</b><span>Çeşit</span></div><div><b style="color:'+(deg==null?'#0F1923':deg<0?'#DC2626':'#0F766E')+';">'+(deg==null?'—':(deg>0?'+':'')+deg+'%')+'</b><span>'+(sI>-1?'Hf '+_rkHafta(H[sI])+' / önceki ort.':'Son hafta / ort.')+'</span></div></div></div>';
   if(eski) h+='<div class="rk-uyari">⚠️ Bu müşterinin son yüklemede ('+_rkTr(M.bas)+' – '+_rkTr(M.bit)+') alımı yok; tablo önceki yüklemeye ait.</div>';
   if(!U.length) h+='<div class="rk-mesaj">Bu dönemde bu ölçüde değer yok.</div>';
   else {
-    h+='<div class="rk-govde"><table id="rkTablo"><thead><tr><th class="u">Ürün</th>'+H.map(function(w,i){ return '<th'+(tam[i]?'':' title="Dosya bu haftanın '+HK[i]+'/'+HT[i]+' iş gününü kapsıyor" style="color:#B45309;"')+'>Hf '+_rkHafta(w)+'<small>'+(tam[i]?_rkTr(w):'eksik '+HK[i]+'/'+HT[i]+' gün')+'</small></th>'; }).join('')+'<th>Toplam</th></tr></thead><tbody>';
+    h+='<div class="rk-govde"><table id="rkTablo"><thead><tr><th class="u">Ürün</th>'+H.map(function(w,i){ return '<th'+(tam[i]?'':' title="Dosya bu haftanın '+HK[i]+'/'+HT[i]+' iş gününü kapsıyor" style="color:#B45309;"')+'>Hf '+_rkHafta(w)+'<small>'+(tam[i]?_rkTr(w):'eksik '+HK[i]+'/'+HT[i]+' gün')+'</small></th>'; }).join('')+(FT?'<th class="rk-f" title="Seçili dönemde bu ürünün geçtiği fatura sayısı">Fatura</th>':'')+'<th>Toplam</th></tr></thead><tbody>';
     U.forEach(function(u){
       var S2=TI.slice(-2), oncekiVar=TI.slice(0,-2).some(function(i){ return u.v[i]>0; }), son2Yok=TI.length>=3 && S2.every(function(i){ return !u.v[i]; });
       var uOrt=ortF(u.v), dusuk=!son2Yok && TI.length>=3 && uOrt>0 && u.v[sI]<uOrt*0.5;
       var cls=(oncekiVar&&son2Yok)?'uy-kirmizi':(dusuk?'uy-turuncu':'');
       h+='<tr class="'+cls+'" data-rk-urun="'+_rkE(u.k||u.a)+'"><td class="u">'+_rkE(u.a)+'<small>'+_rkE(u.g||'')+(u.k?' · '+_rkE(u.k):'')+'</small></td>'
-        +u.v.map(function(x,i){ return '<td class="'+((oncekiVar&&son2Yok&&S2.indexOf(i)>-1)?'bos-kirmizi':'')+'"'+(tam[i]?'':' style="color:#94A3B8;"')+'>'+_rkSay(x,o)+'</td>'; }).join('')+'<td class="t">'+_rkSay(u.t,o)+'</td></tr>';
+        +u.v.map(function(x,i){ return '<td class="'+((oncekiVar&&son2Yok&&S2.indexOf(i)>-1)?'bos-kirmizi':'')+'"'+(tam[i]?'':' style="color:#94A3B8;"')+'>'+_rkSay(x,o)+'</td>'; }).join('')+(FT?'<td class="rk-f">'+(u.f!=null?Number(u.f).toLocaleString('tr-TR'):'')+'</td>':'')+'<td class="t">'+_rkSay(u.t,o)+'</td></tr>';
     });
-    h+='<tr class="top"><td class="u">Toplam</td>'+kol.map(function(x){ return '<td>'+_rkSay(x,o)+'</td>'; }).join('')+'<td>'+_rkSay(gen,o)+'</td></tr></tbody></table></div>';
+    h+='<tr class="top"><td class="u">Toplam</td>'+kol.map(function(x){ return '<td>'+_rkSay(x,o)+'</td>'; }).join('')+(FT?'<td class="rk-f" title="Seçili dönemdeki toplam fatura (tekil)">'+Number(D.fs).toLocaleString('tr-TR')+'</td>':'')+'<td>'+_rkSay(gen,o)+'</td></tr></tbody></table></div>';
   }
   h+='<div class="rk-not"><span style="box-shadow:inset 3px 0 0 #DC2626;padding-left:6px;">Kırmızı</span>: önceden alınıp son 2 tam haftada hiç alınmayan ürün · <span style="box-shadow:inset 3px 0 0 #F59E0B;padding-left:6px;">Turuncu</span>: son tam hafta, önceki tam haftaların ortalamasının yarısından az. Haftalar Pazartesi–Pazar (ISO); dosyanın tam kapsamadığı hafta gri ve "eksik" yazar, karşılaştırmaya girmez.</div>';
   _rkKutu(h);
