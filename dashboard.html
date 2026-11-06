@@ -1459,7 +1459,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-06a';
+var SURUM='2026-11-06c';
 (function(){
   var son=0;
   function bant(){
@@ -2620,7 +2620,7 @@ function _rkCss(){
    +'#rkPanel .rk-govde{overflow:auto;flex:1;-webkit-overflow-scrolling:touch}#rkPanel table{border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums;min-width:100%}'
    +'#rkPanel th{position:sticky;top:0;background:#F1F5F9;font-size:10.5px;color:#475569;font-weight:800;padding:7px 6px;text-align:right;white-space:nowrap;z-index:2}#rkPanel th small{display:block;font-weight:600;color:#94A3B8;font-size:9.5px}'
    +'#rkPanel td{padding:6px;text-align:right;white-space:nowrap;border-bottom:1px solid #F1F5F9}#rkPanel td.u,#rkPanel th.u{position:sticky;left:0;text-align:left;background:#fff;z-index:1;white-space:normal;min-width:150px;max-width:220px}#rkPanel th.u{z-index:3;background:#F1F5F9}'
-   +'#rkPanel td.u small{display:block;color:#94A3B8;font-size:10px}#rkPanel td.t{font-weight:800}#rkPanel tr.uy-kirmizi td.u{box-shadow:inset 3px 0 0 #DC2626}#rkPanel tr.uy-turuncu td.u{box-shadow:inset 3px 0 0 #F59E0B}#rkPanel td.bos-kirmizi{background:#FEF2F2}#rkPanel .rk-f{background:#F1F5F9;color:#334155;font-weight:700;border-left:1px solid #E2E8F0}'
+   +'#rkPanel td.u small{display:block;color:#94A3B8;font-size:10px}#rkPanel td.t{font-weight:800}#rkPanel tr.uy-kirmizi td.u{box-shadow:inset 3px 0 0 #DC2626}#rkPanel tr.uy-turuncu td.u{box-shadow:inset 3px 0 0 #F59E0B}#rkPanel td.bos-kirmizi{background:#FEF2F2}#rkPanel .rk-f{background:#F1F5F9;color:#334155;font-weight:700;border-left:1px solid #E2E8F0}#rkPanel .rk-gunler{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px}#rkPanel .rk-gun{flex:0 0 auto;border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:5px 11px;font:600 12px inherit;font-family:inherit;color:#334155;cursor:pointer}#rkPanel .rk-gun small{margin-left:4px;color:#64748B;font-weight:600}#rkPanel .rk-gun.on{background:#0F766E;border-color:#0F766E;color:#fff}#rkPanel .rk-gun.on small{color:#CCFBF1}#rkPanel .rk-gun-yok{font-size:11px;color:#64748B;padding:6px 0 0}'
    +'#rkPanel tr.top td{background:#0F766E;color:#fff;font-weight:800;position:sticky;bottom:0}#rkPanel tr.top td.u{background:#0F766E}'
    +'#rkPanel .rk-not{font-size:10.5px;color:#64748B;padding:8px 16px 12px;border-top:1px solid #E2E8F0;line-height:1.5}#rkPanel .rk-uyari{margin:8px 16px 0;background:#FFF7ED;color:#9A3412;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:600}'
    +'#rkPanel .rk-mesaj{padding:28px 16px;text-align:center;color:#475569;font-size:13px;line-height:1.5}#rkPanel .rk-ara{width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:15px;margin-top:10px;font-family:inherit}'
@@ -2691,19 +2691,30 @@ function rkListeAc(st, zorla){ RK.st=st;
   _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">⏳ Müşterileriniz yükleniyor…</div>');
   var d=_rkDb(); if(!d) return; var lk='kyk_rkl_'+st;
   // Gün içinde ikinci açılış sunucudan okumaz (ücretsiz okuma kotası); yükleme tarihi değiştiyse yenilenir
-  try{ var c=JSON.parse(localStorage.getItem(lk)||'null'); if(!zorla && c && c.gun===new Date().toISOString().slice(0,10) && Array.isArray(c.liste)){ RK.liste=c.liste; RK.meta=RK.meta||c.meta; rkListeCiz(); return; } }catch(e){}
+  try{ var c=JSON.parse(localStorage.getItem(lk)||'null'); if(!zorla && c && c.s===2 && c.gun===new Date().toISOString().slice(0,10) && Array.isArray(c.liste)){ RK.liste=c.liste; RK.meta=RK.meta||c.meta; rkListeCiz(); return; } }catch(e){}
   Promise.all([d.collection('rutKarti').where('sts','array-contains',st).get(), _rkMeta()]).then(function(s){
-    RK.liste=s[0].docs.filter(function(x){ return x.id!=='_meta'; }).map(function(x){ var v=x.data()||{}, t=0; (v.u||[]).forEach(function(u){ (u.p||[]).forEach(function(z){ t+=Number(z)||0; }); }); return {id:x.id, a:String(v.a||x.id), k:String(v.k||x.id), son:v.son||'', t:t, doc:v}; }).sort(function(a,b){ return b.t-a.t; });
-    try{ localStorage.setItem(lk, JSON.stringify({gun:new Date().toISOString().slice(0,10), liste:RK.liste, meta:RK.meta})); }catch(e){}
+    RK.liste=s[0].docs.filter(function(x){ return x.id!=='_meta'; }).map(function(x){ var v=x.data()||{}, t=0; (v.u||[]).forEach(function(u){ (u.p||[]).forEach(function(z){ t+=Number(z)||0; }); }); return {id:x.id, a:String(v.a||x.id), k:String(v.k||x.id), son:v.son||'', t:t, g:(v.gun&&v.gun[st])||null, doc:v}; }).sort(function(a,b){ return b.t-a.t; });
+    try{ localStorage.setItem(lk, JSON.stringify({s:2, gun:new Date().toISOString().slice(0,10), liste:RK.liste, meta:RK.meta})); }catch(e){}
     rkListeCiz();
   }).catch(function(err){ _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">'+_rkE(/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok.':'Okunamadı: '+((err&&err.message)||err))+'</div>'); });
 }
+// v61d: rut günü filtresi (Pazartesi…Pazar); seçili günde rut sırasına göre dizilir
+var RK_GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'], RK_GUN_KISA={Pazartesi:'Pzt','Salı':'Sal','Çarşamba':'Çar','Perşembe':'Per',Cuma:'Cum',Cumartesi:'Cmt',Pazar:'Paz'};
+function _rkGunCubuk(){
+  var L=RK.liste||[], var_=L.some(function(m){ return m.g; }); if(!var_) return {html:'<div class="rk-gun-yok">ℹ️ Gün bazlı liste için Rut Kartı yeniden yüklenmeli.</div>', var_:false};
+  var say={}; RK_GUNLER.forEach(function(g){ say[g]=0; }); L.forEach(function(m){ if(m.g) Object.keys(m.g).forEach(function(g){ if(say[g]!=null) say[g]++; }); });
+  if(!RK.gunSec){ var bg=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][new Date().getDay()]; RK.gunSec=say[bg]?bg:'Tümü'; }
+  var b=function(g,et,n){ return '<button type="button" class="rk-gun'+(RK.gunSec===g?' on':'')+'" data-rk-gun="'+g+'" onclick="RK.gunSec=\''+g+'\';rkListeCiz()">'+et+(n!=null?'<small>'+n+'</small>':'')+'</button>'; };
+  return {html:'<div class="rk-gunler">'+b('Tümü','Tümü',L.length)+RK_GUNLER.filter(function(g){ return say[g]; }).map(function(g){ return b(g,RK_GUN_KISA[g],say[g]); }).join('')+'</div>', var_:true};
+}
 function rkListeCiz(){
-  var q=(RK.ara||'').toLocaleUpperCase('tr-TR').trim(), l=(RK.liste||[]).filter(function(m){ return !q || m.a.toLocaleUpperCase('tr-TR').indexOf(q)>-1 || m.k.indexOf(q)>-1; });
-  var govde=l.length? l.map(function(m){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(\''+_rkE(m.id)+'\')"><div>'+_rkE(m.a)+'<small>'+_rkE(m.k)+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(m.t).toLocaleString('tr-TR')+' Pk</b></div>'; }).join('') : '<div class="rk-mesaj">'+((RK.liste||[]).length?'Eşleşen müşteri yok.':'Henüz rut kartı yüklenmedi ya da bu dönemde alım yok.')+'</div>';
-  var el=document.getElementById('rkListeGovde'); if(el){ el.innerHTML=govde; return; }
-  _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><div class="rk-alt">'+(RK.liste||[]).length+' müşteri · Veri: '+_rkTr((RK.meta||{}).bas)+' – '+_rkTr((RK.meta||{}).bit)+' · en çok paket alan üstte · <a href="javascript:void(0)" id="rkListeYenile" onclick="rkListeAc(RK.st,true)" style="color:#2563EB;font-weight:700;">↻ Yenile</a></div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button>'
-    +'<input id="rkAra" class="rk-ara" type="search" placeholder="🔎 Müşteri adı veya cari kodu" value="'+_rkE(RK.ara)+'" oninput="RK.ara=this.value;rkListeCiz()"></div><div class="rk-govde" id="rkListeGovde">'+govde+'</div>');
+  var GC=_rkGunCubuk(), gs=GC.var_?RK.gunSec:'Tümü';
+  var q=(RK.ara||'').toLocaleUpperCase('tr-TR').trim(), l=(RK.liste||[]).filter(function(m){ return (gs==='Tümü' || (m.g && m.g[gs]!=null)) && (!q || m.a.toLocaleUpperCase('tr-TR').indexOf(q)>-1 || m.k.indexOf(q)>-1); });
+  if(gs!=='Tümü') l=l.slice().sort(function(a,b){ return (a.g[gs]||9999)-(b.g[gs]||9999); });
+  var govde=l.length? l.map(function(m){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(\''+_rkE(m.id)+'\')"><div>'+(gs!=='Tümü' && m.g && m.g[gs]?'<span style="color:#0F766E;font-weight:700;margin-right:4px">'+m.g[gs]+'.</span>':'')+_rkE(m.a)+'<small>'+_rkE(m.k)+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(m.t).toLocaleString('tr-TR')+' Pk</b></div>'; }).join('') : '<div class="rk-mesaj">'+((RK.liste||[]).length?'Eşleşen müşteri yok.':'Henüz rut kartı yüklenmedi ya da bu dönemde alım yok.')+'</div>';
+  var el=document.getElementById('rkListeGovde'), gc=document.getElementById('rkGunAlan'); if(el && gc){ el.innerHTML=govde; gc.innerHTML=GC.html; return; }
+  _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><div class="rk-alt">'+(RK.liste||[]).length+' müşteri · Veri: '+_rkTr((RK.meta||{}).bas)+' – '+_rkTr((RK.meta||{}).bit)+' · en çok paket alan üstte (gün seçiliyken rut sırası) · <a href="javascript:void(0)" id="rkListeYenile" onclick="rkListeAc(RK.st,true)" style="color:#2563EB;font-weight:700;">↻ Yenile</a></div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button>'
+    +'<input id="rkAra" class="rk-ara" type="search" placeholder="🔎 Müşteri adı veya cari kodu" value="'+_rkE(RK.ara)+'" oninput="RK.ara=this.value;rkListeCiz()"><div id="rkGunAlan">'+GC.html+'</div></div><div class="rk-govde" id="rkListeGovde">'+govde+'</div>');
 }
 function rkListeSec(id){ var m=(RK.liste||[]).filter(function(x){ return x.id===id; })[0]; if(!m) return; RK.kod=id; RK.doc=m.doc; RK.hata='';
   try{ localStorage.setItem('kyk_rk_'+id, JSON.stringify({doc:m.doc, meta:RK.meta, z:Date.now()})); }catch(e){}
@@ -2823,7 +2834,10 @@ function rkPbiHesapla(P, rutEs){
 function _rkRutEsle(){
   return Promise.all(Object.keys(YO).map(function(g){ return db.collection('rutlar').doc(g).get().then(function(d){ return {g:g, d:(d&&d.exists)?d.data():null}; }); })).then(function(l){
     var m=Object.create(null);
-    l.forEach(function(x){ var st=(x.d&&x.d.st)||{}; Object.keys(st).forEach(function(s){ var gun=st[s]||{}; Object.keys(gun).forEach(function(gn){ (Array.isArray(gun[gn])?gun[gn]:[]).forEach(function(mm){ if(mm && mm.k && !m[String(mm.k)]) m[String(mm.k)]={st:s, gy:x.g, gr:mm.gr||''}; }); }); }); });
+    l.forEach(function(x){ var st=(x.d&&x.d.st)||{}; Object.keys(st).forEach(function(s){ var gun=st[s]||{}; Object.keys(gun).forEach(function(gn){ (Array.isArray(gun[gn])?gun[gn]:[]).forEach(function(mm){ if(!mm || !mm.k) return; var k=String(mm.k);
+      if(!m[k]) m[k]={st:s, gy:x.g, gr:mm.gr||'', gun:{}, gyst:{}};
+      // v61d: rut günü + sırası (ST Paneli "Rut Kartım" gün filtresi için) → gun[ST][Gün] = sıra
+      var g=m[k].gun[s]||(m[k].gun[s]={}); g[gn]=Number(mm.s)||0; m[k].gyst[s]=x.g; }); }); }); });
     return m;
   });
 }
@@ -2900,7 +2914,16 @@ function rkSunucuyaYaz(){
     btn.textContent='⏳ Yükleniyor… '+Math.min(i+PARCA,B.length).toLocaleString('tr-TR')+' / '+B.length.toLocaleString('tr-TR');
     return b.commit().then(function(){ i+=PARCA; return adim(); });
   };
-  adim().catch(function(err){ btn.disabled=false; btn.textContent='⬆ Rut kartlarını yükle'; _rkHataG('⚠️ Yüklenemedi: '+((err&&err.message)||err)); });
+  btn.textContent='⏳ Rut günleri ekleniyor…';
+  _rkRutEsle().then(function(m){ _rkGunEkle(B, m); return adim(); }).catch(function(err){ btn.disabled=false; btn.textContent='⬆ Rut kartlarını yükle'; _rkHataG('⚠️ Yüklenemedi: '+((err&&err.message)||err)); });
+}
+// v61d: her müşteri kartına rut günlerini yazar (ST yalnız kendi kartlarını okur; rut listesine erişimi yok).
+// Rutta bu müşteriye bakan ST/GY, faturayı kesen farklı olsa bile kartı görür (kendi rut müşterisi).
+function _rkGunEkle(B, m){
+  B.forEach(function(x){ var r=m[x.v.k]; if(!r || !r.gun) return; x.v.gun=r.gun;
+    var sts=(x.v.sts||[]).slice(), gys=(x.v.gys||[]).slice();
+    Object.keys(r.gun).forEach(function(st){ if(sts.indexOf(st)<0) sts.push(st); var g=r.gyst[st]; if(g && gys.indexOf(g)<0) gys.push(g); });
+    x.v.sts=sts; x.v.gys=gys; if(!x.v.st) x.v.st=sts[0]||''; });
 }
 
 // ===== RAPOR TAKİBİ — açılış sayaçları =====
