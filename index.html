@@ -488,20 +488,20 @@ textarea.inp{resize:vertical;min-height:80px;line-height:1.6;}
         </div>
       </div>
 
-      <!-- ZİYARET GİRİŞ / ÇIKIŞ SAATİ -->
-      <div class="f" id="ziyKutu">
-        <button type="button" id="bZiyGiris" onclick="ziyaretBaslat()" style="width:100%;padding:13px;border:none;border-radius:10px;background:#059669;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;">▶ Müşteriye Girdim</button>
-        <div id="ziyBilgi" style="font-size:12px;color:var(--mid);margin-top:6px;line-height:1.45;">Mağazaya girince basın. Nokta kaydedilince <b>çıkış saati otomatik</b> yazılır.</div>
-      </div>
-
       <!-- HARİTA -->
-      <div id="haritaWrap" style="display:none;margin-bottom:12px;">
+      <div id="haritaWrap" style="margin-bottom:12px;">
         <button id="haritaAcBtn" onclick="leafletHaritaToggle()" style="width:100%;padding:12px;background:#EFF6FF;border:1.5px solid #93C5FD;border-radius:10px;color:#1D4ED8;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;">
-          🗺️ Müşteri Haritasını Göster / Gizle
+          🗺️ Müşteri Haritası — önce Grup Yöneticisi seçin
         </button>
         <div id="leafletMapWrap" style="display:none;margin-top:8px;border-radius:12px;overflow:hidden;border:1.5px solid #93C5FD;">
           <div id="leafletMap" style="width:100%;height:320px;"></div>
         </div>
+      </div>
+
+      <!-- ZİYARET GİRİŞ / ÇIKIŞ SAATİ -->
+      <div class="f" id="ziyKutu">
+        <button type="button" id="bZiyGiris" onclick="ziyaretBaslat()" style="width:100%;padding:13px;border:none;border-radius:10px;background:#059669;color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:'Inter',sans-serif;">▶ Müşteriye Girdim</button>
+        <div id="ziyBilgi" style="font-size:12px;color:var(--mid);margin-top:6px;line-height:1.45;">Mağazaya girince basın. Nokta kaydedilince <b>çıkış saati otomatik</b> yazılır.</div>
       </div>
 
       <!-- RUT KARTI -->
@@ -1041,15 +1041,18 @@ function haritaGoster(){
   if(!wrap) return;
   // Filtrelenmiş müşteri listesini hesapla
   var liste=_haritaMusterileriHesapla();
-  if(liste.length===0){ wrap.style.display='none'; return; }
-  wrap.style.display='block';
+  wrap.style.display='block';   // v61b: buton hep görünür; gösterilecek konum yoksa nedeni yazar (eskiden sessizce gizleniyordu)
+  if(liste.length===0){ _haritaBtn('🗺️ Müşteri Haritası — bu seçimde konumlu müşteri yok', false); var mw=document.getElementById('leafletMapWrap'); if(mw) mw.style.display='none'; return; }
+  _haritaBtn('🗺️ Müşteri Haritasını Göster / Gizle', true);
 }
 function haritaGizle(){
   var w=document.getElementById('haritaWrap');
-  if(w) w.style.display='none';
+  if(w) w.style.display='block';
+  _haritaBtn('🗺️ Müşteri Haritası — önce Grup Yöneticisi seçin', false);
   var mw=document.getElementById('leafletMapWrap');
   if(mw) mw.style.display='none';
 }
+function _haritaBtn(metin, aktif){ var b=document.getElementById('haritaAcBtn'); if(!b) return; b.textContent=metin; b.style.opacity=aktif?'1':'.6'; }
 
 function _haritaMusterileriHesapla(){
   // GY → ST → Gün hiyerarşisine göre müşteri listesi döndür
