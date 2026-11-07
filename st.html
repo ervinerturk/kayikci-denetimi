@@ -189,7 +189,7 @@ var ONIZLEME=false, ONZ_LISTE=[];   // v58: Müdür e-postası sayfada değil; r
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-06c';
+var SURUM='2026-11-07a';
 (function(){
   var son=0;
   function bant(){
@@ -307,7 +307,7 @@ function onizlemeSec(email){
   var x=ONZ_LISTE.filter(function(y){ return y.email===email; })[0]; if(!x) return;
   if(DINLE){ try{ DINLE(); }catch(e){} DINLE=null; }
   BEN={email:x.email, st:x.st, gy:x.gy, k:x.k};
-  try{ if(typeof RK!=='undefined'){ if(document.getElementById('rkPanel')) rkKapat(); RK.gunSec=null; RK.ara=''; RK.liste=null; } }catch(e){}
+  try{ if(typeof RK!=='undefined'){ if(document.getElementById('rkPanel')) rkKapat(); RK.gunSec=null; RK.ara=''; RK.liste=null; RK.mod='mus'; RK.urun=null; RK.urunAra=''; } }catch(e){}
   GSEC=''; LISTE=null; GIR={}; HATA={}; A_VERI=null; A_YUK=false; C_VERI=null; C_YUK=false; C_ACIK={}; C_MACIK={}; C_GUNLUK=false; ARAC=false; CIRO=false;
   var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.remove('ciro-mod');
   document.getElementById('onzSec').value=email;
@@ -631,7 +631,7 @@ function _rkCss(){
    +'#rkPanel .rk-govde{overflow:auto;flex:1;-webkit-overflow-scrolling:touch}#rkPanel table{border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums;min-width:100%}'
    +'#rkPanel th{position:sticky;top:0;background:#F1F5F9;font-size:10.5px;color:#475569;font-weight:800;padding:7px 6px;text-align:right;white-space:nowrap;z-index:2}#rkPanel th small{display:block;font-weight:600;color:#94A3B8;font-size:9.5px}'
    +'#rkPanel td{padding:6px;text-align:right;white-space:nowrap;border-bottom:1px solid #F1F5F9}#rkPanel td.u,#rkPanel th.u{position:sticky;left:0;text-align:left;background:#fff;z-index:1;white-space:normal;min-width:150px;max-width:220px}#rkPanel th.u{z-index:3;background:#F1F5F9}'
-   +'#rkPanel td.u small{display:block;color:#94A3B8;font-size:10px}#rkPanel td.t{font-weight:800}#rkPanel tr.uy-kirmizi td.u{box-shadow:inset 3px 0 0 #DC2626}#rkPanel tr.uy-turuncu td.u{box-shadow:inset 3px 0 0 #F59E0B}#rkPanel td.bos-kirmizi{background:#FEF2F2}#rkPanel .rk-f{background:#F1F5F9;color:#334155;font-weight:700;border-left:1px solid #E2E8F0}#rkPanel .rk-gunler{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px}#rkPanel .rk-gun{flex:0 0 auto;border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:5px 11px;font:600 12px inherit;font-family:inherit;color:#334155;cursor:pointer}#rkPanel .rk-gun small{margin-left:4px;color:#64748B;font-weight:600}#rkPanel .rk-gun.on{background:#0F766E;border-color:#0F766E;color:#fff}#rkPanel .rk-gun.on small{color:#CCFBF1}#rkPanel .rk-gun-yok{font-size:11px;color:#64748B;padding:6px 0 0}'
+   +'#rkPanel td.u small{display:block;color:#94A3B8;font-size:10px}#rkPanel td.t{font-weight:800}#rkPanel tr.uy-kirmizi td.u{box-shadow:inset 3px 0 0 #DC2626}#rkPanel tr.uy-turuncu td.u{box-shadow:inset 3px 0 0 #F59E0B}#rkPanel td.bos-kirmizi{background:#FEF2F2}#rkPanel .rk-f{background:#F1F5F9;color:#334155;font-weight:700;border-left:1px solid #E2E8F0}#rkPanel .rk-gunler{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px}#rkPanel .rk-gun{flex:0 0 auto;border:1px solid #CBD5E1;background:#fff;border-radius:999px;padding:5px 11px;font:600 12px inherit;font-family:inherit;color:#334155;cursor:pointer}#rkPanel .rk-gun small{margin-left:4px;color:#64748B;font-weight:600}#rkPanel .rk-gun.on{background:#0F766E;border-color:#0F766E;color:#fff}#rkPanel .rk-gun.on small{color:#CCFBF1}#rkPanel .rk-gun-yok{font-size:11px;color:#64748B;padding:6px 0 0}#rkPanel .rk-modlar{display:flex;gap:6px;margin-top:8px}#rkPanel .rk-mod{flex:1;border:1px solid #CBD5E1;background:#fff;border-radius:10px;padding:7px 8px;font:700 12px inherit;font-family:inherit;color:#334155;cursor:pointer}#rkPanel .rk-mod.on{background:#1E3A5F;border-color:#1E3A5F;color:#fff}#rkPanel .rk-urun-bas{padding:8px 0 2px;font-size:13px;color:#0F1923}#rkPanel .rk-urun-bas button{border:none;background:none;color:#2563EB;font-weight:700;font-size:12px;padding:0 8px 0 0;cursor:pointer;font-family:inherit}#rkPanel .rk-urun-bas small{display:block;color:#64748B;font-size:11px;margin-top:2px}'
    +'#rkPanel tr.top td{background:#0F766E;color:#fff;font-weight:800;position:sticky;bottom:0}#rkPanel tr.top td.u{background:#0F766E}'
    +'#rkPanel .rk-not{font-size:10.5px;color:#64748B;padding:8px 16px 12px;border-top:1px solid #E2E8F0;line-height:1.5}#rkPanel .rk-uyari{margin:8px 16px 0;background:#FFF7ED;color:#9A3412;border-radius:10px;padding:8px 10px;font-size:12px;font-weight:600}'
    +'#rkPanel .rk-mesaj{padding:28px 16px;text-align:center;color:#475569;font-size:13px;line-height:1.5}#rkPanel .rk-ara{width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:15px;margin-top:10px;font-family:inherit}'
@@ -697,39 +697,84 @@ function rkCiz(ad, onbellek){
   h+='<div class="rk-not"><span style="box-shadow:inset 3px 0 0 #DC2626;padding-left:6px;">Kırmızı</span>: önceden alınıp son 2 tam haftada hiç alınmayan ürün · <span style="box-shadow:inset 3px 0 0 #F59E0B;padding-left:6px;">Turuncu</span>: son tam hafta, önceki tam haftaların ortalamasının yarısından az. Haftalar Pazartesi–Pazar (ISO); dosyanın tam kapsamadığı hafta gri ve "eksik" yazar, karşılaştırmaya girmez.</div>';
   _rkKutu(h);
 }
-// ST Paneli: kendi müşterilerinin listesi (yalnız kendi kartları; sunucu kuralı)
-function rkListeAc(st, zorla){ RK.st=st;
-  _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">⏳ Müşterileriniz yükleniyor…</div>');
-  var d=_rkDb(); if(!d) return; var lk='kyk_rkl_'+st;
-  // Gün içinde ikinci açılış sunucudan okumaz (ücretsiz okuma kotası); yükleme tarihi değiştiyse yenilenir
-  try{ var c=JSON.parse(localStorage.getItem(lk)||'null'); if(!zorla && c && c.s===2 && c.gun===new Date().toISOString().slice(0,10) && Array.isArray(c.liste)){ RK.liste=c.liste; RK.meta=RK.meta||c.meta; rkListeCiz(); return; } }catch(e){}
-  Promise.all([d.collection('rutKarti').where('sts','array-contains',st).get(), _rkMeta()]).then(function(s){
-    RK.liste=s[0].docs.filter(function(x){ return x.id!=='_meta'; }).map(function(x){ var v=x.data()||{}, t=0; (v.u||[]).forEach(function(u){ (u.p||[]).forEach(function(z){ t+=Number(z)||0; }); }); return {id:x.id, a:String(v.a||x.id), k:String(v.k||x.id), son:v.son||'', t:t, g:(v.gun&&v.gun[st])||null, doc:v}; }).sort(function(a,b){ return b.t-a.t; });
-    try{ localStorage.setItem(lk, JSON.stringify({s:2, gun:new Date().toISOString().slice(0,10), liste:RK.liste, meta:RK.meta})); }catch(e){}
-    rkListeCiz();
-  }).catch(function(err){ _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">'+_rkE(/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok.':'Okunamadı: '+((err&&err.message)||err))+'</div>'); });
+// Rut Kartı listesi — ST: kendi müşterileri (sts), GY: ekibinin müşterileri (gys). Sunucu kuralı yalnız bunlara izin verir.
+// v61e: "📦 Ürün ara" modu: bir ürünü en çok alan müşteriler (paket) sırayla; gün ve (GY'de) ST filtresiyle birlikte çalışır.
+function rkListeAc(st, zorla){ RK.tip='st'; RK.st=st; RK.gy=''; _rkListeYukle('sts', st, zorla); }
+function rkListeAcGY(gy, zorla){ if(!gy){ alert('Önce Grup Yöneticisi seçin.'); return; } RK.tip='gy'; RK.gy=gy; RK.st=''; _rkListeYukle('gys', gy, zorla); }
+function _rkListeBaslik(){ return RK.tip==='gy'?'📋 Ekibimin Rut Kartı':'📋 Rut Kartım'; }
+function _rkListeYukle(alan, deger, zorla){
+  _rkKutu('<div class="rk-bas"><div class="rk-ad">'+_rkListeBaslik()+'</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">⏳ Müşteriler yükleniyor…</div>');
+  var d=_rkDb(); if(!d) return; var lk='kyk_rkl_'+(alan==='gys'?'gy_':'')+deger;
+  // Gün içinde ikinci açılış sunucudan okumaz (ücretsiz okuma kotası); ↻ Yenile ile zorlanır
+  try{ var c=JSON.parse(localStorage.getItem(lk)||'null'); if(!zorla && c && c.s===3 && c.gun===new Date().toISOString().slice(0,10) && Array.isArray(c.liste)){ RK.liste=c.liste; RK.meta=RK.meta||c.meta; rkListeCiz(true); return; } }catch(e){}
+  Promise.all([d.collection('rutKarti').where(alan,'array-contains',deger).get(), _rkMeta()]).then(function(s){
+    RK.liste=s[0].docs.filter(function(x){ return x.id!=='_meta'; }).map(function(x){ var v=x.data()||{}, t=0; (v.u||[]).forEach(function(u){ (u.p||[]).forEach(function(z){ t+=Number(z)||0; }); }); return {id:x.id, a:String(v.a||x.id), k:String(v.k||x.id), son:v.son||'', t:t, gun:v.gun||null, sts:v.sts||[], doc:v}; }).sort(function(a,b){ return b.t-a.t; });
+    try{ localStorage.setItem(lk, JSON.stringify({s:3, gun:new Date().toISOString().slice(0,10), liste:RK.liste, meta:RK.meta})); }catch(e){}   // GY listesi büyükse sığmayabilir; o zaman her açılışta sunucudan okunur
+    rkListeCiz(true);
+  }).catch(function(err){ _rkKutu('<div class="rk-bas"><div class="rk-ad">'+_rkListeBaslik()+'</div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button></div><div class="rk-mesaj">'+_rkE(/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok.':'Okunamadı: '+((err&&err.message)||err))+'</div>'); });
+}
+// Müşterinin rut günleri → {Gün: sıra}. ST: kendi günleri; GY: seçili ST'ninki ya da ekipteki tüm günler (en küçük sıra)
+function _rkG(m){
+  if(!m.gun){ return m.g||null; }
+  if(RK.tip!=='gy') return m.gun[RK.st]||null;
+  if(RK.stSec) return m.gun[RK.stSec]||null;
+  var r=null; Object.keys(m.gun).forEach(function(st){ var g=m.gun[st]||{}; Object.keys(g).forEach(function(gn){ r=r||{}; if(r[gn]==null || (g[gn]||9999)<r[gn]) r[gn]=g[gn]; }); }); return r;
 }
 // v61d: rut günü filtresi (Pazartesi…Pazar); seçili günde rut sırasına göre dizilir
 var RK_GUNLER=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'], RK_GUN_KISA={Pazartesi:'Pzt','Salı':'Sal','Çarşamba':'Çar','Perşembe':'Per',Cuma:'Cum',Cumartesi:'Cmt',Pazar:'Paz'};
+function _rkStFiltre(L){ return RK.tip==='gy' && RK.stSec ? L.filter(function(m){ return (m.sts||[]).indexOf(RK.stSec)>-1 || (m.gun && m.gun[RK.stSec]); }) : L; }
 function _rkGunCubuk(){
-  var L=RK.liste||[], var_=L.some(function(m){ return m.g; }); if(!var_) return {html:'<div class="rk-gun-yok">ℹ️ Gün bazlı liste için Rut Kartı yeniden yüklenmeli.</div>', var_:false};
-  var say={}; RK_GUNLER.forEach(function(g){ say[g]=0; }); L.forEach(function(m){ if(m.g) Object.keys(m.g).forEach(function(g){ if(say[g]!=null) say[g]++; }); });
+  var L=_rkStFiltre(RK.liste||[]), var_=L.some(function(m){ return _rkG(m); }); if(!var_) return {html:'<div class="rk-gun-yok">ℹ️ Gün bazlı liste için Rut Kartı yeniden yüklenmeli.</div>', var_:false};
+  var say={}; RK_GUNLER.forEach(function(g){ say[g]=0; }); L.forEach(function(m){ var g=_rkG(m); if(g) Object.keys(g).forEach(function(x){ if(say[x]!=null) say[x]++; }); });
   if(!RK.gunSec){ var bg=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'][new Date().getDay()]; RK.gunSec=say[bg]?bg:'Tümü'; }
   var b=function(g,et,n){ return '<button type="button" class="rk-gun'+(RK.gunSec===g?' on':'')+'" data-rk-gun="'+g+'" onclick="RK.gunSec=\''+g+'\';rkListeCiz()">'+et+(n!=null?'<small>'+n+'</small>':'')+'</button>'; };
   return {html:'<div class="rk-gunler">'+b('Tümü','Tümü',L.length)+RK_GUNLER.filter(function(g){ return say[g]; }).map(function(g){ return b(g,RK_GUN_KISA[g],say[g]); }).join('')+'</div>', var_:true};
 }
-function rkListeCiz(){
-  var GC=_rkGunCubuk(), gs=GC.var_?RK.gunSec:'Tümü';
-  var q=(RK.ara||'').toLocaleUpperCase('tr-TR').trim(), l=(RK.liste||[]).filter(function(m){ return (gs==='Tümü' || (m.g && m.g[gs]!=null)) && (!q || m.a.toLocaleUpperCase('tr-TR').indexOf(q)>-1 || m.k.indexOf(q)>-1); });
-  if(gs!=='Tümü') l=l.slice().sort(function(a,b){ return (a.g[gs]||9999)-(b.g[gs]||9999); });
-  var govde=l.length? l.map(function(m){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(\''+_rkE(m.id)+'\')"><div>'+(gs!=='Tümü' && m.g && m.g[gs]?'<span style="color:#0F766E;font-weight:700;margin-right:4px">'+m.g[gs]+'.</span>':'')+_rkE(m.a)+'<small>'+_rkE(m.k)+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(m.t).toLocaleString('tr-TR')+' Pk</b></div>'; }).join('') : '<div class="rk-mesaj">'+((RK.liste||[]).length?'Eşleşen müşteri yok.':'Henüz rut kartı yüklenmedi ya da bu dönemde alım yok.')+'</div>';
-  var el=document.getElementById('rkListeGovde'), gc=document.getElementById('rkGunAlan'); if(el && gc){ el.innerHTML=govde; gc.innerHTML=GC.html; return; }
-  _rkKutu('<div class="rk-bas"><div class="rk-ad">📋 Rut Kartım</div><div class="rk-alt">'+(RK.liste||[]).length+' müşteri · Veri: '+_rkTr((RK.meta||{}).bas)+' – '+_rkTr((RK.meta||{}).bit)+' · en çok paket alan üstte (gün seçiliyken rut sırası) · <a href="javascript:void(0)" id="rkListeYenile" onclick="rkListeAc(RK.st,true)" style="color:#2563EB;font-weight:700;">↻ Yenile</a></div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button>'
-    +'<input id="rkAra" class="rk-ara" type="search" placeholder="🔎 Müşteri adı veya cari kodu" value="'+_rkE(RK.ara)+'" oninput="RK.ara=this.value;rkListeCiz()"><div id="rkGunAlan">'+GC.html+'</div></div><div class="rk-govde" id="rkListeGovde">'+govde+'</div>');
+// Ürün özeti: listede (gün/ST filtresinden sonra) her ürünün toplam paketi ve kaç müşteride geçtiği
+function _rkUrunler(L){
+  var M=Object.create(null);
+  L.forEach(function(m){ ((m.doc&&m.doc.u)||[]).forEach(function(u){ var k=String(u.k||u.a||''), t=0; (u.p||[]).forEach(function(z){ t+=Number(z)||0; }); if(!k || t<=0) return;
+    var x=M[k]||(M[k]={k:k, kod:u.k||'', a:u.a||k, g:u.g||'', t:0, n:0}); x.t+=t; x.n++; }); });
+  return Object.keys(M).map(function(k){ return M[k]; }).sort(function(a,b){ return b.t-a.t; });
+}
+function _rkMusUrunPk(m, k){ var t=0; ((m.doc&&m.doc.u)||[]).forEach(function(u){ if(String(u.k||u.a||'')===k) (u.p||[]).forEach(function(z){ t+=Number(z)||0; }); }); return t; }
+function rkListeMod(mod){ RK.mod=mod; RK.urun=null; rkListeCiz(true); }
+function rkUrunSec(k){ RK.urun=k; RK.musAra=''; rkListeCiz(true); }
+function rkListeCiz(yeniden){
+  var mod=RK.mod||'mus', GC=_rkGunCubuk(), gs=GC.var_?RK.gunSec:'Tümü', TR=function(x){ return String(x||'').toLocaleUpperCase('tr-TR').trim(); };
+  var L=_rkStFiltre(RK.liste||[]).filter(function(m){ var g=_rkG(m); return gs==='Tümü' || (g && g[gs]!=null); });
+  var sirala=function(l){ return gs==='Tümü'?l:l.slice().sort(function(a,b){ return ((_rkG(a)||{})[gs]||9999)-((_rkG(b)||{})[gs]||9999); }); };
+  var sira=function(m){ var g=_rkG(m); return gs!=='Tümü' && g && g[gs]?'<span style="color:#0F766E;font-weight:700;margin-right:4px">'+g[gs]+'.</span>':''; };
+  var satir=function(m, pk, ek){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(\''+_rkE(m.id)+'\')"><div>'+sira(m)+_rkE(m.a)+'<small>'+_rkE(m.k)+(ek||'')+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(pk).toLocaleString('tr-TR')+' Pk</b></div>'; };
+  var govde, ust='', yer='🔎 Müşteri adı veya cari kodu', deger=RK.ara||'', girdi='RK.ara=this.value;rkListeCiz()';
+  if(mod==='urun' && !RK.urun){
+    var q=TR(RK.urunAra), U=_rkUrunler(L).filter(function(u){ return !q || TR(u.a).indexOf(q)>-1 || TR(u.kod).indexOf(q)>-1; });
+    yer='📦 Ürün adı veya kodu'; deger=RK.urunAra||''; girdi='RK.urunAra=this.value;rkListeCiz()';
+    govde=U.length? U.slice(0,200).map(function(u){ return '<div class="rk-mus" data-rk-urun="'+_rkE(u.k)+'" onclick="rkUrunSec(this.getAttribute(\'data-rk-urun\'))"><div>'+_rkE(u.a)+'<small>'+(u.kod?_rkE(u.kod)+' · ':'')+(u.g?_rkE(u.g)+' · ':'')+u.n.toLocaleString('tr-TR')+' müşteri</small></div><b>'+Math.round(u.t).toLocaleString('tr-TR')+' Pk</b></div>'; }).join('') : '<div class="rk-mesaj">Eşleşen ürün yok.</div>';
+  } else if(mod==='urun'){
+    var k=RK.urun, uA=(_rkUrunler(RK.liste||[]).filter(function(u){ return u.k===k; })[0]||{a:k}).a, q2=TR(RK.musAra);
+    var M=L.map(function(m){ return {m:m, pk:_rkMusUrunPk(m,k)}; }).filter(function(x){ return x.pk>0 && (!q2 || TR(x.m.a).indexOf(q2)>-1 || x.m.k.indexOf(q2)>-1); }).sort(function(a,b){ return b.pk-a.pk; });
+    var top=0; M.forEach(function(x){ top+=x.pk; });
+    yer='🔎 Bu ürünü alan müşteride ara'; deger=RK.musAra||''; girdi='RK.musAra=this.value;rkListeCiz()';
+    ust='<div class="rk-urun-bas"><button type="button" id="rkUrunGeri" onclick="RK.urun=null;rkListeCiz(true)">‹ Ürünler</button><b>'+_rkE(uA)+'</b><small>'+M.length.toLocaleString('tr-TR')+' müşteri · '+Math.round(top).toLocaleString('tr-TR')+' Pk · en çok alan üstte</small></div>';
+    govde=M.length? M.map(function(x){ return satir(x.m, x.pk, top?' · %'+Math.round(x.pk/top*100):''); }).join('') : '<div class="rk-mesaj">Bu seçimde bu ürünü alan müşteri yok.</div>';
+  } else {
+    var q3=TR(RK.ara), l=sirala(L.filter(function(m){ return !q3 || TR(m.a).indexOf(q3)>-1 || m.k.indexOf(q3)>-1; }));
+    govde=l.length? l.map(function(m){ return satir(m, m.t); }).join('') : '<div class="rk-mesaj">'+((RK.liste||[]).length?'Eşleşen müşteri yok.':'Henüz rut kartı yüklenmedi ya da bu dönemde alım yok.')+'</div>';
+  }
+  var el=document.getElementById('rkListeGovde'), gc=document.getElementById('rkGunAlan'), ua=document.getElementById('rkUrunUst');
+  if(!yeniden && el && gc && ua){ el.innerHTML=govde; gc.innerHTML=GC.html; ua.innerHTML=ust; return; }
+  var stSec='';
+  if(RK.tip==='gy'){ var S={}; (RK.liste||[]).forEach(function(m){ (m.sts||[]).forEach(function(s){ S[s]=1; }); if(m.gun) Object.keys(m.gun).forEach(function(s){ S[s]=1; }); });
+    stSec='<select id="rkStSec" class="rk-ara" style="margin-top:6px" onchange="RK.stSec=this.value;RK.gunSec=null;rkListeCiz(true)"><option value="">Tüm ST\'ler</option>'+Object.keys(S).sort(function(a,b){ return a.localeCompare(b,'tr'); }).map(function(s){ return '<option value="'+_rkE(s)+'"'+(RK.stSec===s?' selected':'')+'>'+_rkE(s)+'</option>'; }).join('')+'</select>'; }
+  var modB=function(m,et){ return '<button type="button" class="rk-mod'+(mod===m?' on':'')+'" data-rk-mod="'+m+'" onclick="rkListeMod(\''+m+'\')">'+et+'</button>'; };
+  _rkKutu('<div class="rk-bas"><div class="rk-ad">'+_rkListeBaslik()+'</div><div class="rk-alt">'+(RK.liste||[]).length+' müşteri · Veri: '+_rkTr((RK.meta||{}).bas)+' – '+_rkTr((RK.meta||{}).bit)+' · <a href="javascript:void(0)" id="rkListeYenile" onclick="'+(RK.tip==='gy'?'rkListeAcGY(RK.gy,true)':'rkListeAc(RK.st,true)')+'" style="color:#2563EB;font-weight:700;">↻ Yenile</a></div><button class="rk-x" onclick="rkKapat()" aria-label="Kapat">✕</button>'
+    +'<div class="rk-modlar">'+modB('mus','👥 Müşteriler')+modB('urun','📦 Ürün ara')+'</div>'+stSec
+    +'<input id="rkAra" class="rk-ara" type="search" placeholder="'+yer+'" value="'+_rkE(deger)+'" oninput="'+girdi+'"><div id="rkGunAlan">'+GC.html+'</div><div id="rkUrunUst">'+ust+'</div></div><div class="rk-govde" id="rkListeGovde">'+govde+'</div>');
 }
 function rkListeSec(id){ var m=(RK.liste||[]).filter(function(x){ return x.id===id; })[0]; if(!m) return; RK.kod=id; RK.doc=m.doc; RK.hata='';
   try{ localStorage.setItem('kyk_rk_'+id, JSON.stringify({doc:m.doc, meta:RK.meta, z:Date.now()})); }catch(e){}
-  rkCiz(m.a); var b=document.querySelector('#rkPanel .rk-bas'); if(b){ var g=document.createElement('button'); g.type='button'; g.id='rkGeri'; g.textContent='‹ Müşterilerim'; g.style.cssText='border:none;background:none;color:#2563EB;font-weight:700;font-size:12px;padding:0 0 6px;cursor:pointer;font-family:inherit'; g.onclick=function(){ rkListeCiz(); }; b.insertBefore(g,b.firstChild); } }
+  rkCiz(m.a); var b=document.querySelector('#rkPanel .rk-bas'); if(b){ var g=document.createElement('button'); g.type='button'; g.id='rkGeri'; g.textContent=RK.mod==='urun'&&RK.urun?'‹ Ürünü alanlar':(RK.tip==='gy'?'‹ Müşteriler':'‹ Müşterilerim'); g.style.cssText='border:none;background:none;color:#2563EB;font-weight:700;font-size:12px;padding:0 0 6px;cursor:pointer;font-family:inherit'; g.onclick=function(){ rkListeCiz(true); }; b.insertBefore(g,b.firstChild); } }
 
 </script>
 </body>
