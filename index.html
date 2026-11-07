@@ -3279,7 +3279,10 @@ function rkKartAc(kod, ad){
     RK.doc=(s[0]&&s[0].exists)?s[0].data():{yok:true}; RK.hata='';
     try{ if(!RK.doc.yok){ localStorage.setItem('kyk_rk_'+id, JSON.stringify({doc:RK.doc, meta:RK.meta, z:Date.now()})); var ks=Object.keys(localStorage).filter(function(k){ return k.indexOf('kyk_rk_')===0; }); if(ks.length>40) ks.slice(0,ks.length-40).forEach(function(k){ localStorage.removeItem(k); }); } }catch(e){}
     rkCiz(ad);
-  }).catch(function(err){ if(RK.kod!==id) return; if(!onb){ RK.hata=/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok; bu müşterinin kartı daha önce bu cihazda açılmamış.':'Rut kartı okunamadı: '+((err&&err.message)||err); rkCiz(ad); } });
+  }).catch(function(err){ if(RK.kod!==id) return;
+    // v61g güvenlik: sunucu yetki vermiyorsa cihazdaki kopya da gösterilmez ve silinir (önceki kullanıcının verisi kalmasın)
+    if(err && (err.code==='permission-denied' || /permission/i.test(String(err.message)))){ try{ localStorage.removeItem('kyk_rk_'+id); }catch(e){} RK.doc=null; RK.hata='Bu müşterinin rut kartını görme yetkiniz yok.'; rkCiz(ad); return; }
+    if(!onb){ RK.hata=/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok; bu müşterinin kartı daha önce bu cihazda açılmamış.':'Rut kartı okunamadı: '+((err&&err.message)||err); rkCiz(ad); } });
 }
 function rkOlcu(o){ RK.olcu=o; rkCiz(); }
 function rkCiz(ad, onbellek){
@@ -3363,7 +3366,7 @@ function rkListeCiz(yeniden){
   var L=_rkStFiltre(RK.liste||[]).filter(function(m){ var g=_rkG(m); return gs==='Tümü' || (g && g[gs]!=null); });
   var sirala=function(l){ return gs==='Tümü'?l:l.slice().sort(function(a,b){ return ((_rkG(a)||{})[gs]||9999)-((_rkG(b)||{})[gs]||9999); }); };
   var sira=function(m){ var g=_rkG(m); return gs!=='Tümü' && g && g[gs]?'<span style="color:#0F766E;font-weight:700;margin-right:4px">'+g[gs]+'.</span>':''; };
-  var satir=function(m, pk, ek){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(\''+_rkE(m.id)+'\')"><div>'+sira(m)+_rkE(m.a)+'<small>'+_rkE(m.k)+(ek||'')+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(pk).toLocaleString('tr-TR')+' Pk</b></div>'; };
+  var satir=function(m, pk, ek){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(this.getAttribute(\'data-rk-mus\'))"><div>'+sira(m)+_rkE(m.a)+'<small>'+_rkE(m.k)+(ek||'')+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(pk).toLocaleString('tr-TR')+' Pk</b></div>'; };
   var govde, ust='', yer='🔎 Müşteri adı veya cari kodu', deger=RK.ara||'', girdi='RK.ara=this.value;rkListeCiz()';
   if(mod==='urun' && !RK.urun){
     var q=TR(RK.urunAra), U=_rkUrunler(L).filter(function(u){ return !q || TR(u.a).indexOf(q)>-1 || TR(u.kod).indexOf(q)>-1; });

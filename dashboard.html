@@ -1469,7 +1469,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-07c';
+var SURUM='2026-11-07d';
 (function(){
   var son=0;
   function bant(){
@@ -2145,7 +2145,7 @@ function _izinCiz(sadeceListe){
       var l=F.filter(function(p){ return (p.gy||'')===g; }).sort(function(a,b){ return a.ad.localeCompare(b.ad,'tr'); }); if(!l.length) return;
       h+='<div class="gg">'+_kac(grupAd(g))+'</div>';
       l.forEach(function(p){ var ky=(_izK||[]).filter(function(x){ return x.pid===p.id && x.durum==='aktif' && x.bit>=ilk && x.bas<=son; });
-        h+='<div class="ad" onclick="izinSec(\''+_kac(p.id)+'\')">'+_izAv(p)+'<span style="overflow:hidden;text-overflow:ellipsis;">'+_kac(p.ad)+'</span></div>';
+        h+='<div class="ad" data-iz-p="'+_kac(p.id)+'" onclick="izinSec(this.getAttribute(\'data-iz-p\'))">'+_izAv(p)+'<span style="overflow:hidden;text-overflow:ellipsis;">'+_kac(p.ad)+'</span></div>';
         for(var g2=1; g2<=gs; g2++){ var d2=ay+'-'+('0'+g2).slice(-2), pz2=_izD(d2).getUTCDay()===0, tt2=IZ_TATIL[d2], x=null, bg='';
           if(!pz2 && tt2!=='d') ky.forEach(function(k){ if(k.bas<=d2 && k.bit>=d2) x=k; });
           if(x) bg='background:'+IZ_TUR[x.tur][1]+';'+(tt2==='r'?'opacity:.55;':''); else if(pz2) bg='background:#F1F5F9;'; else if(tt2==='d') bg='background:#FEE2E2;'; else if(tt2==='r') bg='background:#FEF3C7;';
@@ -2665,7 +2665,10 @@ function rkKartAc(kod, ad){
     RK.doc=(s[0]&&s[0].exists)?s[0].data():{yok:true}; RK.hata='';
     try{ if(!RK.doc.yok){ localStorage.setItem('kyk_rk_'+id, JSON.stringify({doc:RK.doc, meta:RK.meta, z:Date.now()})); var ks=Object.keys(localStorage).filter(function(k){ return k.indexOf('kyk_rk_')===0; }); if(ks.length>40) ks.slice(0,ks.length-40).forEach(function(k){ localStorage.removeItem(k); }); } }catch(e){}
     rkCiz(ad);
-  }).catch(function(err){ if(RK.kod!==id) return; if(!onb){ RK.hata=/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok; bu müşterinin kartı daha önce bu cihazda açılmamış.':'Rut kartı okunamadı: '+((err&&err.message)||err); rkCiz(ad); } });
+  }).catch(function(err){ if(RK.kod!==id) return;
+    // v61g güvenlik: sunucu yetki vermiyorsa cihazdaki kopya da gösterilmez ve silinir (önceki kullanıcının verisi kalmasın)
+    if(err && (err.code==='permission-denied' || /permission/i.test(String(err.message)))){ try{ localStorage.removeItem('kyk_rk_'+id); }catch(e){} RK.doc=null; RK.hata='Bu müşterinin rut kartını görme yetkiniz yok.'; rkCiz(ad); return; }
+    if(!onb){ RK.hata=/offline|unavailable|network/i.test(String(err&&err.message))?'📡 İnternet bağlantısı yok; bu müşterinin kartı daha önce bu cihazda açılmamış.':'Rut kartı okunamadı: '+((err&&err.message)||err); rkCiz(ad); } });
 }
 function rkOlcu(o){ RK.olcu=o; rkCiz(); }
 function rkCiz(ad, onbellek){
@@ -2749,7 +2752,7 @@ function rkListeCiz(yeniden){
   var L=_rkStFiltre(RK.liste||[]).filter(function(m){ var g=_rkG(m); return gs==='Tümü' || (g && g[gs]!=null); });
   var sirala=function(l){ return gs==='Tümü'?l:l.slice().sort(function(a,b){ return ((_rkG(a)||{})[gs]||9999)-((_rkG(b)||{})[gs]||9999); }); };
   var sira=function(m){ var g=_rkG(m); return gs!=='Tümü' && g && g[gs]?'<span style="color:#0F766E;font-weight:700;margin-right:4px">'+g[gs]+'.</span>':''; };
-  var satir=function(m, pk, ek){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(\''+_rkE(m.id)+'\')"><div>'+sira(m)+_rkE(m.a)+'<small>'+_rkE(m.k)+(ek||'')+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(pk).toLocaleString('tr-TR')+' Pk</b></div>'; };
+  var satir=function(m, pk, ek){ return '<div class="rk-mus" data-rk-mus="'+_rkE(m.id)+'" onclick="rkListeSec(this.getAttribute(\'data-rk-mus\'))"><div>'+sira(m)+_rkE(m.a)+'<small>'+_rkE(m.k)+(ek||'')+(m.son?' · son alım '+_rkTr(m.son):'')+'</small></div><b>'+Math.round(pk).toLocaleString('tr-TR')+' Pk</b></div>'; };
   var govde, ust='', yer='🔎 Müşteri adı veya cari kodu', deger=RK.ara||'', girdi='RK.ara=this.value;rkListeCiz()';
   if(mod==='urun' && !RK.urun){
     var q=TR(RK.urunAra), U=_rkUrunler(L).filter(function(u){ return !q || TR(u.a).indexOf(q)>-1 || TR(u.kod).indexOf(q)>-1; });
@@ -4358,6 +4361,8 @@ function dashCikisYap(){
   if(!confirm('Çıkış yapmak istediğinize emin misiniz?')) return;
   try{ localStorage.removeItem('kayikci_dash_oturum'); }catch(e){}
   try{ sessionStorage.removeItem('kayikci_dash_oturum'); }catch(e){}
+  // v61g güvenlik: bu cihazdaki müşteri/rut kartı kopyalarını da sil (GY formundaki çıkışla aynı)
+  try{ Object.keys(localStorage).forEach(function(k){ if(k.indexOf('kyk_rut_')===0||k.indexOf('kyk_yetki_')===0||k.indexOf('kyk_rk_')===0||k.indexOf('kyk_rkl_')===0||k.indexOf('rapor_')===0) localStorage.removeItem(k); }); }catch(e){}
   if(dashAuth){ dashAuth.signOut().then(function(){ location.reload(); }); }
   else location.reload();
 }
