@@ -1469,7 +1469,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-07d';
+var SURUM='2026-11-08a';
 (function(){
   var son=0;
   function bant(){
@@ -1520,7 +1520,7 @@ function _crIsleyici(basRow, sayfa){
   var iP=ix(['PLASIYER','SATISTEMSILCISI','TEMSILCI']), iG=ix(['URUNKATEGORI','URUNGRUBU']), iB=ix(['BRUTFIYAT','BRUTTUTAR','BRUT']);
   if(iP<0 || iG<0) return null;
   if(iB<0) throw new Error('"'+_bkTemiz(sayfa,40)+'" sayfasında "Brüt Fiyat" sütunu bulunamadı.');
-  var iT=ix(['TARIH','FATURATARIHI','BELGETARIHI','EVRAKTARIHI']), iC=ix(['CARIKODU']), iA=ix(['CARIUNVANI','CARIADI']), iUK=ix(['URUNKOD','URUNKODU']), iU=ix(['URUN','URUNADI']), iQ=ix(['MIKTARPAK','MIKTAR']), iN=ix(['NETFIYAT','NETTUTAR']), iKG=ix(['BIRIMDONUSUMKG','TONAJ','KG']), iK=ix(['BAYIKATEGORI','MUSTERIGRUBU','CARIGRUBU','CARIKATEGORI']), iTC=ix(['TESLIMCARI']), iE=ix(['EVRAKNO','FATURANO','BELGENO']);
+  var iT=ix(['TARIH','FATURATARIHI','BELGETARIHI','EVRAKTARIHI']), iC=ix(['CARIKODU']), iA=ix(['CARIUNVANI','CARIADI']), iUK=ix(['URUNKOD','URUNKODU']), iU=ix(['URUN','URUNADI']), iQ=ix(['MIKTARPAK','MIKTAR']), iN=ix(['NETFIYAT','NETTUTAR']), iKG=ix(['BIRIMDONUSUMKG','TONAJ','KG']), iK=ix(['BAYIKATEGORI','MUSTERIGRUBU','CARIGRUBU','CARIKATEGORI']), iTC=ix(['TESLIMCARI']), iE=ix(['EVRAKNO','FATURANO','BELGENO']), iSR=ix(['SIRA','SIRANO','URUNSIRA','URUNSIRASI','SIRALAMA']);   // v61h: Müdür'ün ürün sırası (Rut Kartı'nda ürünler bu sırayla)
   var K={p:[],g:[],u:[],ua:[],ug:[],c:[],ca:[],k:[],t:[],ta:[],e:[]}, X={p:Object.create(null),g:Object.create(null),u:Object.create(null),c:Object.create(null),k:Object.create(null),t:Object.create(null),e:Object.create(null)};
   var id=function(t,k){ var x=X[t][k]; if(x===undefined){ x=X[t][k]=K[t].length; K[t].push(k); } return x; };
   var R=[], tmin='', tmax='';
@@ -1532,6 +1532,7 @@ function _crIsleyici(basRow, sayfa){
       var t=iT>-1?_crTarih(x[iT]):''; if(t){ if(!tmin||t<tmin) tmin=t; if(!tmax||t>tmax) tmax=t; }
       var uk=_bkTemiz(iUK>-1?x[iUK]:'',20), ua=_bkTemiz(iU>-1?x[iU]:'',100), ukey=uk||ua;
       var ui=X.u[ukey]; if(ui===undefined){ ui=id('u',ukey); K.ua[ui]=ua||uk; K.ug[ui]=g; }
+      if(iSR>-1){ var sr=parseFloat(String(x[iSR]).replace(',','.')); if(isFinite(sr) && sr>0){ K.us=K.us||{}; if(K.us[ui]==null || sr<K.us[ui]) K.us[ui]=sr; } }
       var ck=_bkTemiz(iC>-1?x[iC]:'',20), ca=_bkTemiz(iA>-1?x[iA]:'',100), ckey=ck||ca;
       var ci=X.c[ckey]; if(ci===undefined){ ci=id('c',ckey); K.ca[ci]=ca||ck; }
       // Teslim Cari (v60b): zincir marketlerde fatura merkeze (Cari Kodu), mal şubeye (Teslim Cari) gider; rut listesi şube kodunu kullanır → yalnız Rut Kartı kullanır, ciro hesabı değişmez
@@ -2677,7 +2678,7 @@ function rkCiz(ad, onbellek){
   if(!D) return;
   if(D.yok){ _rkKutu(bas+'<div class="rk-ad">'+_rkE(ad||'Müşteri')+'</div><div class="rk-alt">Cari: '+_rkE(RK.kod)+'</div></div><div class="rk-mesaj">Bu müşterinin yüklenen dönemde ('+_rkTr(M.bas)+' – '+_rkTr(M.bit)+') alım kaydı yok.</div>'); return; }
   var VAR=RK_OLCU.filter(function(x){ return (D.u||[]).some(function(u){ return Array.isArray(u[x[0]]); }); }).map(function(x){ return x[0]; }); if(VAR.length && VAR.indexOf(RK.olcu)<0) RK.olcu=VAR[0];
-  var H=Array.isArray(D.h)?D.h:[], o=RK.olcu, U=(Array.isArray(D.u)?D.u:[]).map(function(u){ var v=(Array.isArray(u[o])?u[o]:[]).map(function(x){ return Number(x)||0; }); var t=0; v.forEach(function(x){ t+=x; }); return {a:u.a, k:u.k, g:u.g, v:v, t:t, f:u.f}; }).filter(function(u){ return Math.abs(u.t)>0.0001; }).sort(function(a,b){ return b.t-a.t; });
+  var H=Array.isArray(D.h)?D.h:[], o=RK.olcu, U=(Array.isArray(D.u)?D.u:[]).map(function(u){ var v=(Array.isArray(u[o])?u[o]:[]).map(function(x){ return Number(x)||0; }); var t=0; v.forEach(function(x){ t+=x; }); return {a:u.a, k:u.k, g:u.g, v:v, t:t, f:u.f, o:u.o}; }).filter(function(u){ return Math.abs(u.t)>0.0001; }).sort(function(a,b){ var ao=a.o!=null, bo=b.o!=null; if(ao||bo){ if(!ao) return 1; if(!bo) return -1; if(a.o!==b.o) return a.o-b.o; } return b.t-a.t; });   // v61h: Müdür'ün Sıra sütunu varsa ürünler o sırayla, sırasızlar en altta
   var n=H.length, kol=H.map(function(){ return 0; }), gen=0; U.forEach(function(u){ u.v.forEach(function(x,i){ kol[i]+=x; }); gen+=u.t; });
   // Tam haftalar (dosya haftanın tüm iş günlerini kapsıyor): karşılaştırma ve uyarılar yalnız bunlarla
   var HK=Array.isArray(D.hk)?D.hk:[], HT=Array.isArray(D.ht)?D.ht:[], tam=H.map(function(w,i){ return HK[i]==null || HT[i]==null || HK[i]>=HT[i]; });
@@ -2810,7 +2811,7 @@ function rkHesapla(coz){
     var stl=Object.keys(c.sts).sort(function(a,b){ return c.stT[b]-c.stT[a]; });
     var fv=Object.keys(c.e).length;   // fatura sayısı (Evrak No tekil); dosyada Evrak No yoksa alan yazılmaz
     var v={k:kod, a:ad, gr:c.kat||'', st:stl[0]||'', sts:stl, gys:Object.keys(c.gys), son:c.son, h:H, hk:HK, ht:HT,
-      u:Object.keys(c.u).map(function(ui){ var u=c.u[ui], r={a:K.ua[ui], k:(K.u[ui]===K.ua[ui]?'':K.u[ui]), g:K.ug[ui], p:u.p.map(Math.round), t:u.t.map(r2), n:u.n.map(r2), kg:u.kg.map(function(v){ return Math.round(v*100)/100; })}; if(fv) r.f=Object.keys(u.e).length; return r; })};
+      u:Object.keys(c.u).map(function(ui){ var u=c.u[ui], r={a:K.ua[ui], k:(K.u[ui]===K.ua[ui]?'':K.u[ui]), g:K.ug[ui], p:u.p.map(Math.round), t:u.t.map(r2), n:u.n.map(r2), kg:u.kg.map(function(v){ return Math.round(v*100)/100; })}; if(fv) r.f=Object.keys(u.e).length; if(K.us && K.us[ui]!=null) r.o=K.us[ui]; return r; })};
     if(fv) v.fs=fv;
     return {id:rkKimlik(kod), v:v};
   }).filter(function(b){ return b.id; });
