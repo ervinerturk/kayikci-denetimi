@@ -1469,7 +1469,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-08a';
+var SURUM='2026-11-09a';
 (function(){
   var son=0;
   function bant(){
@@ -1536,7 +1536,7 @@ function _crIsleyici(basRow, sayfa){
       var ck=_bkTemiz(iC>-1?x[iC]:'',20), ca=_bkTemiz(iA>-1?x[iA]:'',100), ckey=ck||ca;
       var ci=X.c[ckey]; if(ci===undefined){ ci=id('c',ckey); K.ca[ci]=ca||ck; }
       // Teslim Cari (v60b): zincir marketlerde fatura merkeze (Cari Kodu), mal şubeye (Teslim Cari) gider; rut listesi şube kodunu kullanır → yalnız Rut Kartı kullanır, ciro hesabı değişmez
-      var tc=iTC>-1?_bkTemiz(x[iTC],140):'', tm=tc?/^\s*(\d+)\s*-\s*(.*)$/.exec(tc):null, tk=tm?tm[1]:ck, ti=X.t[tk]; if(ti===undefined){ ti=id('t',tk); K.ta[ti]=tm?tm[2].trim():(ca||ck); }
+      var tc=iTC>-1?_bkTemiz(x[iTC],140):'', tm=tc?/^\s*(\d+(?:-\d+)*)\s*-\s*(.*)$/.exec(tc):null   /* v61i: '10002-1567932 - AD' gibi tireli kodlar tek parça (eskiden 10002 altında 10 müşteri birleşiyordu) */, tk=tm?tm[1]:ck, ti=X.t[tk]; if(ti===undefined){ ti=id('t',tk); K.ta[ti]=tm?tm[2].trim():(ca||ck); }
       R.push([id('p',pl), t, id('g',g), ui, ci, b, iQ>-1?_bkSayi(x[iQ]):0, id('k',(iK>-1?_bkTemiz(x[iK],40):'')||'(Belirsiz)'), iN>-1?_bkSayi(x[iN]):0, iKG>-1?_bkSayi(x[iKG]):0, ti, iE>-1?id('e',_bkTemiz(x[iE],40)||'?'):-1]);   // [11] Evrak No → Rut Kartı fatura sayısı
     },
     bitir:function(){
