@@ -1469,7 +1469,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-09b';
+var SURUM='2026-11-10a';
 (function(){
   var son=0;
   function bant(){
@@ -2065,6 +2065,9 @@ function _izCss(){
    +'.iz-sek{display:inline-flex;background:#F1F5F9;border-radius:10px;padding:3px;gap:2px}.iz-sek button{border:none;background:none;padding:6px 12px;border-radius:8px;font-weight:700;font-size:12px;color:var(--mid);cursor:pointer;font-family:inherit;white-space:nowrap}.iz-sek button.on{background:#fff;color:#0F766E;box-shadow:0 1px 3px rgba(15,25,35,.12)}'
    +'.iz-row{display:grid;grid-template-columns:minmax(190px,1.5fr) 74px minmax(130px,1fr) 60px minmax(130px,1fr) 104px;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #F1F5F9;cursor:pointer}.iz-row:hover{background:#F8FAFC}.iz-row.sec{background:#F0FDFA}'
    +'@media(min-width:761px){#izGovde{overflow-y:auto;overscroll-behavior:contain}#izGovde .iz-row.hd{position:sticky;top:0;z-index:2}}'
+   // v61k: Takvim'de ay seçimi ve gün başlıkları sabit (PC); telefonda takvim yana kayar, sayfa normal kayar
+   +'.iz-tk-kay{overflow-x:auto}'
+   +'@media(min-width:761px){#izGovde:has(#izTakvim){overflow:auto}#izGovde .iz-tk-kay{overflow:visible}#izGovde .iz-tk-ay{position:sticky;top:0;left:0;z-index:5;background:#fff;height:46px;box-sizing:border-box}#izGovde .iz-tk .gh,#izGovde .iz-tk .ad.hd{position:sticky;top:46px;z-index:3;background:#fff;box-shadow:0 1px 0 #E2E8F0}#izGovde .iz-tk .ad.hd{left:0;z-index:4}}'
    +'.iz-row.hd{cursor:default;background:#F8FAFC;font-size:10px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.3px;padding:7px 14px}.iz-grp{padding:6px 14px;background:#EEF2F7;font-size:11px;font-weight:800;color:#1E3A5F}'
    +'.iz-who{display:flex;align-items:center;gap:8px;min-width:0}.iz-who .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iz-who small{display:block;color:var(--soft);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
    +'.iz-av{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}'
@@ -2137,10 +2140,10 @@ function _izinCiz(sadeceListe){
   var takvim=function(){
     var ay=_izAy||bugun.slice(0,7), yy=+ay.slice(0,4), mm=+ay.slice(5,7), gs=new Date(Date.UTC(yy,mm,0)).getUTCDate(), ilk=ay+'-01', son=ay+'-'+('0'+gs).slice(-2);
     var nb='border:none;border-radius:8px;padding:5px 11px;font-weight:800;font-size:13px;cursor:pointer;background:#F1F5F9;color:#334155;font-family:inherit;';
-    var h='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;"><button type="button" id="izAyGeri" onclick="izinAyKaydir(-1)" style="'+nb+'">‹</button><b id="izAyAd" style="font-size:14px;min-width:120px;text-align:center;">'+IZ_AYLAR[mm-1]+' '+yy+'</b><button type="button" id="izAyIleri" onclick="izinAyKaydir(1)" style="'+nb+'">›</button>'
+    var h='<div class="iz-tk-ay" style="display:flex;align-items:center;gap:8px;padding:10px 14px;"><button type="button" id="izAyGeri" onclick="izinAyKaydir(-1)" style="'+nb+'">‹</button><b id="izAyAd" style="font-size:14px;min-width:120px;text-align:center;">'+IZ_AYLAR[mm-1]+' '+yy+'</b><button type="button" id="izAyIleri" onclick="izinAyKaydir(1)" style="'+nb+'">›</button>'
       +'<span style="font-size:11px;color:var(--soft);">'+(_izChip==='tumu'?'Tüm personel':'Filtre: '+_kac(_izChip))+' · '+F.length+' kişi</span></div>';
     var cw='grid-template-columns:var(--izad,190px) repeat('+gs+',minmax(24px,1fr));';
-    h+='<div style="overflow-x:auto;"><div class="iz-tk" style="'+cw+'min-width:'+(190+gs*24)+'px;"><div class="ad" style="color:var(--soft);font-size:10px;cursor:default;">Personel</div>';
+    h+='<div class="iz-tk-kay"><div class="iz-tk" style="'+cw+'min-width:'+(190+gs*24)+'px;"><div class="ad hd" style="color:var(--soft);font-size:10px;cursor:default;">Personel</div>';
     for(var g1=1; g1<=gs; g1++){ var ds=ay+'-'+('0'+g1).slice(-2), pz=_izD(ds).getUTCDay()===0, tt=IZ_TATIL[ds]; h+='<div class="gh" title="'+_izTr(ds)+(tt==='d'?' dini bayram':tt==='r'?' resmi tatil':'')+'" style="'+(ds===bugun?'color:#DC2626;':'')+(pz?'background:#F1F5F9;':tt==='d'?'background:#FEE2E2;':tt==='r'?'background:#FEF3C7;':'')+'">'+g1+'</div>'; }
     gruplar.forEach(function(g){
       var l=F.filter(function(p){ return (p.gy||'')===g; }).sort(function(a,b){ return a.ad.localeCompare(b.ad,'tr'); }); if(!l.length) return;
