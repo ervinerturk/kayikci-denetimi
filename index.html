@@ -1661,7 +1661,9 @@ function gorevGuncelle(){
     var d=document.createElement('div'); d.className='gorev-item'; d.setAttribute('data-i',i);
     var m=document.createElement('div'); m.className='gorev-metin'; m.textContent=g.metin; d.appendChild(m);
     var bilgi=document.createElement('div'); bilgi.style.cssText='font-size:11px;color:var(--mid);margin:-2px 0 6px;font-weight:600;';
-    bilgi.textContent=g.kod ? '⏳ Temsilci dönüşü bekleniyor'+(g.sonTarih?' · son tarih '+_trTarihKisa(g.sonTarih):'') : '';
+    // v62: WA gönderimi kayda geçer; gönderilmeyen görev turuncu uyarıyla gösterilir (ST yine de ST Paneli › Görevlerim'de görür)
+    bilgi.textContent=g.kod ? (g.waZaman ? '📨 WA\'ya aktarıldı '+_gorevSaat(g.waZaman) : '⚠️ Henüz WA ile gönderilmedi')+' · ⏳ dönüş bekleniyor'+(g.sonTarih?' · son tarih '+_trTarihKisa(g.sonTarih):'') : '';
+    if(g.kod && !g.waZaman) bilgi.style.color='#C2410C';
     if(g.kod) d.appendChild(bilgi);
     var b=document.createElement('div'); b.className='gorev-btns';
     var wa=document.createElement('button'); wa.className='g-btn g-btn-wa'; wa.textContent='📨 WA ile Gönder'; wa.addEventListener('click',function(){ gorevPaylast(i); });
@@ -1743,6 +1745,17 @@ function waAc(url){
   a.click();
   document.body.removeChild(a);
 }
+function _gorevSaat(iso){ var d=new Date(iso); return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+// v62: WA ekranı açıldığında görev kaydına "waZaman" yazılır (Panel › Görev Takip'te "WA gönderilmedi" uyarısı için)
+function _gorevWaKaydet(liste){
+  var z=new Date().toISOString();
+  (liste||[]).forEach(function(g){
+    if(!g || !g.kod || !_db) return;
+    g.waZaman=z;
+    _db.collection('gorevler').doc(g.kod).update({waZaman:z}).catch(function(err){ try{ console.warn('WA kaydı yazılamadı:', err && err.message); }catch(e){} });
+  });
+  gorevGuncelle();
+}
 function gorevPaylast(i){
   var st=document.getElementById('sST').value||'ST';
   var nokta=document.getElementById('iNokta').value||'Nokta';
@@ -1754,6 +1767,7 @@ function gorevPaylast(i){
   var tel=ST_TEL[st]||'';
   var url=tel?'https://wa.me/90'+tel.substring(1)+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg);
   waAc(url);
+  _gorevWaKaydet([g]);
 }
 function gorevHepsiPaylast(){
   var st=document.getElementById('sST').value||'ST';
@@ -1765,6 +1779,7 @@ function gorevHepsiPaylast(){
   var msg='Merhaba '+st+', '+nokta+' için görevler:\n'+metinler+'\nHer görevi bitince bağlantısından bildirin.\n- Kayıkçı Saha Denetim';
   var url=tel?'https://wa.me/90'+tel.substring(1)+'?text='+encodeURIComponent(msg):'https://wa.me/?text='+encodeURIComponent(msg);
   waAc(url);
+  _gorevWaKaydet(gorevler);
 }
 
 // ── ZİYARET GİRİŞ / ÇIKIŞ ──

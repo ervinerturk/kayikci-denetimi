@@ -681,7 +681,7 @@ function gorevDinleyiciBaslat(){
   if(_dashKullanici && _dashKullanici.gy) q=q.where('gy','==',_dashKullanici.gy);
   q.onSnapshot(function(sn){
     _gorevlerHam=sn.docs.map(function(d){ var x=d.data()||{}; var g={};
-      ['kod','gy','st','musteri','metin','sonTarih','olusturma','durum','neden','aciklama','cevapZaman'].forEach(function(f){ g[f]=(typeof x[f]==='string')?x[f].slice(0,400):''; });
+      ['kod','gy','st','musteri','metin','sonTarih','olusturma','durum','neden','aciklama','cevapZaman','waZaman','stGordu'].forEach(function(f){ g[f]=(typeof x[f]==='string')?x[f].slice(0,400):''; });
       return g; }).filter(function(g){ return /^[A-Za-z0-9]{20,40}$/.test(g.kod); });
     guncelle();
   }, function(err){ console.warn('Görev dinleme hatası:', err && err.message); _gorevDinleyiciBasladi=false; });
@@ -700,6 +700,19 @@ function gorevYenidenAc(kod){
   if(!/^[A-Za-z0-9]{20,40}$/.test(kod) || !db) return;
   db.collection('gorevler').doc(kod).update({durum:'bekliyor', neden:'', aciklama:'', cevapZaman:''})
     .catch(function(err){ alert('Görev yeniden açılamadı: '+(err && err.message)); });
+}
+// v62: bu tarihten önce oluşturulan görevlerde WA kaydı tutulmuyordu; onlara "WA gönderilmedi" uyarısı verilmez
+var GOREV_WA_KAYIT_BAS='2026-11-10T10:58:00.000Z';
+function _gorevTS(iso){ var d=new Date(iso); if(isNaN(d)) return ''; return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function _gorevWaYok(g){ return g.durum==='bekliyor' && !g.waZaman && String(g.olusturma)>=GOREV_WA_KAYIT_BAS; }
+function _gorevTeslimHtml(g){
+  if(g.durum!=='bekliyor') return '';
+  var h='';
+  if(g.waZaman) h+='<div style="font-size:10px;color:var(--soft);white-space:nowrap;">📨 WA '+_kac(_gorevTS(g.waZaman))+'</div>';
+  else if(_gorevWaYok(g)) h+='<div style="font-size:10px;color:var(--red);font-weight:700;white-space:nowrap;">⚠️ WA gönderilmedi</div>';
+  h+=g.stGordu ? '<div style="font-size:10px;color:var(--green);white-space:nowrap;">👁 ST gördü '+_kac(_gorevTS(g.stGordu))+'</div>'
+               : '<div style="font-size:10px;color:var(--soft);white-space:nowrap;">👁 ST Paneli\'nde görülmedi</div>';
+  return h;
 }
 function _gorevKartHtml(gy, st, donem){
   if(!_gorevlerHam.length) return '';
@@ -725,6 +738,9 @@ function _gorevKartHtml(gy, st, donem){
   k+=row('Toplam Görev', liste.length+' görev');
   k+=row('⏳ Bekleyen', nBek+' görev', nBek?'o':'');
   k+=row('🔴 Süresi Geçen', nGec+' görev', nGec?'r':'g');
+  var nWa=liste.filter(_gorevWaYok).length, nGor=liste.filter(function(g){ return g.durum==='bekliyor' && !g.stGordu; }).length;
+  k+=row('⚠️ WA ile Gönderilmemiş', nWa+' görev', nWa?'r':'g');
+  k+=row('👁 ST Paneli\'nde Görülmemiş', nGor+' görev', nGor?'o':'g');
   k+=row('✅ Yapıldı', nOk+' görev', nOk?'g':'');
   k+=row('❌ Yapılamadı', nNo+' görev', nNo?'r':'');
   k+=row('Tamamlama Oranı', '%'+oran, oran>=80?'g':oran<50?'r':'o');
@@ -746,6 +762,7 @@ function _gorevKartHtml(gy, st, donem){
     else if(g.durum==='yapilamadi'){ durum='<span style="color:var(--red);font-weight:700;">❌ Yapılamadı</span><div style="font-size:11px;color:var(--mid);">'+_kac(g.neden)+(g.aciklama?' — '+_kac(g.aciklama):'')+'</div>'; }
     else if(gec(g)){ var gun=Math.round((new Date(bugun)-new Date(g.sonTarih))/864e5); durum='<span style="color:var(--red);font-weight:700;">🔴 Gecikti</span><div style="font-size:10px;color:var(--red);">'+gun+' gün</div>'; }
     else durum='<span style="color:var(--orange);font-weight:700;">⏳ Bekliyor</span>';
+    durum+=_gorevTeslimHtml(g);
     if(g.durum==='bekliyor') islem='<a href="'+_kac(_gorevHatirlatUrl(g))+'" target="_blank" rel="noopener" style="font-size:11px;font-weight:700;color:#16A34A;text-decoration:none;white-space:nowrap;">🔔 Hatırlat</a>';
     else islem='<button type="button" onclick="gorevYenidenAc(\''+g.kod+'\')" style="font-size:11px;font-weight:700;color:var(--blue);background:none;border:none;cursor:pointer;white-space:nowrap;">↺ Yeniden aç</button>';
     t+='<tr><td style="white-space:nowrap;">'+_trT(_yerelTarih(g.olusturma))+'</td><td>'+_kac(g.gy)+'</td><td>'+_kac(g.st)+'</td><td>'+_kac(g.musteri)+'</td><td>'+_kac(g.metin)+'</td><td style="white-space:nowrap;">'+_trT(g.sonTarih)+'</td><td>'+durum+'</td><td>'+islem+'</td></tr>';
@@ -1469,7 +1486,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-10a';
+var SURUM='2026-11-10b';
 (function(){
   var son=0;
   function bant(){

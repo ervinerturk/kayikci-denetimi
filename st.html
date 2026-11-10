@@ -45,6 +45,21 @@ button,input,select{font-family:inherit;}
 .cgrup .ok{color:#0D9488;font-weight:800;margin-left:4px;}
 .wrap.arac-mod #gBilgi,.wrap.arac-mod #kontrol,.wrap.arac-mod #ozet,.wrap.arac-mod #liste{display:none!important;}
 .sekme.arac{border-color:#93C5FD;color:#1D4ED8;}
+#gtGorev{display:none;}
+.wrap.gt-mod #gtGorev{display:block;}
+.wrap.gt-mod #gBilgi,.wrap.gt-mod #kontrol,.wrap.gt-mod #ozet,.wrap.gt-mod #liste{display:none!important;}
+.sekme.gt{border-color:#FDBA74;color:#C2410C;}
+.sekme.gt.on{background:#EA580C;border-color:#EA580C;color:#fff;}
+.sekme .rozet{display:inline-block;min-width:18px;padding:1px 5px;margin-left:4px;border-radius:999px;background:#DC2626;color:#fff;font-size:11px;line-height:16px;text-align:center;}
+.gtk{background:#fff;border-radius:12px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(15,25,35,.06);border-left:4px solid #EA580C;}
+.gtk.gec{border-left-color:#DC2626;}
+.gtk.ok{border-left-color:#16A34A;opacity:.85;}
+.gtk.no{border-left-color:#94A3B8;opacity:.85;}
+.gtk .m{font-weight:800;font-size:14px;}
+.gtk .t{font-size:14px;margin:6px 0;white-space:pre-wrap;word-break:break-word;}
+.gtk .a{font-size:12px;color:var(--mid);}
+.gtbtn{display:block;margin-top:10px;text-align:center;background:#EA580C;color:#fff;font-weight:800;font-size:14px;padding:11px;border-radius:10px;text-decoration:none;}
+.gtbas{font-size:13px;font-weight:800;color:var(--mid);margin:12px 2px 6px;}
 .sekme.arac.on{background:#1D4ED8;border-color:#1D4ED8;color:#fff;}
 .akutu{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 10px;}
 .akutu div{background:#fff;border-radius:12px;padding:10px 6px;text-align:center;box-shadow:0 1px 3px rgba(15,25,35,.06);}
@@ -165,6 +180,7 @@ button,input,select{font-family:inherit;}
     <div id="sekmeler" class="sekmeler"></div>
     <div id="aracim"></div>
     <div id="cirom"></div>
+    <div id="gtGorev"></div>
     <div id="gBilgi" class="bilgi"></div>
     <div id="kontrol" class="kont gizli">
       <select id="fGun" onchange="ciz()"></select>
@@ -189,7 +205,7 @@ var ONIZLEME=false, ONZ_LISTE=[];   // v58: Müdür e-postası sayfada değil; r
 var BEN=null, GOREVLER=[], GSEC='', LISTE=null, GIR={}, BEKLEYEN={}, HATA={}, DINLE=null, YUKLENIYOR=false;
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-08a';
+var SURUM='2026-11-10a';
 (function(){
   var son=0;
   function bant(){
@@ -268,7 +284,7 @@ if(auth) auth.onAuthStateChanged(function(u){
     document.getElementById('uGy').textContent='ST '+BEN.k+' · '+BEN.gy;
     document.getElementById('giris').classList.add('gizli'); document.getElementById('ana').classList.remove('gizli');
     stGoruntule('panel'); surumSatiri();
-    gorevleriOku();
+    gorevleriOku(); gtOku();
   }).catch(function(err){
     var m=(err&&err.message)||String(err);
     // Kural gereği tanımsız ST hesabı (stHesaplar belgesi yok) "yetki yok" hatası alır
@@ -308,12 +324,12 @@ function onizlemeSec(email){
   if(DINLE){ try{ DINLE(); }catch(e){} DINLE=null; }
   BEN={email:x.email, st:x.st, gy:x.gy, k:x.k};
   try{ if(typeof RK!=='undefined'){ if(document.getElementById('rkPanel')) rkKapat(); RK.gunSec=null; RK.ara=''; RK.liste=null; RK.mod='urun'; RK.urun=null; RK.urunAra=''; } }catch(e){}
-  GSEC=''; LISTE=null; GIR={}; HATA={}; A_VERI=null; A_YUK=false; C_VERI=null; C_YUK=false; C_ACIK={}; C_MACIK={}; C_GUNLUK=false; ARAC=false; CIRO=false;
-  var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.remove('ciro-mod');
+  GSEC=''; LISTE=null; GIR={}; HATA={}; A_VERI=null; A_YUK=false; C_VERI=null; C_YUK=false; C_ACIK={}; C_MACIK={}; C_GUNLUK=false; ARAC=false; CIRO=false; GT=false; GT_VERI=null; GT_HATA='';
+  var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.remove('ciro-mod'); w.classList.remove('gt-mod');
   document.getElementById('onzSec').value=email;
   document.getElementById('uAd').textContent='👁 '+BEN.st;
   document.getElementById('uGy').textContent='ST '+BEN.k+' · '+BEN.gy+' · Önizleme';
-  surumSatiri(); gorevleriOku();
+  surumSatiri(); gorevleriOku(); gtOku();
 }
 // ── Açılış sayacı (GY ve Müdür "Rapor Takibi"nde görür): stGoruntuleme/{STkodu}__{alan}__{YYYYMMDD}, her açılış +1 ──
 function stGoruntule(r){
@@ -326,18 +342,87 @@ function stGoruntule(r){
       .catch(function(e){ window.SAYAC={ok:false, r:r, hata:(e&&e.message)||String(e)}; surumSatiri(); try{ console.warn('Sayaç kaydedilemedi:', e); }catch(x){} });
   }catch(e){}
 }
+// ── 📌 Görevlerim (v62): GY'nin GY formunda bu ST'ye verdiği görevler (gorevler koleksiyonu; sunucu kuralı yalnız kendi görevlerini okutur).
+// Yanıt mevcut gorev.html sayfasından verilir; sekme açılınca açık görevlere "stGordu" zamanı yazılır (önizlemede yazılmaz).
+var GT=false, GT_VERI=null, GT_YUK=false, GT_HATA='';
+function _gtBugun(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _gtTr(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); return m?m[3]+'.'+m[2]+'.'+m[1]:'—'; }
+function _gtAcikSay(){ return (GT_VERI||[]).filter(function(g){ return g.durum==='bekliyor'; }).length; }
+function gtOku(){
+  if(!db || !BEN || !BEN.st) return;
+  var st=BEN.st; GT_YUK=true; GT_HATA=''; if(GT) gtCiz();
+  db.collection('gorevler').where('st','==',st).get().then(function(s){
+    if(!BEN || BEN.st!==st) return;
+    GT_VERI=s.docs.map(function(d){ var v=d.data()||{}, g={};
+      ['kod','gy','musteri','metin','sonTarih','olusturma','durum','neden','aciklama','cevapZaman','stGordu'].forEach(function(f){ g[f]=temiz(v[f],400); });
+      return g; }).filter(function(g){ return /^[A-Za-z0-9]{20,40}$/.test(g.kod); });
+    GT_YUK=false; sekmeleriCiz();
+    if(GT){ gtCiz(); _gtGordu(); }
+  }).catch(function(err){
+    if(!BEN || BEN.st!==st) return;
+    GT_YUK=false; GT_HATA=(err&&err.message)||String(err); if(GT) gtCiz();
+  });
+}
+function gtAc(){
+  GT=true; ARAC=false; CIRO=false;
+  var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.remove('ciro-mod'); w.classList.add('gt-mod');
+  sekmeleriCiz(); stGoruntule('gorev');
+  if(!GT_VERI && !GT_YUK) gtOku(); else { gtCiz(); _gtGordu(); }
+  window.scrollTo(0,0);
+}
+function _gtGordu(){
+  if(ONIZLEME || !db || !GT_VERI) return;
+  var z=new Date().toISOString();
+  GT_VERI.forEach(function(g){
+    if(g.durum!=='bekliyor' || g.stGordu) return;
+    g.stGordu=z;
+    db.collection('gorevler').doc(g.kod).update({stGordu:z}).catch(function(e){ try{ console.warn('Görüldü kaydı yazılamadı:', e && e.message); }catch(x){} });
+  });
+}
+function gtCiz(){
+  var el=document.getElementById('gtGorev'); if(!el) return;
+  if(!GT_VERI){ el.innerHTML='<div class="bos">'+(GT_HATA?'⚠️ Görevler okunamadı: '+esc(GT_HATA):'⏳ Görevler yükleniyor…')+'</div>'; return; }
+  var bugun=_gtBugun();
+  var acik=GT_VERI.filter(function(g){ return g.durum==='bekliyor'; }).sort(function(a,b){ return String(a.sonTarih).localeCompare(String(b.sonTarih)); });
+  var sinir=new Date(Date.now()-30*864e5).toISOString();
+  var kapali=GT_VERI.filter(function(g){ return g.durum!=='bekliyor' && String(g.cevapZaman)>=sinir; })
+    .sort(function(a,b){ return String(b.cevapZaman).localeCompare(String(a.cevapZaman)); }).slice(0,20);
+  var h='<div class="bilgi">Grup Yöneticinizin size verdiği görevler. Görevi bitirince <b>Yanıtla</b>\'ya basıp Yaptım / Yapamadım diye bildirin.</div>';
+  h+='<div class="gtbas">⏳ Açık görevler ('+acik.length+')</div>';
+  if(!acik.length) h+='<div class="bos">Açık göreviniz yok. 👍</div>';
+  acik.forEach(function(g){
+    var gec=g.sonTarih && g.sonTarih<bugun, gun=gec?Math.round((new Date(bugun)-new Date(g.sonTarih))/864e5):0;
+    h+='<div class="gtk'+(gec?' gec':'')+'"><div class="m">📍 '+esc(g.musteri||'—')+'</div><div class="t">'+esc(g.metin)+'</div>'
+      +'<div class="a">Veren: '+esc(g.gy||'—')+' · '+esc(_gtTr(String(g.olusturma).slice(0,10)))+'</div>'
+      +'<div class="a" style="'+(gec?'color:var(--kirmizi);font-weight:800;':'')+'">⏰ Son tarih: '+esc(_gtTr(g.sonTarih))+(gec?' · '+gun+' gün gecikti':'')+'</div>'
+      +(ONIZLEME?'<div class="a" style="margin-top:8px;">👁 Önizlemede yanıt verilemez.</div>':'<a class="gtbtn" href="gorev.html?k='+encodeURIComponent(g.kod)+'">✍️ Yanıtla (Yaptım / Yapamadım)</a>')
+      +'</div>';
+  });
+  if(kapali.length){
+    h+='<div class="gtbas">🗂️ Son 30 günde yanıtladıklarınız</div>';
+    kapali.forEach(function(g){
+      var ok=g.durum==='yapildi';
+      h+='<div class="gtk '+(ok?'ok':'no')+'"><div class="m">📍 '+esc(g.musteri||'—')+'</div><div class="t">'+esc(g.metin)+'</div>'
+        +'<div class="a">'+(ok?'✅ Yapıldı':'❌ Yapılamadı — '+esc(g.neden)+(g.aciklama?' ('+esc(g.aciklama)+')':''))+' · '+esc(_gtTr(String(g.cevapZaman).slice(0,10)))+'</div></div>';
+    });
+  }
+  el.innerHTML=h;
+}
+// gorev.html'den geri dönülünce liste tazelenir
+window.addEventListener('pageshow', function(e){ if(e.persisted && BEN && GT_VERI) gtOku(); });
 // ── Sekmeler: görevler + "🚚 Aracım" (her ST yalnız kendi araç stoğunu görür — sunucu kuralıyla) ──
 var ARAC=false, A_VERI=null, A_OLCU='tl', A_YUK=false;
 function sekmeleriCiz(){
-  document.getElementById('sekmeler').innerHTML=GOREVLER.map(function(g){ return '<button type="button" class="sekme'+(!ARAC&&!CIRO&&g.id===GSEC?' on':'')+'" onclick="gorevSec(\''+esc(g.id)+'\')">🎯 '+esc(g.ad)+'</button>'; }).join('')
+  document.getElementById('sekmeler').innerHTML=GOREVLER.map(function(g){ return '<button type="button" class="sekme'+(!ARAC&&!CIRO&&!GT&&g.id===GSEC?' on':'')+'" onclick="gorevSec(\''+esc(g.id)+'\')">🎯 '+esc(g.ad)+'</button>'; }).join('')
     +'<button type="button" id="aracSekme" class="sekme arac'+(ARAC?' on':'')+'" onclick="aracAc()">🚚 Aracım</button>'
     +'<button type="button" id="ciroSekme" class="sekme ciro'+(CIRO?' on':'')+'" onclick="ciroAc()">📈 Cirom</button>'
-    +'<button type="button" id="rkSekme" class="sekme" onclick="rkListeAc(BEN.st)">📋 Rut Kartım</button>';   // v61d: Yönetici önizlemesinde de görünür (Müdür kararı 06.11)
+    +'<button type="button" id="rkSekme" class="sekme" onclick="rkListeAc(BEN.st)">📋 Rut Kartım</button>'
+    +'<button type="button" id="gtSekme" class="sekme gt'+(GT?' on':'')+'" onclick="gtAc()">📌 Görevlerim'+(_gtAcikSay()?'<span class="rozet">'+_gtAcikSay()+'</span>':'')+'</button>';   // v61d: Yönetici önizlemesinde de görünür (Müdür kararı 06.11)
 }
 // ── 📈 Cirom: yalnız kendi brüt cirosu (ciroST, sunucu kuralı) — ürün grubu, ürün ve müşteri; en yüksek ciro üstte ──
 var CIRO=false, C_VERI=null, C_YUK=false, C_ACIK={}, C_GUNLUK=false, C_OLCU='tl', C_MACIK={};
 function ciroAc(){
-  CIRO=true; ARAC=false; var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.add('ciro-mod'); sekmeleriCiz(); stGoruntule('ciro');
+  CIRO=true; ARAC=false; GT=false; var w=document.querySelector('.wrap'); w.classList.remove('arac-mod'); w.classList.remove('gt-mod'); w.classList.add('ciro-mod'); sekmeleriCiz(); stGoruntule('ciro');
   if(!C_VERI && !C_YUK) ciroOku(); else ciroCiz();
   window.scrollTo(0,0);
 }
@@ -414,7 +499,7 @@ function ciroCiz(sadeceMusteri){
     +'<div id="cListe">'+musteri()+'</div>';
 }
 function aracAc(){
-  ARAC=true; CIRO=false; document.querySelector('.wrap').classList.remove('ciro-mod'); document.querySelector('.wrap').classList.add('arac-mod'); sekmeleriCiz(); stGoruntule('arac');
+  ARAC=true; CIRO=false; GT=false; document.querySelector('.wrap').classList.remove('ciro-mod'); document.querySelector('.wrap').classList.remove('gt-mod'); document.querySelector('.wrap').classList.add('arac-mod'); sekmeleriCiz(); stGoruntule('arac');
   if(!A_VERI && !A_YUK) aracOku(); else aracCiz();
   window.scrollTo(0,0);
 }
@@ -480,7 +565,7 @@ function gorevleriOku(){
 function gorevSec(id){
   GSEC=id; LISTE=null; GIR={}; HATA={};
   if(DINLE){ try{ DINLE(); }catch(e){} DINLE=null; }
-  ARAC=false; CIRO=false; document.querySelector('.wrap').classList.remove('arac-mod'); document.querySelector('.wrap').classList.remove('ciro-mod'); sekmeleriCiz(); stGoruntule('odak');
+  ARAC=false; CIRO=false; GT=false; document.querySelector('.wrap').classList.remove('arac-mod'); document.querySelector('.wrap').classList.remove('ciro-mod'); document.querySelector('.wrap').classList.remove('gt-mod'); sekmeleriCiz(); stGoruntule('odak');
   var G=gorev();
   document.getElementById('gBilgi').innerHTML=(G.donem?'Satış dönemi: <b>'+esc(G.donem)+'</b> · ':'')+G.urunler.length+' ürün'+(G.bitis?' · Bitiş: '+esc(G.bitis.split('-').reverse().join('.')):'')
     +'<br><span class="renk" style="background:var(--firsat);">Kırmızı</span> = fırsat (ürün yok) · <span class="renk" style="background:var(--satis);">Yeşil</span> = satış var · <span class="renk" style="background:var(--az);">Sarı</span> = az satış (1-2 PAK). Ürün verdiğiniz kırmızı kutuya <b>miktarı (PAK)</b> yazın.';
