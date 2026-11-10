@@ -702,7 +702,7 @@ function gorevYenidenAc(kod){
     .catch(function(err){ alert('Görev yeniden açılamadı: '+(err && err.message)); });
 }
 // v62: bu tarihten önce oluşturulan görevlerde WA kaydı tutulmuyordu; onlara "WA gönderilmedi" uyarısı verilmez
-var GOREV_WA_KAYIT_BAS='2026-11-10T12:00:00.000Z';
+var GOREV_WA_KAYIT_BAS='2026-11-10T10:58:00.000Z';
 function _gorevTS(iso){ var d=new Date(iso); if(isNaN(d)) return ''; return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
 function _gorevWaYok(g){ return g.durum==='bekliyor' && !g.waZaman && String(g.olusturma)>=GOREV_WA_KAYIT_BAS; }
 function _gorevTeslimHtml(g){
