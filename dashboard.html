@@ -1236,36 +1236,53 @@ function _yaSayi(v){ return Math.round(v||0).toLocaleString('tr-TR'); }
 function _yaOnd(v,n){ return (v||0).toLocaleString('tr-TR',{minimumFractionDigits:n,maximumFractionDigits:n}); }
 // ── Excel okuma ──
 function yakitExcelCoz(wb){
-  var AY=YK_AYLAR.map(_bkKat);
   for(var si=0; si<wb.SheetNames.length; si++){
     var ws=wb.Sheets[wb.SheetNames[si]]; if(!ws || !ws['!ref']) continue;
-    var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
-    for(var i=0;i<Math.min(rows.length,15);i++){
-      var h=(rows[i]||[]).map(_bkKat), iP=h.indexOf('PLAKA'), iK=h.indexOf('KULLANICI'), iG=h.indexOf('GRUP');
-      if(iP<0 || iK<0) continue;
-      var ust=(rows[i-1]||[]).map(_bkKat), kol=[];
-      h.forEach(function(x,j){ if(x!=='KM') return;
-        var ay=-1; for(var d=0; d<3 && ay<0; d++){ ay=AY.indexOf(ust[j+d]||''); } if(ay<0) for(d=1; d<3 && ay<0; d++){ ay=AY.indexOf(ust[j-d]||''); }
-        kol.push({ay:ay, km:j, l:/LITRE/.test(h[j+1]||'')?j+1:-1, tl:/TUTAR/.test(h[j+2]||'')?j+2:-1}); });
-      if(!kol.length) continue;
-      if(kol.some(function(c){ return c.ay<0; })) kol.forEach(function(c,n){ c.ay=n; });   // ay başlığı yoksa sıraya göre
-      if(kol.length>12) throw new Error('12\'den fazla ay sütunu bulundu; dosyada tek yıl olmalı.');
-      var satirlar=[], gor=Object.create(null);
-      for(var r=i+1; r<rows.length; r++){
-        var R=rows[r]||[], p=_bkKat(R[iP]); if(!/^[0-9]{2}[A-Z]{1,3}[0-9]{2,5}$/.test(p)) continue;
-        var k=_bkTemiz(R[iK],60); if(!k || k==='0' || k==='-') k='';
-        var a=[]; for(var x=0;x<36;x++) a.push(null);
-        kol.forEach(function(c){ var v=[R[c.km], c.l>-1?R[c.l]:'', c.tl>-1?R[c.tl]:'']; if(v.every(function(z){ return String(z).trim()===''; })) return;
-          a[c.ay*3]=Math.round(_bkSayi(v[0])); a[c.ay*3+1]=Math.round(_bkSayi(v[1])*100)/100; a[c.ay*3+2]=Math.round(_bkSayi(v[2])*100)/100; });
-        if(gor[p]) p=p+'#'+(++gor[p]); else gor[p]=1;
-        satirlar.push({p:_bkTemiz(R[iP],15).toLocaleUpperCase('tr-TR'), k:k, g:iG>-1?_bkTemiz(R[iG],30).toLocaleUpperCase('tr-TR'):'', a:a});
-      }
-      if(!satirlar.length) continue;
-      var son=-1; satirlar.forEach(function(s){ for(var m=11;m>son;m--){ if(s.a[m*3]!=null){ son=m; break; } } });
-      return {sayfa:wb.SheetNames[si], satirlar:satirlar, son:son, aylar:kol.length};
-    }
+    var c=_yaSatirCoz(XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true}), wb.SheetNames[si]); if(c) return c;
   }
   throw new Error('Yakıt tablosu bulunamadı. Başlık satırında "Plaka", "Kullanıcı", "Grup" ve her ay için "KM · Litre · Tutar" sütunları olmalı.');
+}
+// Excel'den kopyalanıp yapıştırılan tablo (sekme ile ayrılmış satırlar)
+function yakitMetinCoz(metin){
+  var rows=String(metin||'').replace(/\r/g,'').split('\n').map(function(l){ return l.split('\t'); });
+  var c=_yaSatirCoz(rows, 'Yapıştırılan tablo'); if(c) return c;
+  throw new Error('Yapıştırılan metinde yakıt tablosu bulunamadı. Excel\'de ay adları satırından son araca kadar seçip kopyalayın (No, Plaka, Kullanıcı, Grup başlıkları dahil).');
+}
+// Türkçe sayı: "1.073" = bin yetmiş üç (binlik nokta), "1.091,00" ve "100,44" virgüllü ondalık
+function _yaSayiOku(v){
+  if(typeof v==='number') return isFinite(v)?v:0;
+  var t=String(v==null?'':v).replace(/[₺\s]/g,''); if(!t) return 0;
+  if(t.indexOf(',')>-1) t=t.replace(/\./g,'').replace(',','.');
+  else if(/^-?\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,'');
+  var n=parseFloat(t); return isFinite(n)?n:0;
+}
+function _yaSatirCoz(rows, sayfa){
+  var AY=YK_AYLAR.map(_bkKat);
+  for(var i=0;i<Math.min(rows.length,15);i++){
+    var h=(rows[i]||[]).map(_bkKat), iP=h.indexOf('PLAKA'), iK=h.indexOf('KULLANICI'), iG=h.indexOf('GRUP');
+    if(iP<0 || iK<0) continue;
+    var kol=[];
+    h.forEach(function(x,j){ if(x==='KM') kol.push({km:j, l:/LITRE/.test(h[j+1]||'')?j+1:-1, tl:/TUTAR/.test(h[j+2]||'')?j+2:-1}); });
+    if(!kol.length) continue;
+    if(kol.length>12) throw new Error('12\'den fazla ay sütunu bulundu; tabloda tek yıl olmalı.');
+    // Ay adları üst satırda soldan sağa sırayla okunur (birleştirilmiş hücre / kopyalamada kayan sütunlar sorun olmaz)
+    var adlar=(rows[i-1]||[]).map(_bkKat).filter(function(x){ return AY.indexOf(x)>-1; }).map(function(x){ return AY.indexOf(x); });
+    var sirali=adlar.length===kol.length && adlar.every(function(a,n){ return n===0 || a>adlar[n-1]; });
+    kol.forEach(function(c,n){ c.ay=sirali?adlar[n]:n; });
+    var satirlar=[];
+    for(var r=i+1; r<rows.length; r++){
+      var R=rows[r]||[], p=_bkKat(R[iP]); if(!/^[0-9]{2}[A-Z]{1,3}[0-9]{2,5}$/.test(p)) continue;
+      var k=_bkTemiz(R[iK],60); if(!k || k==='0' || k==='-') k='';
+      var a=[]; for(var x=0;x<36;x++) a.push(null);
+      kol.forEach(function(c){ var v=[R[c.km], c.l>-1?R[c.l]:'', c.tl>-1?R[c.tl]:'']; if(v.every(function(z){ return z==null || String(z).trim()===''; })) return;
+        a[c.ay*3]=Math.round(_yaSayiOku(v[0])); a[c.ay*3+1]=Math.round(_yaSayiOku(v[1])*100)/100; a[c.ay*3+2]=Math.round(_yaSayiOku(v[2])*100)/100; });
+      satirlar.push({p:_bkTemiz(R[iP],15).toLocaleUpperCase('tr-TR'), k:k, g:iG>-1?_bkTemiz(R[iG],30).toLocaleUpperCase('tr-TR'):'', a:a});
+    }
+    if(!satirlar.length) continue;
+    var son=-1; satirlar.forEach(function(s){ for(var m=11;m>son;m--){ if(s.a[m*3]!=null){ son=m; break; } } });
+    return {sayfa:sayfa, satirlar:satirlar, son:son, aylar:kol.length};
+  }
+  return null;
 }
 // Kullanıcı → GY ekibi: GY'nin kendi aracı ya da ekibindeki ST (yazım farkına tek harf tolerans; araç stoktaki eşleştirme)
 function _yaEslestir(satirlar){
@@ -1298,12 +1315,16 @@ function _yaUyarilar(s){
 // ── Yükleme ──
 function yakitYukleHtml(){
   return '<div style="font-size:15px;font-weight:700;color:#0F1923;margin-bottom:6px;">⛽ Yakıt Tablosu Yükle</div>'
-    +'<p style="font-size:12px;color:#4A5568;margin:0 0 12px;line-height:1.5;">Aylık yakıt takip Excel\'ini <b>tüm yıl tek tablo</b> olarak seçin (Plaka | Kullanıcı | Grup | her ay KM · Litre · Tutar ₺). Yükleme seçilen yılın verisini <b>tamamen yeniler</b>; geçmiş aylardaki düzeltmeler de işlenir.</p>'
+    +'<p style="font-size:12px;color:#4A5568;margin:0 0 12px;line-height:1.5;">Aylık yakıt takip tablosunu <b>tüm yıl tek tablo</b> olarak dosyadan seçin ya da kopyalayıp yapıştırın (Plaka | Kullanıcı | Grup | her ay KM · Litre · Tutar ₺). Yükleme seçilen yılın verisini <b>tamamen yeniler</b>; geçmiş aylardaki düzeltmeler de işlenir.</p>'
     +'<label style="display:block;font-size:11px;font-weight:700;color:#4A5568;margin-bottom:4px;">Yıl</label>'
     +'<input type="number" id="yaYilGir" min="2020" max="2099" value="'+new Date().getFullYear()+'" style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;margin-bottom:12px;box-sizing:border-box;font-family:Inter,sans-serif;">'
     +'<div id="yaDrop" onclick="document.getElementById(\'yaDosya\').click()" style="border:2px dashed #CBD5E0;border-radius:12px;padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:12px;">'
     +'<div style="font-size:28px;">⛽</div><div style="font-size:13px;font-weight:600;color:#4A5568;">Excel dosyasını seçin veya buraya sürükleyin</div><div style="font-size:11px;color:#8896A7;margin-top:3px;">.xlsx, .xls</div></div>'
     +'<input type="file" id="yaDosya" accept=".xlsx,.xls" style="display:none" onchange="yakitDosyaOku(this.files[0])">'
+    +'<div style="text-align:center;font-size:11px;font-weight:700;color:#8896A7;margin:-4px 0 8px;">— ya da —</div>'
+    +'<label style="display:block;font-size:11px;font-weight:700;color:#4A5568;margin-bottom:4px;">📋 Excel\'den kopyalayıp yapıştırın</label>'
+    +'<textarea id="yaMetin" rows="4" placeholder="Excel\'de ay adları satırından son araca kadar seçin, Ctrl+C ile kopyalayıp buraya Ctrl+V ile yapıştırın." style="width:100%;padding:10px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;box-sizing:border-box;font-family:Inter,sans-serif;resize:vertical;white-space:pre;" oninput="yakitMetinOku()"></textarea>'
+    +'<div style="height:12px;"></div>'
     +'<div id="yaHata" style="display:none;background:#FEF2F2;color:#B91C1C;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;margin-bottom:10px;"></div>'
     +'<div id="yaOnizleme" style="font-size:12px;color:#4A5568;line-height:1.7;"></div>'
     +'<button type="button" id="yaYukleBtn" onclick="yakitSunucuyaYaz()" style="display:none;width:100%;margin-top:10px;background:#16A34A;color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;">⬆ Sunucuya Yükle</button>';
@@ -1331,8 +1352,25 @@ function yakitDosyaOku(file){
   var r=new FileReader();
   r.onload=function(e){
     try{
-      var coz=yakitExcelCoz(XLSX.read(e.target.result,{type:'array'})), eksik=_yaEslestir(coz.satirlar);
-      _yaYuklenecek={coz:coz, dosya:_bkTemiz(file.name,120)};
+      _yaOnizle(yakitExcelCoz(XLSX.read(e.target.result,{type:'array'})), _bkTemiz(file.name,120));
+    }catch(err){ on.textContent=''; _yaHata('⚠️ '+err.message); }
+  };
+  r.readAsArrayBuffer(file);
+}
+var _yaMetinZ=null;
+function yakitMetinOku(){
+  clearTimeout(_yaMetinZ);
+  _yaMetinZ=setTimeout(function(){
+    var t=(document.getElementById('yaMetin')||{}).value||'', on=document.getElementById('yaOnizleme'), btn=document.getElementById('yaYukleBtn');
+    _yaHata(''); _yaYuklenecek=null; if(btn) btn.style.display='none'; if(on) on.textContent='';
+    if(!t.trim()) return;
+    try{ _yaOnizle(yakitMetinCoz(t), 'Yapıştırılan tablo ('+_bkZamanTr(new Date().toISOString())+')'); }catch(err){ _yaHata('⚠️ '+err.message); }
+  }, 300);
+}
+function _yaOnizle(coz, dosya){
+  var on=document.getElementById('yaOnizleme'), btn=document.getElementById('yaYukleBtn');
+      var eksik=_yaEslestir(coz.satirlar);
+      _yaYuklenecek={coz:coz, dosya:dosya};
       var T=0, L=0, K=0, nU=0, nE=0;
       coz.satirlar.forEach(function(s){ for(var m=0;m<12;m++){ K+=s.a[m*3]||0; L+=s.a[m*3+1]||0; T+=s.a[m*3+2]||0; } nU+=_yaUyarilar(s).length; if(s.gy) nE++; });
       on.innerHTML='<b>Önizleme</b> (sayfa: '+_kac(coz.sayfa)+')<br>🚗 '+coz.satirlar.length+' araç · Dolu aylar: <b>'+(coz.son>-1?'Ocak – '+YK_AYLAR[coz.son]:'yok')+'</b>'
@@ -1341,9 +1379,6 @@ function yakitDosyaOku(file){
         +(nU?'<div style="color:#B45309;margin-top:4px;">⚠️ '+nU+' hatalı/şüpheli veri var; yükledikten sonra "Kontrol Edilecek Veriler" listesinde görünür.</div>':'')
         +(eksik.length?'<div style="color:#B45309;margin-top:4px;">⚠️ Ekip listesinde bulunamayan temsilci (GY panelinde görünmez): '+eksik.map(_kac).join(', ')+'</div>':'');
       if(btn) btn.style.display='block';
-    }catch(err){ on.textContent=''; _yaHata('⚠️ '+err.message); }
-  };
-  r.readAsArrayBuffer(file);
 }
 function yakitSunucuyaYaz(){
   if(!_yaYuklenecek || !db) return;
