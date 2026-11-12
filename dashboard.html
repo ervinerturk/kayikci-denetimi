@@ -1230,7 +1230,7 @@ function operatorSonYukleme(){
 var YK_AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 // Hatalı / şüpheli veri eşikleri (aylık, araç başına)
 var YK_KM_UST=5000, YK_L100=[4,20], YK_TL_L=[40,120], YK_KM_MIN=300;
-var _yaAcik=false, _yaVeri=null, _yaYuk=false, _yaYil=null, _yaYillar=null, _yaAy='', _yaGrup='', _yaAra='', _yaAcikP=Object.create(null), _yaYuklenecek=null;
+var _yaAcik=false, _yaVeri=null, _yaYuk=false, _yaYil=null, _yaYillar=null, _yaAySec=null, _yaGrup='', _yaAra='', _yaAcikP=Object.create(null), _yaYuklenecek=null;
 function _yaRol(){ var k=_dashKullanici||{}; return {gy:k.gy||'', op:!!k.operator, iz:k.izleyici||'', yukle:!!(k.operator || (!k.gy && !k.izleyici && !k.onizleme))}; }
 function _yaSayi(v){ return Math.round(v||0).toLocaleString('tr-TR'); }
 function _yaOnd(v,n){ return (v||0).toLocaleString('tr-TR',{minimumFractionDigits:n,maximumFractionDigits:n}); }
@@ -1430,8 +1430,13 @@ function yakitGorunumToggle(ac){
   if(_yaAcik){ if(!_yaVeri) yakitVeriOku(); else _yakitCiz(); window.scrollTo({top:0,behavior:'smooth'}); }
 }
 function yakitFiltre(alan, v){
-  if(alan==='yil'){ _yaYil=parseInt(v,10)||_yaYil; _yaVeri=null; _yaAcikP=Object.create(null); yakitVeriOku(); return; }
-  if(alan==='ay') _yaAy=v; else if(alan==='grup') _yaGrup=v; else if(alan==='ara') _yaAra=v;
+  if(alan==='yil'){ _yaYil=parseInt(v,10)||_yaYil; _yaVeri=null; _yaAySec=null; _yaAcikP=Object.create(null); yakitVeriOku(); return; }
+  if(alan==='aysec'){ var son=(_yaVeri&&typeof _yaVeri.son==='number')?_yaVeri.son:11, hep=[]; for(var m=0;m<=son;m++) hep.push(m);
+    var cur=(_yaAySec&&_yaAySec.length)?_yaAySec.slice():hep;
+    if(cur.length===hep.length) cur=[v]; else { var i=cur.indexOf(v); if(i>-1) cur.splice(i,1); else cur.push(v); }
+    _yaAySec=cur.length?cur:null; }
+  else if(alan==='aytum') _yaAySec=null;
+  else if(alan==='grup') _yaGrup=v; else if(alan==='ara') _yaAra=v;
   _yakitCiz(alan==='ara');
 }
 function yakitAracAcKapa(p){ _yaAcikP[p]=!_yaAcikP[p]; _yakitCiz(); }
@@ -1453,54 +1458,93 @@ function _yakitCiz(araOdak){
   var gruplar=[]; S.forEach(function(s){ if(s.g && gruplar.indexOf(s.g)<0) gruplar.push(s.g); }); gruplar.sort(function(a,b){ return a.localeCompare(b,'tr'); });
   if(_yaGrup && gruplar.indexOf(_yaGrup)<0) _yaGrup='';
   var aylar=[]; for(var m=0;m<=son;m++) aylar.push(m);
-  var secAy=_yaAy===''?aylar:[parseInt(_yaAy,10)];
+  // Dönem: ay çipleri (birden çok ay seçilebilir); seçim yoksa tüm dolu aylar
+  var secAy=(_yaAySec||[]).filter(function(m){ return m<=son; }).sort(function(a,b){ return a-b; }); if(!secAy.length) secAy=aylar.slice();
+  var tumSecili=secAy.length===aylar.length;
+  var bitisik=secAy.every(function(m,i){ return i===0 || m===secAy[i-1]+1; });
+  var donemKisa=secAy.length===1?YK_AYLAR[secAy[0]]:(bitisik?YK_AYLAR[secAy[0]]+' – '+YK_AYLAR[secAy[secAy.length-1]]:secAy.map(function(m){ return YK_AYLAR[m].slice(0,3); }).join(', '));
+  var donemUzun=donemKisa+(secAy.length>1?' ('+secAy.length+' ay)':'');
   var ara=_bkKat(_yaAra);
   var F=S.filter(function(s){ return (!_yaGrup || s.g===_yaGrup) && (!ara || _bkKat(s.p+' '+s.k+' '+s.gy).indexOf(ara)>-1); });
-  // ₺/km ve L/100 km yalnız "temiz" aylardan hesaplanır: KM 0 (yakıt var) ya da aylık KM üst sınırını aşan aylar orana katılmaz
-  var ekle=function(o, km, l, tl){ o.km+=km||0; o.l+=l||0; o.tl+=tl||0; if(km>0 && km<=YK_KM_UST){ o.kk+=km; o.kl+=l||0; o.kt+=tl||0; } };
-  var yeni=function(){ return {km:0,l:0,tl:0,kk:0,kl:0,kt:0,v:false}; };
-  var birlestir=function(a,o){ ['km','l','tl','kk','kl','kt'].forEach(function(k){ a[k]+=o[k]; }); };
+  // ₺/km ve L/100 km yalnız "geçerli" kayıtlardan: KM 0 (yakıt var) ya da aylık KM üst sınırını aşan aylar orana katılmaz
+  var ekle=function(o, km, l, tl){ o.km+=km||0; o.l+=l||0; o.tl+=tl||0; if(km>0 && km<=YK_KM_UST){ o.kk+=km; o.kl+=l||0; o.kt+=tl||0; o.kn++; } };
+  var yeni=function(){ return {km:0,l:0,tl:0,kk:0,kl:0,kt:0,kn:0,v:false}; };
+  var birlestir=function(a,o){ ['km','l','tl','kk','kl','kt','kn'].forEach(function(k){ a[k]+=o[k]; }); };
   var top=function(s, ml){ var o=yeni(); ml.forEach(function(m){ var k=s.a[m*3]; if(k==null) return; o.v=true; ekle(o, k, s.a[m*3+1], s.a[m*3+2]); }); return o; };
   var oran=function(o){ return {tlkm:o.kk>0?o.kt/o.kk:null, l100:o.kk>0&&o.kl>0?o.kl/o.kk*100:null, tll:o.l>0?o.tl/o.l:null}; };
   var G=yeni(), nArac=0;
   F.forEach(function(s){ var o=top(s,secAy); if(!o.v) return; nArac++; birlestir(G,o); });
   var GO=oran(G);
-  var donemAd=_yaAy===''?('Ocak – '+YK_AYLAR[son]+' '+V.yil):(YK_AYLAR[+_yaAy]+' '+V.yil);
-  // Uyarılar (seçili dönem + filtre)
-  var UY=[]; F.forEach(function(s){ _yaUyarilar(s).forEach(function(u){ if(secAy.indexOf(u.m)>-1) UY.push({s:s,u:u}); }); });
-  var h=ustBar('📅 <b>'+V.yil+'</b> yakıt tablosu · Dolu aylar: <b>Ocak – '+YK_AYLAR[son]+'</b><br>⏱ Son yükleme: '+_bkZamanTr(V.yuklendi)+(V.yukleyen&&!R.gy?' · '+_kac(V.yukleyen):'')+(V.dosya&&!R.gy?' · 📄 '+_kac(V.dosya):''));
-  // Filtre satırı
-  h+='<div class="card"><div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px;">'
-    +yilSec
-    +'<select class="fsel" style="max-width:170px;" onchange="yakitFiltre(\'ay\',this.value)"><option value="">Yıl toplamı (Ocak – '+YK_AYLAR[son]+')</option>'+aylar.slice().reverse().map(function(m){ return '<option value="'+m+'"'+(String(m)===String(_yaAy)?' selected':'')+'>'+YK_AYLAR[m]+'</option>'; }).join('')+'</select>'
+  var donemAd=donemKisa+' '+V.yil;
+  // Uyarılar (seçili dönem + filtre); "kayıt" = araç × ay
+  var UY=[], hk=Object.create(null); F.forEach(function(s){ _yaUyarilar(s).forEach(function(u){ if(secAy.indexOf(u.m)>-1){ UY.push({s:s,u:u}); hk[s.p+'|'+u.m]=1; } }); });
+  var nHataKayit=Object.keys(hk).length;
+  // Aylık toplamlar (12 ay, grafikler için)
+  var A=YK_AYLAR.map(function(_,m){ var o=yeni(); F.forEach(function(s){ if(s.a[m*3]==null) return; o.v=true; ekle(o, s.a[m*3], s.a[m*3+1], s.a[m*3+2]); }); return o; });
+  var bin=function(x){ return Math.round((x||0)/1000).toLocaleString('tr-TR')+' bin ₺'; };
+  var mn=function(x){ return ((x||0)/1e6).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2})+' Mn ₺'; };
+  var NV='#1F3864';
+  // Yükleme satırı
+  var h='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--mid);">'
+    +'<div>⏱ Son yükleme: '+_bkZamanTr(V.yuklendi)+(V.yukleyen&&!R.gy?' · '+_kac(V.yukleyen):'')+(V.dosya&&!R.gy?' · 📄 '+_kac(V.dosya):'')+'</div>'+yukleBtn+'</div>';
+  // Başlık
+  h+='<div style="background:'+NV+';color:#fff;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:.6px;">YAKIT TAKİP RAPORU · '+V.yil+'</div>'
+    +'<div style="margin-left:auto;display:flex;align-items:center;gap:10px;"><span style="font-weight:800;font-size:13px;">Dönem ▶</span><span style="background:#fff;color:'+NV+';font-weight:800;padding:8px 16px;border-radius:6px;font-size:14px;white-space:nowrap;">'+_kac(donemUzun)+'</span></div></div>';
+  // Dönem seçimi
+  h+='<div style="background:#fff;border:1.5px solid #9DB3D3;border-radius:8px;padding:10px 12px;margin-bottom:6px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;border-bottom:1px solid #9DB3D3;padding-bottom:6px;margin-bottom:8px;"><b style="font-size:14px;color:#0F1923;">Dönem seçimi</b>'
+    +'<button type="button" onclick="yakitFiltre(\'aytum\')" title="Tüm aylar" style="margin-left:auto;background:#EEF2F7;color:'+NV+';border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;">'+(tumSecili?'☑ Tüm aylar':'✕ Seçimi temizle')+'</button></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px;">'
+    +YK_AYLAR.map(function(ad,m){ var var_=m<=son, sec=var_ && secAy.indexOf(m)>-1;
+      var st=!var_?'background:#C9C9C9;color:#3F3F3F;cursor:default;':(sec?'background:#4F81BD;color:#fff;':'background:#DCE6F1;color:'+NV+';');
+      return '<button type="button"'+(var_?' onclick="yakitFiltre(\'aysec\','+m+')"':' disabled')+' style="'+st+'border:none;border-radius:4px;padding:8px 6px;font-size:14px;font-weight:600;text-align:left;font-family:inherit;">'+ad+'</button>'; }).join('')
+    +'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;">'+yilSec
     +'<select class="fsel" style="max-width:190px;" onchange="yakitFiltre(\'grup\',this.value)"><option value="">Tüm gruplar</option>'+gruplar.map(function(g){ return '<option value="'+_kac(g)+'"'+(g===_yaGrup?' selected':'')+'>'+_kac(g)+'</option>'; }).join('')+'</select>'
-    +'<input id="yaAra" class="fsel" style="cursor:text;background-image:none;max-width:220px;" placeholder="🔍 Plaka / kullanıcı ara" value="'+_kac(_yaAra)+'" oninput="yakitFiltre(\'ara\',this.value)">'
-    +'</div></div>';
-  // KPI
-  var kpi=function(v,l,alt,renk){ return '<div style="flex:1 1 140px;background:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 1px 3px rgba(15,25,35,.06);"><div style="font-size:20px;font-weight:800;color:'+(renk||'#0F1923')+';white-space:nowrap;">'+v+'</div><div style="font-size:11px;font-weight:700;color:var(--mid);margin-top:2px;">'+l+'</div>'+(alt?'<div style="font-size:10px;color:var(--soft);margin-top:2px;">'+alt+'</div>':'')+'</div>'; };
-  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">'
-    +kpi(_bkPara(G.tl),'Toplam Yakıt Tutarı',donemAd)
-    +kpi(_yaSayi(G.l)+' L','Toplam Litre')
-    +kpi(_yaSayi(G.km)+' km','Toplam KM')
-    +kpi(GO.tlkm!=null?_yaOnd(GO.tlkm,2)+' ₺':'—','₺ / km','hatalı KM\'li aylar hariç')
-    +kpi(GO.l100!=null?_yaOnd(GO.l100,1)+' L':'—','100 km\'de Tüketim')
-    +kpi(GO.tll!=null?_yaOnd(GO.tll,2)+' ₺':'—','Ort. Litre Fiyatı')
-    +kpi(String(nArac),'Araç')
-    +kpi(String(UY.length),'Kontrol Edilecek Veri',UY.length?'aşağıdaki listeye bakın':'sorun görünmüyor',UY.length?'var(--red)':'var(--green)')
+    +'<input id="yaAra" class="fsel" style="cursor:text;background-image:none;max-width:220px;" placeholder="🔍 Plaka / kullanıcı ara" value="'+_kac(_yaAra)+'" oninput="yakitFiltre(\'ara\',this.value)"></div></div>'
+    +'<div style="font-size:11px;font-style:italic;color:var(--soft);margin:0 2px 10px;">Aya tıklayın; birden çok ay için diğer aylara da tıklayın, seçili aya tekrar tıklamak onu kaldırır. Gri aylarda henüz veri yok.</div>';
+  // Sarı özet satırı
+  h+='<div style="background:#FFF6D5;border-radius:6px;padding:10px 14px;font-size:14px;color:#0F1923;margin-bottom:10px;line-height:1.6;"><b>'+_kac(donemUzun)+':</b> yakıt <b>'+bin(G.tl)+'</b> · litre <b>'+_yaSayi(G.l)+'</b> · birim fiyat <b>'+(GO.tll!=null?_yaOnd(GO.tll,2)+' ₺/L':'—')+'</b> · '
+    +(nHataKayit?'<b style="color:#B91C1C;">⚠️ '+nHataKayit+' kayıtta veri hatası</b>':'<b style="color:var(--green);">✓ veri hatası yok</b>')+'</div>';
+  // KPI kutuları
+  var kut=function(bas, deger, alt){ return '<div style="padding:12px 10px;text-align:center;border-right:1px solid #E2E8F0;border-bottom:1px solid #E2E8F0;"><div style="font-size:11px;font-weight:700;color:var(--mid);letter-spacing:.3px;">'+bas+'</div><div style="font-size:11px;color:var(--mid);">'+_kac(donemKisa)+'</div>'
+    +'<div style="font-size:26px;font-weight:800;color:'+NV+';margin:14px 0 10px;white-space:nowrap;">'+deger+'</div><div style="font-size:11px;color:var(--mid);min-height:14px;">'+(alt||'')+'</div></div>'; };
+  h+='<div style="background:#F7F9FC;border-top:3px solid '+NV+';border-radius:4px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:10px;">'
+    +kut('YAKIT TUTARI', bin(G.tl), nArac+' araç')
+    +kut('LİTRE', _yaSayi(G.l)+' L')
+    +kut('KM (geçerli kayıt)', _yaSayi(G.kk)+' km', G.kn?'Araç başı aylık ort. '+_yaSayi(G.kk/G.kn)+' km':'')
+    +kut('L / 100 KM', GO.l100!=null?_yaOnd(GO.l100,1)+' L':'—')
+    +kut('TL / KM', GO.tlkm!=null?_yaOnd(GO.tlkm,2)+' ₺':'—')
+    +kut('ORT. BİRİM FİYAT', GO.tll!=null?_yaOnd(GO.tll,2)+' ₺/L':'—')
     +'</div>';
-  // Aylık trend (yıl toplamı seçiliyken)
-  if(_yaAy===''){
-    var A=aylar.map(function(m){ var o=yeni(); F.forEach(function(s){ if(s.a[m*3]==null) return; ekle(o, s.a[m*3], s.a[m*3+1], s.a[m*3+2]); }); return o; });
-    var mx=Math.max.apply(null, A.map(function(o){ return o.tl; }).concat([1]));
-    h+=kart('Aylık Yakıt Tutarı','📊','#DBEAFE','<div style="overflow-x:auto;"><div style="display:flex;gap:8px;align-items:flex-end;min-width:'+(aylar.length*62)+'px;height:210px;padding-top:6px;">'
-      +A.map(function(o,i){ var hp=Math.max(2,Math.round(o.tl/mx*140)), r=oran(o);
-        return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;" title="'+_kac(YK_AYLAR[i]+': '+_bkPara(o.tl)+' · '+_yaSayi(o.l)+' L · '+_yaSayi(o.km)+' km')+'">'
-          +'<div style="font-size:10px;font-weight:700;color:#1E3A5F;white-space:nowrap;">'+_bkKisa(o.tl)+'</div>'
-          +'<div style="width:70%;max-width:44px;height:'+hp+'px;background:#2563EB;border-radius:6px 6px 0 0;margin-top:3px;"></div>'
-          +'<div style="font-size:11px;font-weight:700;color:var(--mid);margin-top:4px;">'+YK_AYLAR[i].slice(0,3)+'</div>'
-          +'<div style="font-size:9px;color:var(--soft);white-space:nowrap;">'+(r.tll!=null?_yaOnd(r.tll,1)+' ₺/L':'')+'</div></div>'; }).join('')
-      +'</div></div><div style="font-size:11px;color:var(--soft);margin-top:6px;">Çubuk altındaki değer o ayın ortalama litre fiyatıdır.</div>');
-  }
+  // Bilgi satırı + yıl sonu tahmini (son 3 ayın ortalamasıyla, filtreye göre)
+  var tahmin='';
+  if(son<11){ var s3=aylar.slice(-3), ort=s3.reduce(function(t,m){ return t+A[m].tl; },0)/s3.length, yt=aylar.reduce(function(t,m){ return t+A[m].tl; },0);
+    tahmin=' · yıl sonu tahmini ≈ <b>'+mn(yt+ort*(11-son))+'</b> (son '+s3.length+' ay ortalamasıyla)'; }
+  h+='<div style="background:#EAF1FB;border-radius:4px;padding:8px 14px;font-size:13px;color:#0F1923;margin-bottom:6px;"><b>'+_kac(donemKisa)+':</b> brüt '+mn(G.tl)+' · '+_yaSayi(G.l)+' litre'+tahmin+'</div>';
+  if(secAy.length>=2){ var a0=A[secAy[0]], a1=A[secAy[secAy.length-1]];
+    var deg=function(x0,x1){ if(!(x0>0) || x1==null) return '—'; var d=(x1-x0)/x0*100; return (d>=0?'▲':'▼')+' %'+_yaOnd(Math.abs(d),1); };
+    h+='<div style="font-size:12px;font-style:italic;color:var(--mid);margin:0 2px 12px;">'+YK_AYLAR[secAy[0]]+' → '+YK_AYLAR[secAy[secAy.length-1]]+': aylık litre '+deg(a0.l,a1.l)+' · birim fiyat '+deg(oran(a0).tll,oran(a1).tll)+' · aylık tutar '+deg(a0.tl,a1.tl)+'</div>'; }
+  else h+='<div style="height:8px;"></div>';
+  // Grafikler (12 ay; seçili aylar koyu)
+  var W=360, H0=245, x0=14, gw=W-x0-6, bw=gw/12, yUst=34, yAlt=186;
+  var eksen=function(){ return YK_AYLAR.map(function(ad,m){ var cx=x0+bw*m+bw/2; return '<text x="'+cx+'" y="'+(yAlt+8)+'" transform="rotate(-60 '+cx+' '+(yAlt+8)+')" text-anchor="end" font-size="10" fill="#0F1923">'+ad+'</text>'; }).join('')
+    +'<line x1="'+x0+'" y1="'+yAlt+'" x2="'+(W-6)+'" y2="'+yAlt+'" stroke="#1F3864" stroke-width="1"/>'; };
+  var cubuk=function(deg, yaz){ var mx=Math.max.apply(null, deg.map(function(v){ return v||0; }).concat([1e-9]));
+    return '<svg viewBox="0 0 '+W+' '+H0+'" style="width:100%;height:auto;display:block;">'+deg.map(function(v,m){ if(v==null) return ''; var hh=Math.max(1,(v/mx)*(yAlt-yUst)), x=x0+bw*m+bw*0.15, sec=secAy.indexOf(m)>-1;
+      return '<rect x="'+x+'" y="'+(yAlt-hh)+'" width="'+(bw*0.7)+'" height="'+hh+'" fill="'+(sec?NV:'#A9BCD9')+'"/><text x="'+(x+bw*0.35)+'" y="'+(yAlt-hh-5)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0F1923">'+yaz(v)+'</text>'; }).join('')+eksen()+'</svg>'; };
+  var cizgi=function(deg, yaz){ var vs=deg.filter(function(v){ return v!=null; }); if(!vs.length) return ''; var mx=Math.max.apply(null,vs), mi=Math.min.apply(null,vs), ar=(mx-mi)||1;
+    var pt=deg.map(function(v,m){ return v==null?null:{x:x0+bw*m+bw/2, y:yAlt-14-((v-mi)/ar)*(yAlt-yUst-24), v:v, m:m}; }).filter(Boolean);
+    return '<svg viewBox="0 0 '+W+' '+H0+'" style="width:100%;height:auto;display:block;"><polyline fill="none" stroke="#C55A11" stroke-width="2.5" points="'+pt.map(function(p){ return p.x+','+p.y; }).join(' ')+'"/>'
+      +pt.map(function(p){ var sec=secAy.indexOf(p.m)>-1; return '<circle cx="'+p.x+'" cy="'+p.y+'" r="4.5" fill="'+(sec?'#C55A11':'#F4B183')+'"/><text x="'+p.x+'" y="'+(p.y-9)+'" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0F1923">'+yaz(p.v)+'</text>'; }).join('')+eksen()+'</svg>'; };
+  var grafik=function(bas, birim, svg){ return '<div><div style="font-size:13px;font-weight:800;color:#0F1923;border-bottom:2px solid '+NV+';padding-bottom:3px;margin-bottom:6px;">'+bas+' <span style="font-weight:600;">· '+birim+'</span></div>'
+    +'<div style="background:#fff;border:1px solid #CBD5E0;border-radius:16px;padding:8px 6px 0;">'+svg+'</div></div>'; };
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:18px;">'
+    +grafik('AYLIK YAKIT TUTARI','bin ₺', cubuk(A.map(function(o){ return o.v?o.tl/1000:null; }), function(v){ return Math.round(v).toLocaleString('tr-TR'); }))
+    +grafik('AYLIK TÜKETİM','bin litre', cubuk(A.map(function(o){ return o.v?o.l/1000:null; }), function(v){ return _yaOnd(v,1); }))
+    +grafik('ORT. BİRİM FİYAT','₺ / litre', cizgi(A.map(function(o){ return o.v&&o.l>0?o.tl/o.l:null; }), function(v){ return _yaOnd(v,1); }))
+    +'</div>';
   // Grup özeti
   var GR=Object.create(null);
   F.forEach(function(s){ var o=top(s,secAy); if(!o.v) return; var g=s.g||'—', x=GR[g]||(GR[g]=Object.assign(yeni(),{n:0})); x.n++; birlestir(x,o); });
@@ -1813,7 +1857,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-12b';
+var SURUM='2026-11-12c';
 (function(){
   var son=0;
   function bant(){
