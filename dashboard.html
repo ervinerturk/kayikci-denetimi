@@ -230,6 +230,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--dark);min-h
     <button id="navTaniBtn" onclick="taniGoster()" style="background:rgba(255,200,0,.25);color:#FFD700;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;">🔍 Tanı</button>
     <div class="nav-date" id="navDate"></div>
     <a id="navFormBtn" href="index.html" style="display:none;background:#16A34A;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none;font-family:Inter,sans-serif;white-space:nowrap;">📝 Saha Formuna Dön</a>
+    <select id="navOnizSec" onchange="onizlemeGec(this.value)" title="Başka bir kullanıcının ekranını salt okunur görün" style="display:none;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:6px 8px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;max-width:190px;"></select>
     <span id="navKullanici" style="font-size:11px;color:rgba(255,255,255,.7);"></span>
     <button id="navCikisBtn" onclick="dashCikisYap()" style="display:none;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;">Çıkış</button>
   </div>
@@ -1488,7 +1489,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-10c';
+var SURUM='2026-11-12a';
 (function(){
   var son=0;
   function bant(){
@@ -4373,11 +4374,55 @@ function dashOturumGoster(k){
     }
     gyDegisti();
     guncelle();
-    if(k.gy) raporGoruntule('panel');   // Rapor Takibi sayacı (yalnız GY)
+    if(k.gy && !k.onizleme) raporGoruntule('panel');   // Rapor Takibi sayacı (yalnız GY; önizlemede sayılmaz)
     raporDinleyiciBaslat();
     gorevDinleyiciBaslat();
     if(!k.gy && !k.operator) musteriAdlariniYayinla();   // yalnız Satış Müdürü
   }, 50);
+}
+
+// ── 👁 Görünüm önizleme (v62c): yalnız Satış Müdürü; Patron / Muhasebe / GY ekranını SALT OKUNUR gösterir ──
+// Adres: dashboard.html?gor=patron | muhasebe | gy:<GY adı>. Veri Müdür yetkisiyle okunur (yetki hatalarını göstermez);
+// önizlemede Firestore'a hiçbir yazma yapılamaz (aşağıdaki kilit), Rapor Takibi sayacı çalışmaz.
+var _onzGercekMd=false;
+function _onizlemeKullanici(k){
+  if(!k || k.gy || k.operator || k.izleyici) return null;
+  _onzGercekMd=true;
+  var v=''; try{ v=new URLSearchParams(location.search).get('gor')||''; }catch(e){}
+  if(v==='patron') return {email:k.email, ad:'Patron', rol:'Yönetim', gy:'', izleyici:'patron', onizleme:'Patron'};
+  if(v==='muhasebe') return {email:k.email, ad:'Muhasebe', rol:'Muhasebe Müdürü', gy:'', izleyici:'muhasebe', onizleme:'Muhasebe'};
+  if(v.indexOf('gy:')===0){ var g=v.slice(3); if(Object.prototype.hasOwnProperty.call(YO,g)) return {email:k.email, ad:g, rol:'Grup Yöneticisi', gy:g, onizleme:'GY · '+g}; }
+  return null;
+}
+function _onizlemeYazmaKilidi(){
+  try{
+    var red=function(){ return Promise.reject(new Error('👁 Önizleme modunda kayıt yapılamaz.')); };
+    var F=firebase.firestore;
+    ['set','update','delete'].forEach(function(m){ F.DocumentReference.prototype[m]=red; });
+    F.CollectionReference.prototype.add=red;
+    F.WriteBatch.prototype.commit=red;
+    F.Firestore.prototype.runTransaction=red;
+  }catch(e){ try{ console.warn('Önizleme kilidi kurulamadı', e); }catch(x){} }
+}
+function _onizlemeSecDoldur(aktif){
+  var s=document.getElementById('navOnizSec'); if(!s || !_onzGercekMd) return;
+  var o=function(v,t){ return '<option value="'+_kac(v)+'"'+(v===aktif?' selected':'')+'>'+_kac(t)+'</option>'; };
+  s.innerHTML=(aktif?o('__md','↩ Müdür görünümüne dön'):o('','👁 Görünüm önizle…'))
+    +'<optgroup label="Yönetim">'+o('patron','Patron (Yönetim Paneli)')+o('muhasebe','Muhasebe Paneli')+'</optgroup>'
+    +'<optgroup label="Grup Yöneticisi">'+Object.keys(YO).sort(function(a,b){ return a.localeCompare(b,'tr'); }).map(function(g){ return o('gy:'+g, g); }).join('')+'</optgroup>';
+  s.style.display='';
+}
+function onizlemeGec(v){
+  var u=location.pathname;
+  if(v && v!=='__md') u+='?gor='+encodeURIComponent(v);
+  location.href=u;
+}
+function _onizlemeBandi(k){
+  var b=document.createElement('div'); b.id='onzBant';
+  b.style.cssText='position:sticky;top:0;z-index:999;background:#FEF3C7;color:#78350F;padding:8px 14px;font-size:12px;font-weight:700;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:2px solid #F59E0B;';
+  b.innerHTML='<span>👁 Önizleme: <b>'+_kac(k.onizleme)+'</b> ekranı · salt okunur, kayıt yapılamaz. Veriler sizin yetkinizle okunur; yetki hatalarını görmek için kişinin kendi girişi gerekir.</span>'
+    +'<button type="button" onclick="onizlemeGec(\'__md\')" style="margin-left:auto;background:#78350F;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">✕ Önizlemeden çık</button>';
+  var p=document.getElementById('dashAnaPanel'); if(p) p.insertBefore(b, p.firstChild);
 }
 
 function dashCikisYap(){
@@ -4405,7 +4450,11 @@ function dashCikisYap(){
       return;
     }
     _yetkiYukle(user.email.toLowerCase()).then(function(k){
-      if(k){ dashOturumGoster(k); }
+      if(k){
+        var _onz=_onizlemeKullanici(k);
+        if(_onz){ _onizlemeYazmaKilidi(); dashOturumGoster(_onz); _onizlemeBandi(_onz); _onizlemeSecDoldur(new URLSearchParams(location.search).get('gor')); }
+        else { dashOturumGoster(k); _onizlemeSecDoldur(''); }
+      }
       else { _dashMesaj('Bu hesap için panel yetkisi tanımlı değil. Satış Müdürü ile görüşün.'); dashAuth.signOut(); }
     }).catch(function(err){
       var off=/offline|unavailable|network/i.test(String((err&&err.message)||err));
