@@ -1857,7 +1857,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-12c';
+var SURUM='2026-11-12d';
 (function(){
   var son=0;
   function bant(){
@@ -4792,9 +4792,12 @@ function onizlemeGec(v){
 function _onizlemeBandi(k){
   var b=document.createElement('div'); b.id='onzBant';
   b.style.cssText='position:sticky;top:0;z-index:999;background:#FEF3C7;color:#78350F;padding:8px 14px;font-size:12px;font-weight:700;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:2px solid #F59E0B;';
-  b.innerHTML='<span>👁 Önizleme: <b>'+_kac(k.onizleme)+'</b> ekranı · salt okunur, kayıt yapılamaz. Veriler sizin yetkinizle okunur; yetki hatalarını görmek için kişinin kendi girişi gerekir.</span>'
-    +'<button type="button" onclick="onizlemeGec(\'__md\')" style="margin-left:auto;background:#78350F;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">✕ Önizlemeden çık</button>';
+  b.innerHTML='<style>@media(max-width:760px){#onzBant .onz-uzun{display:none}#onzBant{padding:6px 10px!important}}</style><span>👁 Önizleme: <b>'+_kac(k.onizleme)+'</b> · salt okunur<span class="onz-uzun">, kayıt yapılamaz. Veriler sizin yetkinizle okunur; yetki hatalarını görmek için kişinin kendi girişi gerekir.</span></span>'
+    +'<button type="button" onclick="onizlemeGec(\'__md\')" style="margin-left:auto;background:#78350F;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">✕ Önizlemeden çık</button>';
   var p=document.getElementById('dashAnaPanel'); if(p) p.insertBefore(b, p.firstChild);
+  // Önizlemede bant ve menü birlikte üstte sabit kalır: menü bandın hemen altına yapışır (yoksa bant menünün üstünü kapatır)
+  var n=document.querySelector('.nav'), ayar=function(){ if(n) n.style.top=b.offsetHeight+'px'; };
+  ayar(); window.addEventListener('resize', ayar);
 }
 
 function dashCikisYap(){
