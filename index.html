@@ -3171,6 +3171,10 @@ function onizlemeBaslat(u){
   var git=document.createElement('a'); git.href='dashboard.html'; git.textContent='← Panele dön'; git.style.cssText='color:#92400E;text-decoration:underline;margin-left:4px;white-space:nowrap;';
   serit.appendChild(git);
   document.body.insertBefore(serit, document.body.firstChild);
+  // Önizleme şeridi, menü ve adım çubuğu birlikte üstte sabit kalır (şerit menünün üstünü kapatmasın)
+  var _nv=document.querySelector('.nav'), _st=document.querySelector('.steps');
+  var _ayar=function(){ var h=serit.offsetHeight; if(_nv) _nv.style.top=h+'px'; if(_st) _st.style.top=(h+46)+'px'; };
+  _ayar(); window.addEventListener('resize', _ayar);
   onizlemeTumAdlariYukle();
   var sYon=document.getElementById('sYon');
   if(sYon){
