@@ -106,6 +106,14 @@ div[style*="overflow:auto"] > table > thead > tr:first-child > th{position:stick
 #crTablo thead th:first-child,#crTablo tr>td:first-child:not([colspan]){position:sticky;left:0;z-index:1;background:inherit;box-shadow:1px 0 0 var(--border);}   /* yana kayarken temsilci adı sabit */
 #ipdTablo thead th:first-child,#ipdTablo td.ipd-gy{position:sticky;left:0;z-index:2;background:#fff;box-shadow:2px 0 0 #CBD5E1;}   /* İş Planı: GY sütunu sabit, günler kayar */
 #ipdTablo thead th:first-child{background:#1F3864;z-index:5;white-space:normal!important;}
+/* Bakiye: GY / Temsilci tablolarında ad sütunu sabit; telefonda daraltılmış, sığarsa kaydırmasız */
+table.bk-dar>thead>tr>th:first-child,table.bk-dar>tbody>tr>td:first-child:not([colspan]){position:sticky;left:0;background:#fff;box-shadow:1px 0 0 var(--border);}
+table.bk-dar>tbody>tr>td:first-child:not([colspan]){z-index:1;white-space:nowrap;}
+table.bk-dar>thead>tr>th:first-child{z-index:4;}
+.bk-kisa{display:none;}
+@media(max-width:700px){table.bk-dar{min-width:0!important;width:100%;}table.bk-dar>thead>tr>th,table.bk-dar>tbody>tr>td:not([colspan]){padding:6px 3px;font-size:10.5px;}table.bk-dar>thead>tr>th{white-space:normal;line-height:1.2;font-size:10px;}table.bk-dar>thead>tr>th:first-child,table.bk-dar>tbody>tr>td:first-child:not([colspan]){width:80px;min-width:80px;max-width:80px;white-space:normal;word-break:break-word;padding-left:4px;}table.bk-dar>tbody>tr>td:first-child b{font-size:10.5px;}table.bk-dar>tbody>tr>td:first-child div{font-size:9px!important;}table.bk-dar .bk-tl,table.bk-dar .bk-uzun{display:none;}table.bk-dar .bk-kisa{display:inline;}}
+/* Odak: Son ST Girişleri telefonda kaydırmasız */
+@media(max-width:700px){table.od-son{min-width:0!important;width:100%;}table.od-son th,table.od-son td{padding:6px 3px!important;font-size:10.5px;white-space:normal!important;word-break:normal;}table.od-son td:first-child{width:44px;}table.od-son th:nth-child(2),table.od-son td:nth-child(2){min-width:72px;word-break:normal;}table.od-son th:last-child,table.od-son td:last-child{width:34px;}}
 @media(max-width:600px){#ipdTablo thead th:first-child,#ipdTablo td.ipd-gy{width:104px!important;min-width:104px;max-width:104px;padding:6px!important;font-size:11.5px!important;white-space:normal;word-break:break-word;}#ipdTablo td.ipd-gy div{font-size:10px!important;}#ipdTablo{min-width:780px!important;}}
 #crTablo th.num{white-space:normal!important;line-height:1.2;}
 #crTablo .cr-detay .tbl td{white-space:nowrap;}
@@ -930,6 +938,7 @@ function _bkSayi(v){
   s=s.replace(/[^0-9.\-]/g,''); var x=parseFloat(s); return isFinite(x)?x:0;
 }
 function _bkPara(x){ return (Math.round(x||0)).toLocaleString('tr-TR')+' ₺'; }
+function _bkParaD(x){ return (Math.round(x||0)).toLocaleString('tr-TR')+'<span class="bk-tl"> ₺</span>'; }   // telefonda ₺ gizlenir (dar tablo)
 function _bkKisa(x){ x=x||0; return Math.abs(x)>=1e6 ? (x/1e6).toLocaleString('tr-TR',{maximumFractionDigits:2})+' Mn ₺' : Math.abs(x)>=1e3 ? Math.round(x/1e3).toLocaleString('tr-TR')+' Bin ₺' : Math.round(x)+' ₺'; }
 function _bkKovaBas(k){ var m=/^(\d+)/.exec(String(k)); return m?parseInt(m[1],10):0; }
 function _bkTarihTr(s){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||'')); return m?m[3]+'.'+m[2]+'.'+m[1]:'—'; }
@@ -1170,8 +1179,8 @@ function _bakiyeCiz(sadeceArama){
   if(!gy && _dashKullanici && !_dashKullanici.gy){
     var G=Object.create(null); tl.forEach(function(o){ var x=G[o.gy]||(G[o.gy]={gy:o.gy,s:0,m:0,t:0,u:0}); x.s++; x.m+=o.m; x.t+=o.t; x.u+=o.u; });
     var gl=Object.keys(G).map(function(k){ return G[k]; }).sort(function(a,b){ return b.u-a.u; });
-    h+=secHd('👥 Grup Yöneticisi Bazında')+'<div style="overflow-x:auto;"><table class="tbl" style="min-width:520px;"><thead><tr><th>Grup Yöneticisi</th><th class="num">Temsilci</th><th class="num">Müşteri</th><th class="num">Toplam</th><th class="num">21+ Gün</th><th class="num">21+ %</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
-    gl.forEach(function(x){ var p=x.t>0?Math.round(x.u/x.t*100):0; h+='<tr><td style="white-space:nowrap;">'+_kac(x.gy)+'</td><td class="num">'+x.s+'</td><td class="num">'+x.m+'</td><td class="num" style="font-weight:700;white-space:nowrap;">'+_bkPara(x.t)+'</td><td class="num" style="color:'+(x.u>0.5?'var(--red)':'inherit')+';font-weight:700;white-space:nowrap;">'+_bkPara(x.u)+'</td><td class="num">%'+p+'</td><td class="num" style="white-space:nowrap;">'+_bkPara(x.t-x.u)+'</td></tr>'; });
+    h+=secHd('👥 Grup Yöneticisi Bazında')+'<div style="overflow-x:auto;"><table class="tbl bk-dar" style="min-width:520px;"><thead><tr><th>Grup Yöneticisi</th><th class="num"><span class="bk-uzun">Temsilci</span><span class="bk-kisa">ST</span></th><th class="num"><span class="bk-uzun">Müşteri</span><span class="bk-kisa">Müş.</span></th><th class="num">Toplam</th><th class="num">21+ Gün</th><th class="num">21+ %</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
+    gl.forEach(function(x){ var p=x.t>0?Math.round(x.u/x.t*100):0; h+='<tr><td>'+_kac(x.gy)+'</td><td class="num">'+x.s+'</td><td class="num">'+x.m+'</td><td class="num" style="font-weight:700;white-space:nowrap;">'+_bkParaD(x.t)+'</td><td class="num" style="color:'+(x.u>0.5?'var(--red)':'inherit')+';font-weight:700;white-space:nowrap;">'+_bkParaD(x.u)+'</td><td class="num">%'+p+'</td><td class="num" style="white-space:nowrap;">'+_bkParaD(x.t-x.u)+'</td></tr>'; });
     h+='</tbody></table></div>';
   }
   // Grafik: temsilci bazında 21+ gün
@@ -1181,7 +1190,7 @@ function _bakiyeCiz(sadeceArama){
     }).join(''), _gl.length):'<div class="grf-bos">21 günü geçen bakiye yok. 👍</div>');
   // Temsilci tablosu (satıra tıkla → müşteriler)
   var tt=secHd('🧑‍💼 Temsilci Bazında (satıra tıklayınca müşteriler açılır)')
-    +'<div style="overflow-x:auto;"><table class="tbl" style="min-width:560px;"><thead><tr><th>Temsilci</th><th class="num">Müşteri</th><th class="num">Toplam</th><th class="num">21+ Gün</th><th class="num">21+ %</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
+    +'<div style="overflow-x:auto;"><table class="tbl bk-dar" style="min-width:560px;"><thead><tr><th>Temsilci</th><th class="num"><span class="bk-uzun">Müşteri</span><span class="bk-kisa">Müş.</span></th><th class="num">Toplam</th><th class="num">21+ Gün</th><th class="num">21+ %</th><th class="num">0-20 Gün</th></tr></thead><tbody>';
   var KD=_bkDoluKovalar(sat, K);   // boş gün aralığı sütunları gizli
   var kovaBas='<th>Cari Kodu</th><th>Cari Adı</th><th>Grup</th>'+KD.map(function(i){ var k=K[i]; return '<th class="num" style="white-space:nowrap;'+(_bkKovaBas(k)>=21?'color:var(--red);':'')+'">'+_kac(_bkKovaAd(k))+'</th>'; }).join('')+'<th class="num">Güncel Bakiye</th>';
   var musSatir=function(s){
@@ -1191,7 +1200,7 @@ function _bakiyeCiz(sadeceArama){
   };
   tl.forEach(function(o,i){
     var p=o.t>0?Math.round(o.u/o.t*100):0, acik=!!_bkAcikST[o.st] || !!st;
-    tt+='<tr style="cursor:pointer;" onclick="bakiyeTemsilciAcKapa('+i+')"><td><b style="white-space:nowrap;">'+_kac(o.st)+'</b>'+(!gy&&_dashKullanici&&!_dashKullanici.gy?'<div style="font-size:10px;color:var(--soft);">'+_kac(o.gy)+'</div>':'')+'</td><td class="num">'+o.m+'</td><td class="num" style="font-weight:700;white-space:nowrap;">'+_bkPara(o.t)+'</td><td class="num" style="color:'+(o.u>0.5?'var(--red)':'inherit')+';font-weight:700;white-space:nowrap;">'+_bkPara(o.u)+'</td><td class="num">%'+p+'</td><td class="num" style="white-space:nowrap;">'+_bkPara(o.t-o.u)+' <span style="color:var(--blue);">'+(acik?'▾':'›')+'</span></td></tr>';
+    tt+='<tr style="cursor:pointer;" onclick="bakiyeTemsilciAcKapa('+i+')"><td><b>'+_kac(o.st)+'</b>'+(!gy&&_dashKullanici&&!_dashKullanici.gy?'<div style="font-size:10px;color:var(--soft);">'+_kac(o.gy)+'</div>':'')+'</td><td class="num">'+o.m+'</td><td class="num" style="font-weight:700;white-space:nowrap;">'+_bkParaD(o.t)+'</td><td class="num" style="color:'+(o.u>0.5?'var(--red)':'inherit')+';font-weight:700;white-space:nowrap;">'+_bkParaD(o.u)+'</td><td class="num">%'+p+'</td><td class="num" style="white-space:nowrap;">'+_bkParaD(o.t-o.u)+' <span style="color:var(--blue);">'+(acik?'▾':'›')+'</span></td></tr>';
     tt+='<tr id="bkSt'+i+'" data-st="'+_kac(o.st)+'" style="'+(acik?'':'display:none;')+'"><td colspan="6" style="padding:0 0 10px;background:var(--bg);"><div style="overflow-x:auto;"><table class="tbl" style="min-width:760px;font-size:12px;"><thead><tr>'+kovaBas+'</tr></thead><tbody>'
       +o.l.slice().sort(function(a,b){ return ust(b)-ust(a) || b.t-a.t; }).map(musSatir).join('')+'</tbody></table></div></td></tr>';
   });
@@ -2052,7 +2061,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-20e';
+var SURUM='2026-11-20f';
 (function(){
   var son=0;
   function bant(){
@@ -3815,7 +3824,7 @@ function _odakCiz(){
   var ua=Object.create(null); U.forEach(function(u){ ua[u.k]=u.a; });
   var mAd=Object.create(null); _odListe.forEach(function(r){ mAd[r.c]=r.a; });
   if(sonGiris.length){
-    h+=secHd('🕒 Son ST Girişleri')+'<div style="overflow-x:auto;"><table class="tbl" style="min-width:520px;font-size:12px;"><thead><tr><th>Zaman</th><th>Temsilci</th><th>Müşteri</th><th>Ürün</th><th class="num">PAK</th></tr></thead><tbody>'
+    h+=secHd('🕒 Son ST Girişleri')+'<div style="overflow-x:auto;"><table class="tbl od-son" style="min-width:520px;font-size:12px;"><thead><tr><th>Zaman</th><th>Temsilci</th><th>Müşteri</th><th>Ürün</th><th class="num">PAK</th></tr></thead><tbody>'
       +sonGiris.slice(0,15).map(function(x){ return '<tr><td style="white-space:nowrap;">'+_kac(_odZamanTr(x.z))+'</td><td style="white-space:nowrap;">'+_kac(x.st)+'</td><td>'+_kac(mAd[x.c]||x.c)+'</td><td>'+_kac(ua[x.k]||x.k)+'</td><td class="num"><b>'+x.v.toLocaleString('tr-TR')+'</b></td></tr>'; }).join('')+'</tbody></table></div>';
   }
   // Matris
