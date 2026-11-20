@@ -3171,6 +3171,7 @@ function onizlemeBaslat(u){
   var git=document.createElement('a'); git.href='dashboard.html'; git.textContent='← Panele dön'; git.style.cssText='color:#92400E;text-decoration:underline;margin-left:4px;white-space:nowrap;';
   serit.appendChild(git);
   document.body.insertBefore(serit, document.body.firstChild);
+  try{ _isPlaniButonu(); }catch(e){}
   // Önizleme şeridi, menü ve adım çubuğu birlikte üstte sabit kalır (şerit menünün üstünü kapatmasın)
   var _nv=document.querySelector('.nav'), _st=document.querySelector('.steps');
   var _ayar=function(){ var h=serit.offsetHeight; if(_nv) _nv.style.top=h+'px'; if(_st) _st.style.top=(h+46)+'px'; };
@@ -3206,6 +3207,7 @@ function loginUygula(u){
     }
     _taslakKontrol(u.gy);   // bugünün taslağı otomatik geri gelir
     _panelimButonu();
+    _isPlaniButonu();
     bugunRaporlariYukle();
     // Nav'da kullanıcı adını göster
     var navEl = document.querySelector('.nav-right');
@@ -3216,6 +3218,235 @@ function loginUygula(u){
 }
 
 // GY'nin kendi paneline geçiş (formdaki veriler otomatik saklandığı için dönüşte kaybolmaz)
+// ════════ 📅 İŞ PLANIM (v64) — GY haftalık iş planı ════════
+// Bilgi amaçlıdır (onay yok). Plan en geç haftanın Pazartesi 08:00'ine kadar gönderilir.
+// Kayıt: isPlani/{YYYY-Www}__{GY}. Sunucu kuralı: GY yalnız kendi planını okur/yazar; Müdür hepsini okur. Silme yok.
+// Saha kalemi, aynı gün aynı ST için girilmiş saha raporu varsa otomatik "Gerçekleşti" sayılır.
+var IP_TUR={saha:'🚗 Saha (ST ile)', kilit:'🏪 Kilit müşteri ziyareti', ofis:'🏢 Ofis / toplantı', egitim:'🎓 Eğitim', izin:'🏖 İzin', diger:'📌 Diğer'};
+var IP_ZAMAN=['Tüm gün','Sabah','Öğleden sonra'];
+var IP_NEDEN=['ST izinli / raporlu','Araç arızası','Acil iş / görevlendirme','Müşteri kapalı / yetkili yok','Hava / trafik','Diğer'];
+var IP_GUN=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+var IP={acik:false, pzt:null, gy:'', plan:null, rapor:[], yuk:false, hata:'', degisti:false, form:null};
+function _ipISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _ipPzt(d){ var x=new Date(d.getFullYear(), d.getMonth(), d.getDate()); var g=(x.getDay()+6)%7; x.setDate(x.getDate()-g); return x; }
+function _ipGun(pzt, i){ var x=new Date(pzt); x.setDate(x.getDate()+i); return x; }
+function _ipHafta(pzt){   // ISO hafta: YYYY-Www
+  var t=new Date(pzt); t.setDate(t.getDate()+3); var y=t.getFullYear(), ilk=new Date(y,0,4);
+  var w=1+Math.round(((t-ilk)/864e5-3+((ilk.getDay()+6)%7))/7); return y+'-W'+String(w).padStart(2,'0');
+}
+function _ipTr(d){ return d.toLocaleDateString('tr-TR',{day:'numeric',month:'long'}); }
+function _ipSaat(iso){ var d=new Date(iso); return isNaN(d)?'':d.toLocaleDateString('tr-TR',{weekday:'short',day:'numeric',month:'short'})+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function _ipSonTarih(pzt){ var d=new Date(pzt); d.setHours(8,0,0,0); return d; }
+function _ipGyAdi(){ return (document.getElementById('sYon')||{}).value||''; }
+function _ipBos(gy, pzt){ return {gy:gy, hafta:_ipHafta(pzt), basTarih:_ipISO(pzt), durum:'taslak', gonderim:'', kalemler:[], hedefler:[], degerlendirme:'', guncel:'', guncelleyen:''}; }
+function _ipTemiz(s,n){ return String(s==null?'':s).replace(/[<>]/g,'').slice(0,n||200); }
+
+function isPlaniAc(){
+  var gy=_ipGyAdi();
+  if(!gy){ toast(_onizleme?'Önce Grup Yöneticisi seçin.':'Grup Yöneticisi bulunamadı.','e'); return; }
+  IP.acik=true; IP.gy=gy; IP.pzt=_ipPzt(new Date()); IP.degisti=false; IP.form=null;
+  var k=document.getElementById('ipKutu');
+  if(!k){ k=document.createElement('div'); k.id='ipKutu';
+    k.style.cssText='position:fixed;inset:0;z-index:1200;background:#F1F5F9;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+    document.body.appendChild(k);
+    window.addEventListener('popstate', function(){ if(IP.acik) isPlaniKapat(true); });
+  }
+  k.style.display='block'; document.body.style.overflow='hidden';
+  try{ history.pushState({ip:1}, ''); }catch(e){}
+  _ipYukle();
+}
+function isPlaniKapat(geriden){
+  if(IP.degisti && !_onizleme && !confirm('Kaydedilmemiş değişiklikler var. Kaydetmeden kapatılsın mı?')){ if(geriden){ try{ history.pushState({ip:1}, ''); }catch(e){} } return; }
+  IP.acik=false; var k=document.getElementById('ipKutu'); if(k) k.style.display='none'; document.body.style.overflow='';
+  if(!geriden){ try{ if(history.state && history.state.ip) history.back(); }catch(e){} }
+}
+function isPlaniHafta(yon){
+  if(IP.degisti && !_onizleme && !confirm('Kaydedilmemiş değişiklikler var. Başka haftaya geçilsin mi?')) return;
+  IP.pzt=_ipGun(IP.pzt, 7*yon); IP.degisti=false; IP.form=null; _ipYukle();
+}
+function _ipYukle(){
+  var gy=IP.gy, pzt=IP.pzt, hafta=_ipHafta(pzt);
+  IP.yuk=true; IP.hata=''; IP.plan=null; IP.rapor=[]; _ipCiz();
+  if(!_db){ IP.yuk=false; IP.hata='Sunucuya bağlanılamadı.'; _ipCiz(); return; }
+  var gunler=[]; for(var i=0;i<6;i++) gunler.push(_ipISO(_ipGun(pzt,i)));
+  var p1=_db.collection('isPlani').doc(hafta+'__'+gy).get();
+  var p2=_db.collection('raporlar').where('yonetici','==',gy).where('tarih','in',gunler).get().catch(function(){ return null; });
+  Promise.all([p1,p2]).then(function(r){
+    if(IP.gy!==gy || _ipHafta(IP.pzt)!==hafta) return;
+    var d=r[0]; var x=d && d.exists ? d.data() : null;
+    var P=_ipBos(gy, pzt);
+    if(x){
+      P.durum=x.durum==='gonderildi'?'gonderildi':'taslak'; P.gonderim=_ipTemiz(x.gonderim,40); P.guncel=_ipTemiz(x.guncel,40);
+      P.degerlendirme=_ipTemiz(x.degerlendirme,1000); P.gonderimSunucu=x.gonderimSunucu||null;
+      try{ if(P.gonderimSunucu && P.gonderimSunucu.toDate) P.gonderim=P.gonderimSunucu.toDate().toISOString(); }catch(e){}
+      P.kalemler=(Array.isArray(x.kalemler)?x.kalemler:[]).slice(0,80).map(function(k){ return {id:_ipTemiz(k.id,20), gun:Math.max(0,Math.min(5,parseInt(k.gun,10)||0)), tur:IP_TUR[k.tur]?k.tur:'diger',
+        st:_ipTemiz(k.st,60), zaman:IP_ZAMAN.indexOf(k.zaman)>-1?k.zaman:IP_ZAMAN[0], yer:_ipTemiz(k.yer,120), amac:_ipTemiz(k.amac,200),
+        durum:['','yapildi','yapilamadi','iptal'].indexOf(k.durum)>-1?k.durum:'', neden:_ipTemiz(k.neden,60), not:_ipTemiz(k.not,200)}; });
+      P.hedefler=(Array.isArray(x.hedefler)?x.hedefler:[]).slice(0,8).map(function(h){ return {m:_ipTemiz(h.m,120), h:_ipTemiz(h.h,30), g:_ipTemiz(h.g,30)}; });
+    }
+    IP.plan=P;
+    IP.rapor=[];
+    if(r[1]) r[1].docs.forEach(function(dd){ var v=dd.data()||{}; if(String(dd.id).indexOf('rapor_')!==0) return;
+      var st={}; if(v.st) st[v.st]=1; (Array.isArray(v.noktalar)?v.noktalar:[]).forEach(function(n){ if(n && n.noktaST) st[n.noktaST]=1; });
+      Object.keys(st).forEach(function(s){ IP.rapor.push({tarih:String(v.tarih||''), st:s, nokta:(v.toplamNokta||0)}); }); });
+    IP.yuk=false; _ipCiz();
+  }).catch(function(e){ IP.yuk=false; IP.hata=(e&&e.message)||String(e); _ipCiz(); });
+}
+function _ipRaporVar(k){ if((k.tur!=='saha' && k.tur!=='kilit') || !k.st) return false; var t=_ipISO(_ipGun(IP.pzt,k.gun)), a=_adAnahtar(k.st);
+  return IP.rapor.some(function(r){ return r.tarih===t && _adAnahtar(r.st)===a; }); }
+function _ipEkip(){ return (YO[IP.gy]||[]).slice().sort(function(a,b){ return a.localeCompare(b,'tr'); }); }
+
+function _ipCiz(){
+  var k=document.getElementById('ipKutu'); if(!k || !IP.acik) return;
+  var E=_htmlKac, pzt=IP.pzt, bugun=_ipISO(new Date()), son=_ipSonTarih(pzt), P=IP.plan, ro=!!_onizleme;
+  var h='<div style="max-width:760px;margin:0 auto;padding:0 0 90px;font-family:Inter,sans-serif;">';
+  h+='<div style="position:sticky;top:0;z-index:5;background:#1E3A5F;color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px;">'
+    +'<button type="button" onclick="isPlaniKapat()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:14px;font-weight:800;cursor:pointer;">← Geri</button>'
+    +'<div style="font-size:16px;font-weight:800;">📅 İş Planım</div><div style="margin-left:auto;font-size:12px;opacity:.85;">'+E(IP.gy)+(ro?' · 👁 önizleme':'')+'</div></div>';
+  h+='<div style="padding:12px 12px 0;">';
+  // Hafta seçici
+  h+='<div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;padding:8px;margin-bottom:10px;">'
+    +'<button type="button" onclick="isPlaniHafta(-1)" style="border:none;background:#EFF6FF;color:#1E3A5F;border-radius:8px;padding:10px 14px;font-size:16px;font-weight:800;cursor:pointer;">◀</button>'
+    +'<div style="flex:1;text-align:center;"><div style="font-size:15px;font-weight:800;color:#0F1923;">'+_ipTr(pzt)+' – '+_ipTr(_ipGun(pzt,5))+'</div><div style="font-size:11px;color:#64748B;">'+_ipHafta(pzt).split('-W')[1]+'. hafta'+(_ipISO(_ipPzt(new Date()))===_ipISO(pzt)?' · bu hafta':'')+'</div></div>'
+    +'<button type="button" onclick="isPlaniHafta(1)" style="border:none;background:#EFF6FF;color:#1E3A5F;border-radius:8px;padding:10px 14px;font-size:16px;font-weight:800;cursor:pointer;">▶</button></div>';
+  if(IP.yuk || !P){ k.innerHTML=h+'<div style="padding:30px;text-align:center;color:#64748B;">'+(IP.hata?'⚠️ '+E(IP.hata):'⏳ Yükleniyor…')+'</div></div></div>'; return; }
+  // Durum bandı
+  var gonderildi=P.durum==='gonderildi', gec=gonderildi && new Date(P.gonderim)>son, simdi=new Date();
+  var bant, renk;
+  if(gonderildi){ bant=(gec?'⚠️ Geç gönderildi: ':'✅ Gönderildi: ')+_ipSaat(P.gonderim)+(P.guncel && P.guncel!==P.gonderim?' · son güncelleme '+_ipSaat(P.guncel):''); renk=gec?'#FFF7ED;color:#9A3412':'#F0FDF4;color:#166534'; }
+  else if(simdi<=son){ bant='📝 Taslak · Planı en geç <b>'+_ipSaat(son.toISOString())+'</b> gönderin.'; renk='#EFF6FF;color:#1E40AF'; }
+  else { bant='⛔ Gönderilmedi · Son gönderim '+_ipSaat(son.toISOString())+' idi. Yine de gönderebilirsiniz (geç olarak kaydedilir).'; renk='#FEF2F2;color:#B91C1C'; }
+  h+='<div style="background:'+renk+';border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600;margin-bottom:10px;line-height:1.5;">'+bant+'</div>';
+  if(!P.kalemler.length && !ro) h+='<button type="button" onclick="isPlaniKopyala()" style="width:100%;margin-bottom:10px;background:#fff;border:1.5px dashed #94A3B8;color:#334155;border-radius:10px;padding:10px;font-size:13px;font-weight:700;cursor:pointer;">📋 Geçen haftanın planını kopyala</button>';
+  // Haftalık hedefler
+  h+='<div style="background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:#1E3A5F;margin-bottom:8px;">🎯 Haftalık hedefler</div>';
+  if(!P.hedefler.length) h+='<div style="font-size:12px;color:#94A3B8;margin-bottom:6px;">Örnek: "Odak görevinde 40 boş hücre", "12 saha ziyareti", "3 zincirde teşhir".</div>';
+  P.hedefler.forEach(function(x,i){
+    h+='<div style="display:grid;grid-template-columns:1fr 64px 64px 28px;gap:6px;margin-bottom:6px;align-items:center;">'
+      +'<input '+(ro?'disabled ':'')+'value="'+E(x.m)+'" placeholder="Hedef" oninput="ipHedef('+i+',\'m\',this.value)" style="padding:8px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;min-width:0;">'
+      +'<input '+(ro?'disabled ':'')+'value="'+E(x.h)+'" placeholder="Hedef" oninput="ipHedef('+i+',\'h\',this.value)" style="padding:8px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;text-align:center;min-width:0;">'
+      +'<input '+(ro?'disabled ':'')+'value="'+E(x.g)+'" placeholder="Gerç." oninput="ipHedef('+i+',\'g\',this.value)" style="padding:8px;border:1.5px solid #BBF7D0;background:#F0FDF4;border-radius:8px;font-size:13px;text-align:center;min-width:0;">'
+      +(ro?'<span></span>':'<button type="button" onclick="ipHedefSil('+i+')" style="border:none;background:none;color:#94A3B8;font-size:16px;cursor:pointer;">✕</button>')+'</div>';
+  });
+  if(!ro && P.hedefler.length<8) h+='<button type="button" onclick="ipHedefEkle()" style="border:none;background:#EFF6FF;color:#1E40AF;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;">＋ Hedef ekle</button>';
+  h+='</div>';
+  // Günler
+  for(var g=0; g<6; g++){
+    var tarih=_ipGun(pzt,g), tIso=_ipISO(tarih), gecmis=tIso<=bugun;
+    var kal=P.kalemler.map(function(x,i){ return {x:x,i:i}; }).filter(function(o){ return o.x.gun===g; });
+    h+='<div style="background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;'+(tIso===bugun?'border:2px solid #3B82F6;':'')+'">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><div style="font-size:14px;font-weight:800;color:#0F1923;">'+IP_GUN[g]+'</div><div style="font-size:12px;color:#64748B;">'+_ipTr(tarih)+(tIso===bugun?' · bugün':'')+'</div>'
+      +(ro?'':'<button type="button" onclick="ipFormAc('+g+')" style="margin-left:auto;border:none;background:#16A34A;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;">＋ Ekle</button>')+'</div>';
+    if(!kal.length) h+='<div style="font-size:12px;color:#CBD5E1;">Plan yok</div>';
+    kal.forEach(function(o){ h+=_ipKalemHtml(o.x, o.i, gecmis, ro); });
+    if(IP.form && IP.form.gun===g) h+=_ipFormHtml();
+    // plansız ziyaretler (o gün raporu olup planda olmayan ST)
+    var plansiz=IP.rapor.filter(function(r){ return r.tarih===tIso && !P.kalemler.some(function(x){ return x.gun===g && (x.tur==='saha'||x.tur==='kilit') && _adAnahtar(x.st)===_adAnahtar(r.st); }); });
+    if(plansiz.length) h+='<div style="margin-top:6px;font-size:12px;color:#7C3AED;background:#F5F3FF;border-radius:8px;padding:6px 8px;">➕ Plansız saha raporu: '+plansiz.map(function(r){ return E(r.st); }).join(', ')+'</div>';
+    h+='</div>';
+  }
+  // Değerlendirme
+  h+='<div style="background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:#1E3A5F;margin-bottom:6px;">📝 Hafta sonu değerlendirmesi</div>'
+    +'<textarea '+(ro?'disabled ':'')+'rows="3" maxlength="1000" placeholder="Hafta nasıl geçti? Ne iyi gitti, neye takıldınız?" oninput="ipDeg(this.value)" style="width:100%;box-sizing:border-box;padding:8px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;">'+E(P.degerlendirme)+'</textarea></div>';
+  h+='</div></div>';
+  if(!ro){
+    h+='<div style="position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #E2E8F0;padding:10px 12px;display:flex;gap:8px;justify-content:center;z-index:6;">'
+      +'<button type="button" id="ipKaydetBtn" onclick="isPlaniKaydet(false)" style="flex:1;max-width:240px;border:none;background:#EFF6FF;color:#1E3A5F;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;">💾 Kaydet'+(IP.degisti?' •':'')+'</button>'
+      +(gonderildi?'':'<button type="button" onclick="isPlaniKaydet(true)" style="flex:1;max-width:240px;border:none;background:#16A34A;color:#fff;border-radius:10px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;">📤 Planı Gönder</button>')
+      +'</div>';
+  }
+  var y=k.scrollTop; k.innerHTML=h; k.scrollTop=y;
+}
+function _ipKalemHtml(x, i, gecmis, ro){
+  var E=_htmlKac, oto=_ipRaporVar(x), iptal=x.durum==='iptal';
+  var dur='';
+  if(iptal) dur='<span style="color:#94A3B8;">İptal</span>';
+  else if(oto) dur='<span style="color:#16A34A;font-weight:800;">✅ Gerçekleşti (rapor girildi)</span>';
+  else if(x.durum==='yapildi') dur='<span style="color:#16A34A;font-weight:800;">✅ Yapıldı</span>';
+  else if(x.durum==='yapilamadi') dur='<span style="color:#DC2626;font-weight:800;">❌ Yapılamadı'+(x.neden?' — '+E(x.neden):'')+'</span>';
+  else if(gecmis) dur='<span style="color:#D97706;font-weight:700;">⏳ Durum bekliyor</span>';
+  var h='<div style="border:1px solid #E2E8F0;border-left:4px solid '+(iptal?'#CBD5E1':oto||x.durum==='yapildi'?'#16A34A':x.durum==='yapilamadi'?'#DC2626':'#3B82F6')+';border-radius:8px;padding:8px 10px;margin-bottom:6px;'+(iptal?'opacity:.6;':'')+'">'
+    +'<div style="display:flex;gap:6px;align-items:flex-start;"><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:800;color:#0F1923;'+(iptal?'text-decoration:line-through;':'')+'">'+IP_TUR[x.tur]+(x.st?' · '+E(x.st):'')+'</div>'
+    +'<div style="font-size:12px;color:#475569;margin-top:2px;">'+E(x.zaman)+(x.yer?' · 📍 '+E(x.yer):'')+'</div>'+(x.amac?'<div style="font-size:12px;color:#475569;margin-top:2px;">🎯 '+E(x.amac)+'</div>':'')
+    +(dur?'<div style="font-size:12px;margin-top:4px;">'+dur+'</div>':'')+'</div>'
+    +(ro||oto?'':'<button type="button" onclick="ipKalemSil('+i+')" title="İptal et" style="border:none;background:none;color:#94A3B8;font-size:15px;cursor:pointer;">'+(iptal?'↩':'✕')+'</button>')+'</div>';
+  if(!ro && !iptal && !oto && gecmis){
+    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">'
+      +'<button type="button" onclick="ipDurum('+i+',\'yapildi\')" style="border:1.5px solid #16A34A;background:'+(x.durum==='yapildi'?'#16A34A;color:#fff':'#fff;color:#16A34A')+';border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">✅ Yapıldı</button>'
+      +'<select onchange="ipNeden('+i+',this.value)" style="border:1.5px solid #DC2626;color:#DC2626;border-radius:8px;padding:6px;font-size:12px;font-weight:700;background:'+(x.durum==='yapilamadi'?'#FEF2F2':'#fff')+';"><option value="">❌ Yapılamadı…</option>'
+      +IP_NEDEN.map(function(n){ return '<option'+(x.neden===n?' selected':'')+'>'+n+'</option>'; }).join('')+'</select></div>';
+  }
+  return h+'</div>';
+}
+function _ipFormHtml(){
+  var F=IP.form, E=_htmlKac, ekip=_ipEkip();
+  return '<div style="background:#F8FAFC;border:1.5px solid #93C5FD;border-radius:10px;padding:10px;margin-top:6px;">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'
+    +'<select id="ipfTur" onchange="IP.form.tur=this.value;_ipCiz();" style="padding:9px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;">'+Object.keys(IP_TUR).map(function(t){ return '<option value="'+t+'"'+(F.tur===t?' selected':'')+'>'+IP_TUR[t]+'</option>'; }).join('')+'</select>'
+    +'<select id="ipfZaman" onchange="IP.form.zaman=this.value" style="padding:9px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;">'+IP_ZAMAN.map(function(z){ return '<option'+(F.zaman===z?' selected':'')+'>'+z+'</option>'; }).join('')+'</select></div>'
+    +(F.tur==='saha'||F.tur==='kilit'?'<select id="ipfSt" onchange="IP.form.st=this.value" style="width:100%;margin-top:6px;padding:9px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;"><option value="">'+(F.tur==='saha'?'Satış Temsilcisi seçin *':'ST (isteğe bağlı)')+'</option>'+ekip.map(function(s){ return '<option'+(F.st===s?' selected':'')+'>'+E(s)+'</option>'; }).join('')+'</select>':'')
+    +'<input id="ipfYer" maxlength="120" oninput="IP.form.yer=this.value" value="'+E(F.yer||'')+'" placeholder="Güzergah / rut / müşteri (isteğe bağlı)" style="width:100%;box-sizing:border-box;margin-top:6px;padding:9px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;">'
+    +'<input id="ipfAmac" maxlength="200" oninput="IP.form.amac=this.value" value="'+E(F.amac||'')+'" placeholder="Amaç: odak ürünleri, teşhir, tahsilat… (isteğe bağlı)" style="width:100%;box-sizing:border-box;margin-top:6px;padding:9px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:13px;">'
+    +'<div style="display:flex;gap:6px;margin-top:8px;"><button type="button" onclick="ipFormKaydet()" style="flex:1;border:none;background:#16A34A;color:#fff;border-radius:8px;padding:9px;font-size:13px;font-weight:800;cursor:pointer;">Ekle</button>'
+    +'<button type="button" onclick="IP.form=null;_ipCiz();" style="border:none;background:#E2E8F0;color:#334155;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;">Vazgeç</button></div></div>';
+}
+function ipFormAc(g){ IP.form={gun:g, tur:'saha', zaman:IP_ZAMAN[0], st:'', yer:'', amac:''}; _ipCiz(); }
+function ipFormKaydet(){
+  var F=IP.form; if(!F) return;
+  var st=(document.getElementById('ipfSt')||{}).value||'';
+  if(F.tur==='saha' && !st){ toast('Saha kalemi için Satış Temsilcisi seçin.','e'); return; }
+  if(IP.plan.kalemler.length>=80){ toast('Bir haftaya en fazla 80 kalem girilebilir.','e'); return; }
+  IP.plan.kalemler.push({id:Date.now().toString(36), gun:F.gun, tur:F.tur, st:_ipTemiz(st,60), zaman:(document.getElementById('ipfZaman')||{}).value||IP_ZAMAN[0],
+    yer:_ipTemiz((document.getElementById('ipfYer')||{}).value,120), amac:_ipTemiz((document.getElementById('ipfAmac')||{}).value,200), durum:'', neden:'', not:''});
+  IP.form=null; IP.degisti=true; _ipCiz();
+}
+function ipKalemSil(i){ var x=IP.plan.kalemler[i]; if(!x) return;
+  if(x.durum==='iptal'){ x.durum=''; }
+  else if(!IP.plan.gonderim && !x.durum){ IP.plan.kalemler.splice(i,1); }   // gönderilmemiş plandaki boş kalem tamamen kaldırılır
+  else { x.durum='iptal'; }                                                  // gönderilmiş planda kalem silinmez, "İptal" olarak kalır
+  IP.degisti=true; _ipCiz(); }
+function ipDurum(i,d){ var x=IP.plan.kalemler[i]; if(!x) return; x.durum=(x.durum===d?'':d); if(d==='yapildi') x.neden=''; IP.degisti=true; _ipCiz(); }
+function ipNeden(i,n){ var x=IP.plan.kalemler[i]; if(!x) return; x.neden=n; x.durum=n?'yapilamadi':''; IP.degisti=true; _ipCiz(); }
+function ipHedef(i,a,v){ var x=IP.plan.hedefler[i]; if(!x) return; x[a]=_ipTemiz(v, a==='m'?120:30); IP.degisti=true; var b=document.getElementById('ipKaydetBtn'); if(b) b.textContent='💾 Kaydet •'; }
+function ipHedefEkle(){ IP.plan.hedefler.push({m:'',h:'',g:''}); IP.degisti=true; _ipCiz(); }
+function ipHedefSil(i){ IP.plan.hedefler.splice(i,1); IP.degisti=true; _ipCiz(); }
+function ipDeg(v){ IP.plan.degerlendirme=_ipTemiz(v,1000); IP.degisti=true; var b=document.getElementById('ipKaydetBtn'); if(b) b.textContent='💾 Kaydet •'; }
+function isPlaniKopyala(){
+  var gy=IP.gy, onceki=_ipGun(IP.pzt,-7);
+  _db.collection('isPlani').doc(_ipHafta(onceki)+'__'+gy).get().then(function(d){
+    var x=d && d.exists?d.data():null;
+    if(!x || !Array.isArray(x.kalemler) || !x.kalemler.length){ toast('Geçen hafta için plan bulunamadı.','e'); return; }
+    IP.plan.kalemler=x.kalemler.filter(function(k){ return k && k.durum!=='iptal'; }).slice(0,80).map(function(k,n){ return {id:Date.now().toString(36)+n, gun:Math.max(0,Math.min(5,parseInt(k.gun,10)||0)), tur:IP_TUR[k.tur]?k.tur:'diger',
+      st:_ipTemiz(k.st,60), zaman:IP_ZAMAN.indexOf(k.zaman)>-1?k.zaman:IP_ZAMAN[0], yer:_ipTemiz(k.yer,120), amac:_ipTemiz(k.amac,200), durum:'', neden:'', not:''}; });
+    IP.plan.hedefler=(Array.isArray(x.hedefler)?x.hedefler:[]).slice(0,8).map(function(h){ return {m:_ipTemiz(h.m,120), h:_ipTemiz(h.h,30), g:''}; });
+    IP.degisti=true; _ipCiz(); toast('Geçen haftanın planı kopyalandı. Kontrol edip kaydedin.','s');
+  }).catch(function(e){ toast('Okunamadı: '+((e&&e.message)||e),'e'); });
+}
+function isPlaniKaydet(gonder){
+  if(_onizleme || !_db || !IP.plan) return;
+  var P=IP.plan, simdi=new Date().toISOString();
+  P.hedefler=P.hedefler.filter(function(h){ return h.m||h.h||h.g; });
+  if(gonder && !P.kalemler.filter(function(k){ return k.durum!=='iptal'; }).length){ toast('Göndermeden önce en az bir plan kalemi ekleyin.','e'); return; }
+  var belge={gy:IP.gy, hafta:_ipHafta(IP.pzt), basTarih:_ipISO(IP.pzt), durum:(gonder||P.durum==='gonderildi')?'gonderildi':'taslak',
+    gonderim:P.gonderim || (gonder?simdi:''), kalemler:P.kalemler, hedefler:P.hedefler, degerlendirme:P.degerlendirme, guncel:simdi,
+    guncelleyen:String((_auth&&_auth.currentUser&&_auth.currentUser.email)||'').toLowerCase()};
+  // İlk gönderim zamanı sunucu saatinden alınır (telefon saati değiştirilse de Pazartesi 08:00 takibi doğru olur); sonra hiç değişmez
+  if(P.gonderimSunucu) belge.gonderimSunucu=P.gonderimSunucu;
+  else if(gonder) belge.gonderimSunucu=firebase.firestore.FieldValue.serverTimestamp();
+  _db.collection('isPlani').doc(belge.hafta+'__'+IP.gy).set(belge).then(function(){
+    P.durum=belge.durum; P.gonderim=belge.gonderim; P.guncel=simdi; IP.degisti=false;
+    if(gonder && !P.gonderimSunucu){ _ipYukle(); } else _ipCiz();   // sunucu zamanını geri okumak için
+    toast(gonder?'📤 Plan gönderildi.':'💾 Kaydedildi.','s');
+  }).catch(function(e){ toast('Kaydedilemedi: '+((e&&e.message)||e),'e'); });
+}
+function _isPlaniButonu(){
+  if(document.getElementById('isPlaniBtn')) return;
+  var d=document.getElementById('navDate'); if(!d || !d.parentNode) return;
+  var b=document.createElement('button'); b.type='button'; b.id='isPlaniBtn'; b.textContent='📅 İş Planım'; b.onclick=isPlaniAc;
+  b.style.cssText='background:#16A34A;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;margin-left:auto;margin-right:6px;font-family:inherit;';
+  var pb=document.getElementById('panelimBtn'); if(pb){ pb.style.marginLeft='0'; d.parentNode.insertBefore(b, pb); } else d.parentNode.insertBefore(b, d);
+}
+
 function _panelimButonu(){
   if(_onizleme || document.getElementById('panelimBtn')) return;
   var d=document.getElementById('navDate'); if(!d || !d.parentNode) return;
