@@ -1861,7 +1861,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-20a';
+var SURUM='2026-11-20b';
 (function(){
   var son=0;
   function bant(){
@@ -3594,11 +3594,12 @@ function _odakCiz(){
   h+='<div style="display:flex;justify-content:flex-end;margin:-4px 0 8px;"><div role="group" aria-label="Ölçü" style="display:inline-flex;background:#F1F5F9;border-radius:10px;padding:3px;">'
     +['cesit','syms'].map(function(x){ var ac=(x==='syms')===sy; return '<button type="button" id="odOlcu_'+x+'" aria-pressed="'+ac+'" onclick="odakOlcu(\''+x+'\')" style="border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:Inter,sans-serif;'+(ac?'background:#1E3A5F;color:#fff;':'background:transparent;color:var(--mid);')+'">'+(x==='syms'?'İlgili Dönem SYMS':'Artırılan çeşit')+'</button>'; }).join('')+'</div></div>';
   var kutu=function(v,l,renk,bg){ return '<div style="background:'+(bg||'#EFF6FF')+';border-radius:10px;padding:10px;text-align:center;"><b style="display:block;font-size:17px;color:'+(renk||'#1E3A5F')+';">'+v+'</b><span style="font-size:10px;color:var(--mid);font-weight:600;">'+l+'</span></div>'; };
-  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;">'
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;margin-bottom:14px;">'
     +kutu(satir.length.toLocaleString('tr-TR'),'Müşteri')
     +kutu(firsat.toLocaleString('tr-TR'),'Fırsat (boş hücre)','#B91C1C','#FEF2F2')
-    +kutu((sy?syms:deger).toLocaleString('tr-TR'),sy?'İlgili Dönem SYMS':'Artırılan çeşit','#15803D','#F0FDF4')
-    +kutu(deger.toLocaleString('tr-TR')+' <span style="font-size:13px;">(%'+(firsat?Math.round(deger/firsat*100):0).toLocaleString('tr-TR')+')</span>','Tamamlanan boş hücre','#15803D','#F0FDF4')
+    +(sy?kutu(syms.toLocaleString('tr-TR'),'İlgili Dönem SYMS','#15803D','#F0FDF4'):'')
+    // Tamamlanan boş hücre = Artırılan çeşit (aynı sayı) + fırsata oranı; "Artırılan çeşit" görünümünde tek kart olarak gösterilir
+    +kutu(deger.toLocaleString('tr-TR')+' <span style="font-size:13px;">(%'+(firsat?Math.round(deger/firsat*100):0).toLocaleString('tr-TR')+')</span>',sy?'Tamamlanan boş hücre':'Artırılan çeşit (tamamlanan boş hücre)','#15803D','#F0FDF4')
     +kutu(Math.round(topPak).toLocaleString('tr-TR'),'ST\'nin girdiği toplam PAK','#15803D','#F0FDF4')
     +kutu(bugunTamam.toLocaleString('tr-TR'),'Bugün tamamlanan ziyaret')
     +kutu('%'+(satir.length*NU?Math.round(dolu/(satir.length*NU)*1000)/10:0).toLocaleString('tr-TR'),'Satıştan gelen doluluk (bilgi)')+'</div>';
