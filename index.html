@@ -2492,6 +2492,23 @@ function raporGonder(){
       // Firestore "undefined" değer kabul etmez; JSON turu bu alanları temizler
       var temizRapor=JSON.parse(JSON.stringify(rapor));
       temizRapor.gonderen=(_auth&&_auth.currentUser&&_auth.currentUser.email)||'';
+      // v63h: Aynı gün aynı ST için ikinci rapor engellenir ("Tekrar Gönder" aynı raporu günceller, ona izin var).
+      // Kontrol sunucudan yapılır; internet yoksa kontrol atlanır ve rapor gönderilir.
+      var _ikinciVar=function(){
+        if(!rapor.st) return Promise.resolve(null);
+        return _db.collection('raporlar').where('yonetici','==',rapor.yonetici).where('tarih','==',rapor.tarih).get().then(function(sn){
+          var a=_adAnahtar(rapor.st), bulunan=null;
+          sn.docs.forEach(function(d){ var r=d.data()||{}; if(bulunan || d.id===rapor.id || String(d.id).indexOf('rapor_')!==0) return; if(_adAnahtar(r.st)===a) bulunan=r; });
+          return bulunan;
+        }).catch(function(){ return null; });
+      };
+      _ikinciVar().then(function(onceki){
+        if(onceki){
+          var sa=''; try{ var z=new Date(onceki.zaman); if(!isNaN(z)) sa=' (saat '+String(z.getHours()).padStart(2,'0')+':'+String(z.getMinutes()).padStart(2,'0')+')'; }catch(e){}
+          alert('⛔ '+rapor.st+' için '+rapor.tarih.split('-').reverse().join('.')+' tarihli rapor zaten gönderilmiş'+sa+', '+(onceki.toplamNokta||0)+' nokta.\n\nAynı gün aynı temsilci için ikinci rapor gönderilemez. Bu formdaki noktalar telefonda kayıtlı kalır; eklenmesi gerekiyorsa Satış Müdürü ile görüşün.');
+          btn.disabled=false; btn.textContent='📤 Raporu Gönder';
+          return;
+        }
       _db.collection('raporlar').doc(rapor.id).set(temizRapor)
         .then(function(){
           _gonderilenImza=_noktaImza(); autoSave();   // taslak "gönderildi" olarak işaretlenir
@@ -2504,6 +2521,7 @@ function raporGonder(){
           toast('⚠️ Panele gönderilemedi, telefonda kayıtlı: '+err.message,'e');
           btn.disabled=false; btn.textContent='📨 Tekrar Gönder';
         });
+      });
     }catch(err){
       toast('⚠️ Panele gönderilemedi, telefonda kayıtlı: '+err.message,'e');
       btn.disabled=false; btn.textContent='📨 Tekrar Gönder';
