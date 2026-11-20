@@ -1861,7 +1861,7 @@ function _aracCiz(sadeceArama){
 }
 
 // ── Sürüm kontrolü: sayfa gün boyu açık kalsa da yeni yayın gelince kendini günceller ──
-var SURUM='2026-11-13a';
+var SURUM='2026-11-20a';
 (function(){
   var son=0;
   function bant(){
@@ -3598,6 +3598,7 @@ function _odakCiz(){
     +kutu(satir.length.toLocaleString('tr-TR'),'Müşteri')
     +kutu(firsat.toLocaleString('tr-TR'),'Fırsat (boş hücre)','#B91C1C','#FEF2F2')
     +kutu((sy?syms:deger).toLocaleString('tr-TR'),sy?'İlgili Dönem SYMS':'Artırılan çeşit','#15803D','#F0FDF4')
+    +kutu(deger.toLocaleString('tr-TR')+' <span style="font-size:13px;">(%'+(firsat?Math.round(deger/firsat*100):0).toLocaleString('tr-TR')+')</span>','Tamamlanan boş hücre','#15803D','#F0FDF4')
     +kutu(Math.round(topPak).toLocaleString('tr-TR'),'ST\'nin girdiği toplam PAK','#15803D','#F0FDF4')
     +kutu(bugunTamam.toLocaleString('tr-TR'),'Bugün tamamlanan ziyaret')
     +kutu('%'+(satir.length*NU?Math.round(dolu/(satir.length*NU)*1000)/10:0).toLocaleString('tr-TR'),'Satıştan gelen doluluk (bilgi)')+'</div>';
